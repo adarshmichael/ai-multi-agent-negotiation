@@ -56,30 +56,3 @@ The configuration screen provides scenario selection, mode selection, agent name
 
 See [docs/ui-wireframe.md](docs/ui-wireframe.md) for the annotated wireframe, control descriptions, validation rules, and transition into the Negotiation Arena.
 
-## Repository Structure
-
-```text
-AI-Multi-Agent-Negotiation/
-|
-|-- README.md
-|
-|-- docs/
-|   |-- system-workflow.md
-|   |-- agent-personas.md
-|   |-- negotiation-scenario.md
-|   `-- ui-wireframe.md
-|
-`-- assets/
-	`-- agent-configuration-wireframe.png
-```
-
-## Planned Platform Modules
-
-1. Scenario Selection and Agent Configuration
-2. Orchestrator Agent and Turn Management
-3. LLM-Powered Reasoning and Offer Generation
-4. Counteroffer Evaluation and Concession Decisions
-5. Deadlock Detection and Resolution
-6. Negotiation Arena UI
-7. Human Participant Interface
-8. Outcome Evaluation and Report Generation
