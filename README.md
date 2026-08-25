@@ -1,4 +1,4 @@
-# AI-Driven Multi-Agent Negotiation Training & Simulation Platform
+# NegoSim — Multi-Agent Negotiation Training & Simulation Platform
 
 ## 1. Project Overview
 
@@ -48,11 +48,69 @@ The first scenario is **Vendor Pricing Negotiation**. The Buyer negotiates to pu
 
 See [docs/negotiation-scenario.md](docs/negotiation-scenario.md) for objectives, constraints, terms, an example exchange, agreement validation, and the three-scenario catalogue.
 
-## 5. Basic Agent Configuration UI Wireframe
+---
 
-The configuration screen provides scenario selection, mode selection, agent names and roles, personality selectors, goals, constraints, validation, and a Start Negotiation action.
+## Milestone 1 Scope
+Milestone 1 implements the complete **pre-negotiation setup workflow**:
 
-![Agent Configuration Wireframe](assets/agent-configuration-wireframe.png)
+1. **Scenario Selection Module** — a polished, card-based screen for choosing one of three predefined negotiation scenarios (Vendor Pricing, Job Offer, Project Budget Allocation), each with a 3D hover/tilt effect and clear selected state.
+2. **Scenario Data** — all scenario and agent definitions (name, role, goal, constraint) live in a single centralized data module (`js/data/scenarios.js`), decoupled from UI logic so it can later be swapped for a backend/API call.
+3. **Agent Configuration** — agent cards are generated dynamically from the selected scenario's data (never hardcoded per scenario), showing each agent's goal and constraint.
+4. **Personality Selection** — each agent gets an independent personality selector (Aggressive / Collaborative / Risk-Averse), stored per-agent in centralized application state.
+5. **Basic Workflow** — a 4-step flow: `Scenario Selection → Agent Configuration → Goals & Constraints Summary → Ready to Start Negotiation`, with forward/back navigation and a step indicator in the header.
+6. **Validation** — the user cannot continue without selecting a scenario, and cannot proceed past agent configuration until every agent has a personality assigned; clear inline warning banners explain what's missing.
 
-See [docs/ui-wireframe.md](docs/ui-wireframe.md) for the annotated wireframe, control descriptions, validation rules, and transition into the Negotiation Arena.
+No LLM integration, offer generation, real-time negotiation, or backend/auth is implemented in this milestone — the final screen only indicates the app is "Ready to Start Negotiation" as a placeholder for the next phase.
 
+## Technologies Used
+- HTML5
+- CSS3 (custom properties/design tokens, CSS Grid, 3D transforms for card tilt/depth effects)
+- Clean, modern, "AI-humanized" white-color UI theme
+- Vanilla JavaScript (no frameworks, no build step)
+
+## Project Structure
+```
+project/
+├── index.html
+├── css/
+│   └── style.css
+├── js/
+│   ├── data/
+│   │   └── scenarios.js   # centralized scenario + personality data
+│   ├── state/
+│   │   └── appState.js    # centralized app state (selected scenario, personalities, step)
+│   └── app.js              # rendering + navigation + interaction logic
+└── README.md
+```
+
+## How to Run
+No build step or dependencies are required.
+
+1. Open a terminal in the `project/` folder.
+2. Start any static file server, for example:
+   ```bash
+   python3 -m http.server 8000
+   ```
+3. Open `http://localhost:8000` in your browser.
+
+(Opening `index.html` directly via `file://` also works, since the app uses only plain `<script>` tags.)
+
+## Application State
+A single `AppState` module (`js/state/appState.js`) tracks:
+- `currentStep` — which of the 4 workflow steps is active
+- `selectedScenarioId` — the chosen scenario
+- `personalities` — a map of `agentId → personalityId`
+
+All UI re-renders reactively whenever state changes, via a simple subscribe/notify pattern.
+
+## Known Limitations (Milestone 1)
+- No LLM/AI negotiation logic — the "Ready to Start Negotiation" screen is a placeholder.
+- No backend, database, or persistence — state resets on page reload.
+- No authentication.
+- Scenario/agent data is static and hardcoded in `scenarios.js` (intentionally structured so it can later be fetched from an API).
+
+## Planned for Future Phases
+- Real-time multi-agent negotiation powered by an LLM (e.g. Gemini/OpenAI) per agent persona and personality.
+- Offer generation, counter-offers, and negotiation transcript display.
+- Outcome/report generation at the end of a negotiation.
+- Backend persistence for scenarios, sessions, and results.
