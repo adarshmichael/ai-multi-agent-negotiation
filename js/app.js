@@ -81,9 +81,19 @@ function attachTiltEffect(card) {
 
 function renderScenarioGrid() {
   const grid = document.getElementById("scenario-grid");
-  const { selectedScenarioId } = AppState.getState();
+  const { selectedScenarioId, scenarios, isLoading, error } = AppState.getState();
 
-  grid.innerHTML = SCENARIOS.map((scenario) => {
+  if (isLoading && scenarios.length === 0) {
+    grid.innerHTML = `<div class="loading-state">Loading scenarios...</div>`;
+    return;
+  }
+
+  if (error && scenarios.length === 0) {
+    grid.innerHTML = `<div class="error-state">${error}</div>`;
+    return;
+  }
+
+  grid.innerHTML = scenarios.map((scenario) => {
     const isSelected = scenario.id === selectedScenarioId;
     const agentChips = scenario.agents.map((a) => `<span class="agent-chip">${a.name}</span>`).join("");
     return `
@@ -123,12 +133,29 @@ function handleScenarioContinue() {
 /* ============================== Screen 2: Agent configuration ============================== */
 
 function renderAgentGrid() {
+  const { isLoading, error } = AppState.getState();
   const scenario = AppState.getSelectedScenario();
   if (!scenario) return;
 
   document.getElementById("configure-title").textContent = `Configure Agents — ${scenario.name}`;
 
   const grid = document.getElementById("agent-grid");
+
+  if (isLoading) {
+    grid.innerHTML = `<div class="loading-state">Loading agent configuration...</div>`;
+    return;
+  }
+
+  if (error) {
+    grid.innerHTML = `<div class="error-state">${error}</div>`;
+    return;
+  }
+
+  if (!scenario.agents || scenario.agents.length === 0) {
+    grid.innerHTML = `<div class="empty-state">No agents configured for this scenario.</div>`;
+    return;
+  }
+
   grid.innerHTML = scenario.agents.map((agent) => {
     const selectedPersonality = AppState.getPersonality(agent.id);
     const personalityButtons = PERSONALITIES.map((p) => {
@@ -157,8 +184,10 @@ function renderAgentGrid() {
         <div class="agent-detail-row">
           <div class="agent-detail-icon">${ICONS.lock}</div>
           <div>
-            <div class="agent-detail-label">Constraint</div>
-            <div class="agent-detail-value">${agent.constraint}</div>
+            <div class="agent-detail-label">Constraints</div>
+            <ul class="agent-detail-value constraints-list">
+              ${(agent.constraints || []).map(c => `<li>${c}</li>`).join('')}
+            </ul>
           </div>
         </div>
 
@@ -213,7 +242,12 @@ function renderSummary() {
         </div>
         <div class="summary-line"><strong>Role</strong><span>${agent.role}</span></div>
         <div class="summary-line"><strong>Goal</strong><span>${agent.goal}</span></div>
-        <div class="summary-line"><strong>Constraint</strong><span>${agent.constraint}</span></div>
+        <div class="summary-line summary-line-block">
+          <strong>Constraints</strong>
+          <ul class="constraints-list">
+            ${(agent.constraints || []).map(c => `<li>${c}</li>`).join('')}
+          </ul>
+        </div>
       </div>
     `;
   }).join("");
@@ -244,6 +278,7 @@ function init() {
   document.getElementById("btn-ready-back").addEventListener("click", () => AppState.goToStep(AppState.STEPS.SUMMARY));
   document.getElementById("btn-ready-restart").addEventListener("click", () => AppState.reset());
 
+  AppState.loadScenarios();
   render();
 }
 

@@ -17,6 +17,9 @@ const AppState = (function () {
     // personalities keyed by agentId, scoped per scenario so switching
     // scenarios doesn't leak selections between agents.
     personalities: {},
+    scenarios: [],
+    isLoading: false,
+    error: null,
   };
 
   const listeners = [];
@@ -35,13 +38,47 @@ const AppState = (function () {
 
   function getSelectedScenario() {
     if (!state.selectedScenarioId) return null;
-    return SCENARIOS.find((s) => s.id === state.selectedScenarioId) || null;
+    return state.scenarios.find((s) => s.id === state.selectedScenarioId) || null;
   }
 
-  function selectScenario(scenarioId) {
+  async function loadScenarios() {
+    state.isLoading = true;
+    state.error = null;
+    notify();
+
+    try {
+      state.scenarios = await window.ApiService.getScenarios();
+    } catch (err) {
+      state.error = "Unable to load scenarios. Please try again.";
+    } finally {
+      state.isLoading = false;
+      notify();
+    }
+  }
+
+  async function selectScenario(scenarioId) {
     state.selectedScenarioId = scenarioId;
     state.personalities = {};
+    state.isLoading = true;
+    state.error = null;
     notify();
+
+    try {
+      // Simulate fetching details for the selected scenario
+      const scenario = await window.ApiService.getScenarioById(scenarioId);
+      // Ensure the selected scenario is updated in the state in case it has more details
+      const index = state.scenarios.findIndex((s) => s.id === scenarioId);
+      if (index !== -1) {
+        state.scenarios[index] = scenario;
+      } else {
+        state.scenarios.push(scenario);
+      }
+    } catch (err) {
+      state.error = "Unable to load agent configuration. Please try again.";
+    } finally {
+      state.isLoading = false;
+      notify();
+    }
   }
 
   function setPersonality(agentId, personalityId) {
@@ -66,14 +103,17 @@ const AppState = (function () {
 
   function reset() {
     state = {
+      ...state,
       currentStep: STEPS.SCENARIO,
       selectedScenarioId: null,
       personalities: {},
+      error: null,
     };
     notify();
   }
 
   return {
+    loadScenarios,
     STEPS,
     onChange,
     getState,

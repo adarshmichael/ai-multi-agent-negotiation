@@ -2,7 +2,19 @@
 
 This document defines the end-to-end workflow for the AI-Driven Multi-Agent Negotiation Training & Simulation Platform.
 
-## 1. End-to-End Workflow
+## 1. System Architecture
+
+```mermaid
+flowchart TD
+    U[User] --> A[Scenario Selection]
+    A --> B[Agent Configuration]
+    B --> C[Orchestrator]
+    C --> D[AI Agents]
+    D --> E[Negotiation]
+    E --> F[Outcome Report]
+```
+
+## 2. End-to-End Workflow
 
 ```mermaid
 flowchart TD
@@ -33,7 +45,9 @@ flowchart TD
     S --> T[Generate Outcome Report]
 ```
 
-## 2. Detailed Round Sequence
+```
+
+## 3. Detailed Round Sequence
 
 ```mermaid
 sequenceDiagram
@@ -81,7 +95,9 @@ sequenceDiagram
     M-->>UI: Display Outcome Report
 ```
 
-## 3. Orchestrator State Machine
+```
+
+## 4. Orchestrator State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -104,7 +120,9 @@ stateDiagram-v2
     ReportGenerated --> [*]
 ```
 
-## 4. Stage Definitions
+```
+
+## 5. Stage Definitions
 
 | Stage | System responsibility | Output |
 |---|---|---|
@@ -118,7 +136,7 @@ stateDiagram-v2
 | Deadlock Handling | Detect no movement, repeated offers, impossible constraints, or max rounds | `ResolutionResult` |
 | Outcome Report | Summarize terms, performance, concessions, and result | `OutcomeReport` |
 
-## 5. Deadlock Detection and Resolution
+## 6. Deadlock Detection and Resolution
 
 The Orchestrator checks for deadlock after every evaluated turn:
 
@@ -130,7 +148,7 @@ The Orchestrator checks for deadlock after every evaluated turn:
 
 When a deadlock is detected, the system can request a final package proposal, allow a trade across soft terms, or declare a breakdown with the blocking constraint recorded.
 
-## 6. Simulation and Practice Modes
+## 7. Simulation and Practice Modes
 
 ```mermaid
 flowchart LR
