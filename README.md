@@ -103,14 +103,54 @@ A single `AppState` module (`js/state/appState.js`) tracks:
 
 All UI re-renders reactively whenever state changes, via a simple subscribe/notify pattern.
 
-## Known Limitations (Milestone 1)
-- No LLM/AI negotiation logic — the "Ready to Start Negotiation" screen is a placeholder.
-- No backend, database, or persistence — state resets on page reload.
-- No authentication.
-- Scenario/agent data is static and hardcoded in `scenarios.js` (intentionally structured so it can later be fetched from an API).
+## 6. Backend Integration & Execution (Milestone 2)
+
+A fully functional FastAPI backend has been integrated to power the negotiation logic via Google Gemini.
+
+### Backend Architecture
+- **FastAPI**: REST endpoints for Scenarios, Agents, and Negotiations.
+- **PostgreSQL & SQLAlchemy**: Database models for persisting negotiation histories. (Configurable to SQLite for simple local testing via `.env`).
+- **Orchestrator**: Manages AI turns, constraint validation (preventing agents from exceeding budgets/minimums), and simulation loops.
+- **LLM Service**: Connects to the Gemini 1.5 API to generate intelligent negotiation offers/counteroffers in strict JSON schemas.
+
+### How to Run the Backend
+1. Open a terminal in the `backend/` folder.
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/Scripts/activate  # (Windows) or venv/bin/activate (Mac/Linux)
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Configure environment variables:
+   - Create a `.env` file based on `.env.example` inside the `backend/` directory.
+   - Add your `GEMINI_API_KEY`.
+   - Set `DATABASE_URL=sqlite:///./negosim.db` for quick local testing, or use a PostgreSQL connection string.
+5. Initialize the Database and Seed Data:
+   ```bash
+   python -m app.db.init_db
+   ```
+6. Start the FastAPI server:
+   ```bash
+   uvicorn app.main:app --reload --port 8001
+   ```
+   *The Swagger API documentation will be available at `http://localhost:8001/docs`.*
+
+### Frontend Connection
+1. In a separate terminal at the project root `d:\Infosys Springboard`, start the frontend:
+   ```bash
+   python -m http.server 8000
+   ```
+2. Open `http://localhost:8000` in your browser.
+3. Select the **Vendor Pricing Negotiation** scenario, configure agent personalities, and proceed to the Summary.
+4. Click **Ready to Start Negotiation**. The frontend will now call the backend to create the negotiation, trigger the AI Simulation Mode, and display the final outcome directly on the screen!
+
+## Known Limitations
+- The negotiation transcript is not yet visualized round-by-round on the UI; currently, the Simulation Mode runs automatically on the backend and returns the final outcome summary to the UI.
+- Practice Mode API is built but not yet connected to a dedicated UI screen.
 
 ## Planned for Future Phases
-- Real-time multi-agent negotiation powered by an LLM (e.g. Gemini/OpenAI) per agent persona and personality.
-- Offer generation, counter-offers, and negotiation transcript display.
-- Outcome/report generation at the end of a negotiation.
-- Backend persistence for scenarios, sessions, and results.
+- Real-time WebSockets or polling for round-by-round live UI updates.
+- Practice Mode UI allowing the human player to submit text offers.

@@ -817,3 +817,549 @@ img, svg {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Negotiation Screen — Start Panel
+   ========================================================================== */
+.btn-start-negotiation {
+  font-size: 16px;
+  padding: 16px 36px;
+  margin: var(--space-5) auto 0;
+  display: inline-flex;
+  box-shadow: 0 14px 32px -8px rgba(99, 102, 241, 0.7);
+}
+
+.btn-start-negotiation:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px -8px rgba(99, 102, 241, 0.85);
+}
+
+.btn-start-negotiation:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.neg-start-meta {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+
+.neg-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* ==========================================================================
+   Negotiation Screen — Live Panel Header
+   ========================================================================== */
+.neg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.neg-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.neg-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.neg-status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-text-faint);
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.neg-status-indicator.live {
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  animation: pulse-dot 2s infinite;
+}
+
+.neg-status-indicator.completed {
+  background: var(--color-primary);
+}
+
+.neg-status-indicator.failed {
+  background: var(--color-danger);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.1); }
+}
+
+.neg-scenario-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.neg-status-text {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  margin-top: 1px;
+}
+
+.neg-round-badge {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  white-space: nowrap;
+}
+
+.btn-sm {
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+/* ==========================================================================
+   Negotiation Chat
+   ========================================================================== */
+.neg-chat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  min-height: 380px;
+  max-height: 520px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  scroll-behavior: smooth;
+}
+
+.neg-chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  flex: 1;
+  color: var(--color-text-faint);
+  font-size: 14px;
+  padding: var(--space-7) 0;
+}
+
+/* --- Message bubbles --- */
+.neg-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+  animation: messageIn 350ms var(--ease-out);
+}
+
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.neg-message.agent-left {
+  align-self: flex-start;
+}
+
+.neg-message.agent-right {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.neg-message-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+}
+
+.neg-agent-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.neg-agent-avatar.avatar-alt {
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+}
+
+.neg-message-bubble {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.55;
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+
+.agent-left .neg-message-bubble {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  border-top-left-radius: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.agent-right .neg-message-bubble {
+  background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(14,165,233,0.08) 100%);
+  border-color: rgba(99, 102, 241, 0.2);
+  border-top-right-radius: 4px;
+}
+
+.neg-message-text {
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.neg-offer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-top: var(--space-2);
+}
+
+.neg-offer-badge.offer-accept {
+  color: var(--color-success);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.neg-offer-badge.offer-reject {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.neg-message-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.neg-round-label {
+  background: rgba(0,0,0,0.05);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* --- Thinking indicator --- */
+.neg-thinking {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  align-self: flex-start;
+  animation: messageIn 300ms var(--ease-out);
+}
+
+.neg-thinking.agent-right {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.neg-thinking-bubble {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-thinking-text {
+  font-size: 13px;
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+
+.thinking-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.thinking-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: dotPulse 1.4s infinite ease-in-out;
+}
+
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotPulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40%           { transform: scale(1);   opacity: 1; }
+}
+
+/* ==========================================================================
+   Negotiation Status Bar (offer tracker + progress)
+   ========================================================================== */
+.neg-status-bar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  margin-top: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-offers {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.neg-offer-stat {
+  flex: 1;
+  min-width: 140px;
+}
+
+.neg-offer-stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  margin-bottom: 4px;
+}
+
+.neg-offer-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.neg-offer-stat-value.gap-value {
+  color: var(--color-warning);
+}
+
+.neg-offer-stat-value.agreement-value {
+  color: var(--color-success);
+}
+
+.neg-progress-wrap {
+  margin-top: var(--space-3);
+}
+
+.neg-progress-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  margin-bottom: 6px;
+}
+
+.neg-progress-track {
+  height: 6px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.neg-progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 999px;
+  transition: width 600ms var(--ease-out);
+}
+
+/* ==========================================================================
+   Negotiation Completion Panel
+   ========================================================================== */
+.neg-complete-panel {
+  background: var(--gradient-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6) var(--space-6);
+  margin-top: var(--space-5);
+  text-align: center;
+  box-shadow: var(--shadow-glow);
+  animation: screenIn var(--transition-med);
+}
+
+.neg-complete-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-4);
+  font-size: 32px;
+}
+
+.neg-complete-icon.icon-agreement {
+  background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05));
+  border: 2px solid rgba(16, 185, 129, 0.4);
+}
+
+.neg-complete-icon.icon-failed {
+  background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
+  border: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+.neg-complete-icon.icon-timeout {
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+  border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.neg-complete-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.neg-complete-subtitle {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-5);
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.neg-complete-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+  text-align: left;
+}
+
+.neg-stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  margin-bottom: 4px;
+}
+
+.neg-stat-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.neg-stat-value.success { color: var(--color-success); }
+.neg-stat-value.danger  { color: var(--color-danger); }
+.neg-stat-value.warning { color: var(--color-warning); }
+.neg-stat-value.primary { color: var(--color-primary); }
+
+.neg-agent-decisions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: var(--space-4) 0;
+}
+
+.neg-agent-decision {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: 13px;
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-decision-icon {
+  font-size: 16px;
+}
+
+.neg-agent-decision .agent-name {
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   Responsive — Negotiation
+   ========================================================================== */
+@media (max-width: 640px) {
+  .neg-message {
+    max-width: 90%;
+  }
+
+  .neg-chat {
+    max-height: 420px;
+    padding: var(--space-3);
+  }
+
+  .neg-header {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .neg-complete-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}

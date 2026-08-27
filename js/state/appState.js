@@ -9,6 +9,7 @@ const AppState = (function () {
     CONFIGURE: "configure",
     SUMMARY: "summary",
     READY: "ready",
+    NEGOTIATE: "negotiate",
   };
 
   let state = {
@@ -20,6 +21,18 @@ const AppState = (function () {
     scenarios: [],
     isLoading: false,
     error: null,
+    // Negotiation runtime state
+    negotiationId: null,
+    negotiationStatus: 'idle',  // idle | starting | in_progress | completed | failed | stopped
+    messages: [],
+    currentRound: 0,
+    maxRounds: 10,
+    offers: {},           // { agentId: latestOffer }
+    initialOffers: {},    // { agentId: firstOffer }
+    negotiationResult: null,  // agreement | rejection | max_rounds | stopped
+    negotiationReason: null,
+    finalOffer: null,
+    negotiationSummary: null,
   };
 
   const listeners = [];
@@ -101,6 +114,31 @@ const AppState = (function () {
     notify();
   }
 
+  function setNegotiationState(updates) {
+    Object.assign(state, updates);
+    notify();
+  }
+
+  function addMessage(message) {
+    state.messages = [...state.messages, message];
+    notify();
+  }
+
+  function resetNegotiation() {
+    state.negotiationId = null;
+    state.negotiationStatus = 'idle';
+    state.messages = [];
+    state.currentRound = 0;
+    state.maxRounds = 10;
+    state.offers = {};
+    state.initialOffers = {};
+    state.negotiationResult = null;
+    state.negotiationReason = null;
+    state.finalOffer = null;
+    state.negotiationSummary = null;
+    notify();
+  }
+
   function reset() {
     state = {
       ...state,
@@ -123,6 +161,9 @@ const AppState = (function () {
     getPersonality,
     allPersonalitiesSelected,
     goToStep,
+    setNegotiationState,
+    addMessage,
+    resetNegotiation,
     reset,
   };
 })();

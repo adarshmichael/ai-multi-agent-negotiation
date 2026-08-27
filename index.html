@@ -1,126 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NegoSim — Multi-Agent Negotiation Platform</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NegoSim — Multi-Agent Negotiation Platform</title>
+  <meta name="description"
+    content="AI-powered multi-agent negotiation training and simulation platform. Configure agents, set goals, and watch live negotiations unfold." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
 
-<div class="app-shell">
+  <div class="app-shell">
 
-  <header class="app-header">
-    <div class="brand">
-      <div class="brand-mark">N</div>
-      <div class="brand-text">
-        <h1>NegoSim</h1>
-        <span>Multi-Agent Negotiation Training Platform</span>
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark">N</div>
+        <div class="brand-text">
+          <h1>NegoSim</h1>
+          <span>Multi-Agent Negotiation Training Platform</span>
+        </div>
       </div>
-    </div>
 
-    <nav class="stepper" id="stepper"></nav>
-  </header>
+      <nav class="stepper" id="stepper"></nav>
+    </header>
 
-  <!-- ================= SCREEN 1: SCENARIO SELECTION ================= -->
-  <section class="screen" id="screen-scenario">
-    <div class="screen-header">
-      <div class="screen-eyebrow">Step 1 of 4</div>
-      <h2 class="screen-title">Select a Negotiation Scenario</h2>
-      <p class="screen-subtitle">Choose the scenario you'd like to configure and train against. Each scenario defines its own pair of negotiating agents.</p>
-    </div>
+    <!-- ================= SCREEN 1: SCENARIO SELECTION ================= -->
+    <section class="screen" id="screen-scenario">
+      <div class="screen-header">
+        <div class="screen-eyebrow">Step 1 of 4</div>
+        <h2 class="screen-title">Select a Negotiation Scenario</h2>
+        <p class="screen-subtitle">Choose the scenario you'd like to configure and train against. Each scenario defines
+          its own pair of negotiating agents.</p>
+      </div>
 
-    <div class="validation-banner" id="scenario-validation">
-      <span>⚠</span>
-      <span>Please select a scenario before continuing.</span>
-    </div>
+      <div class="validation-banner" id="scenario-validation">
+        <span>⚠</span>
+        <span>Please select a scenario before continuing.</span>
+      </div>
 
-    <div class="scenario-grid" id="scenario-grid"></div>
+      <div class="scenario-grid" id="scenario-grid"></div>
 
-    <div class="nav-row">
-      <div></div>
-      <button class="btn btn-primary" id="btn-scenario-continue">
-        Continue
-        <span>→</span>
-      </button>
-    </div>
-  </section>
-
-  <!-- ================= SCREEN 2: AGENT CONFIGURATION ================= -->
-  <section class="screen" id="screen-configure">
-    <div class="screen-header">
-      <div class="screen-eyebrow">Step 2 of 4</div>
-      <h2 class="screen-title" id="configure-title">Configure Agents</h2>
-      <p class="screen-subtitle">Review each agent's goal and constraints, then assign a negotiation personality to shape their behavior.</p>
-    </div>
-
-    <div class="validation-banner" id="personality-validation">
-      <span>⚠</span>
-      <span>Every agent needs a personality selected before you continue.</span>
-    </div>
-
-    <div class="agent-grid" id="agent-grid"></div>
-
-    <div class="nav-row">
-      <button class="btn btn-secondary" id="btn-configure-back">← Back</button>
-      <div style="display:flex; gap:12px;">
-        <button class="btn btn-ghost" id="btn-save-config">Save Configuration</button>
-        <button class="btn btn-primary" id="btn-configure-continue">
-          Review Summary
+      <div class="nav-row">
+        <div></div>
+        <button class="btn btn-primary" id="btn-scenario-continue">
+          Continue
           <span>→</span>
         </button>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ================= SCREEN 3: GOALS & CONSTRAINTS SUMMARY ================= -->
-  <section class="screen" id="screen-summary">
-    <div class="screen-header">
-      <div class="screen-eyebrow">Step 3 of 4</div>
-      <h2 class="screen-title">Goals &amp; Constraints Summary</h2>
-      <p class="screen-subtitle">Confirm each agent's configuration before starting the negotiation simulation.</p>
-    </div>
-
-    <div class="summary-grid" id="summary-grid"></div>
-
-    <div class="nav-row">
-      <button class="btn btn-secondary" id="btn-summary-back">← Back</button>
-      <button class="btn btn-primary" id="btn-summary-continue">
-        Ready to Start Negotiation
-        <span>→</span>
-      </button>
-    </div>
-  </section>
-
-  <!-- ================= SCREEN 4: READY ================= -->
-  <section class="screen" id="screen-ready">
-    <div class="ready-panel">
-      <div class="ready-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    <!-- ================= SCREEN 2: AGENT CONFIGURATION ================= -->
+    <section class="screen" id="screen-configure">
+      <div class="screen-header">
+        <div class="screen-eyebrow">Step 2 of 4</div>
+        <h2 class="screen-title" id="configure-title">Configure Agents</h2>
+        <p class="screen-subtitle">Review each agent's goal and constraints, then assign a negotiation personality to
+          shape their behavior.</p>
       </div>
-      <h2 class="ready-title">Ready to Start Negotiation</h2>
-      <p class="ready-subtitle">Your scenario and agents are fully configured. The live negotiation engine will be connected in a future milestone.</p>
-      <button class="btn btn-secondary" id="btn-ready-back">← Back to Summary</button>
-      <div><span class="ready-note">🔒 LLM negotiation engine — coming in a future phase</span></div>
-    </div>
 
-    <div class="nav-row">
-      <button class="btn btn-ghost" id="btn-ready-restart">Start Over</button>
-      <div></div>
-    </div>
-  </section>
+      <div class="validation-banner" id="personality-validation">
+        <span>⚠</span>
+        <span>Every agent needs a personality selected before you continue.</span>
+      </div>
 
-  <footer class="app-footer">
-    NegoSim · Milestone 1 Prototype · Scenario &amp; Agent Configuration Workflow
-  </footer>
+      <div class="agent-grid" id="agent-grid"></div>
 
-</div>
+      <div class="nav-row">
+        <button class="btn btn-secondary" id="btn-configure-back">← Back</button>
+        <div style="display:flex; gap:12px;">
+          <button class="btn btn-ghost" id="btn-save-config">Save Configuration</button>
+          <button class="btn btn-primary" id="btn-configure-continue">
+            Review Summary
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+    </section>
 
-<script src="js/data/scenarios.js"></script>
-<script src="js/data/api.js"></script>
-<script src="js/state/appState.js"></script>
-<script src="js/app.js"></script>
+    <!-- ================= SCREEN 3: GOALS & CONSTRAINTS SUMMARY ================= -->
+    <section class="screen" id="screen-summary">
+      <div class="screen-header">
+        <div class="screen-eyebrow">Step 3 of 4</div>
+        <h2 class="screen-title">Goals &amp; Constraints Summary</h2>
+        <p class="screen-subtitle">Confirm each agent's configuration before starting the negotiation simulation.</p>
+      </div>
+
+      <div class="summary-grid" id="summary-grid"></div>
+
+      <div class="config-section" style="margin-top: 32px;">
+        <h3 class="config-title">Simulation Settings</h3>
+        <div class="form-group" style="max-width: 300px; margin-top: 16px;">
+          <label for="input-max-rounds" class="form-label">Maximum Rounds</label>
+          <input type="number" id="input-max-rounds" class="form-control" value="10" min="1" max="50"
+            style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px;">
+          <p class="form-hint" style="margin-top: 8px; font-size: 13px; color: var(--text-secondary);">The simulation
+            will automatically terminate if an agreement isn't reached by this round.</p>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="btn btn-secondary" id="btn-summary-back">← Back</button>
+        <button class="btn btn-primary" id="btn-summary-continue">
+          Ready to Start Negotiation
+          <span>→</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN 4: LIVE NEGOTIATION ================= -->
+    <section class="screen" id="screen-negotiate">
+
+      <!-- ---- Pre-start: Start panel ---- -->
+      <div id="neg-start-panel">
+        <div class="ready-panel">
+          <div class="ready-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+          </div>
+          <h2 class="ready-title">Ready to Start Negotiation</h2>
+          <p class="ready-subtitle" id="neg-ready-subtitle">Your scenario and agents are fully configured. Click below
+            to launch the live AI negotiation.</p>
+
+          <div class="neg-start-meta" id="neg-start-meta"></div>
+
+          <button class="btn btn-primary btn-start-negotiation" id="btn-start-negotiation">
+            <span id="btn-start-text">🚀 Start Negotiation</span>
+          </button>
+
+          <div class="validation-banner" id="backend-validation" style="margin-top:16px;">
+            <span>⚠</span>
+            <span id="backend-validation-msg">Unable to connect to the backend server. Please start it first.</span>
+          </div>
+        </div>
+
+        <div class="nav-row">
+          <button class="btn btn-secondary" id="btn-ready-back">← Back to Summary</button>
+          <button class="btn btn-ghost" id="btn-ready-restart">Start Over</button>
+        </div>
+      </div>
+
+      <!-- ---- Live Negotiation Chat ---- -->
+      <div id="neg-live-panel" style="display:none;">
+
+        <!-- Header bar -->
+        <div class="neg-header">
+          <div class="neg-header-left">
+            <div class="neg-status-indicator" id="neg-status-dot"></div>
+            <div>
+              <div class="neg-scenario-name" id="neg-scenario-name">Negotiation</div>
+              <div class="neg-status-text" id="neg-status-text">Starting...</div>
+            </div>
+          </div>
+          <div class="neg-header-right">
+            <div class="neg-round-badge" id="neg-round-badge">Round 0 / 10</div>
+            <button class="btn btn-secondary btn-sm" id="btn-stop-negotiation" title="Stop negotiation">■ Stop</button>
+          </div>
+        </div>
+
+        <!-- Chat messages area -->
+        <div class="neg-chat" id="neg-chat">
+          <div class="neg-chat-empty" id="neg-chat-empty">
+            <div class="thinking-dots"><span></span><span></span><span></span></div>
+            <p>Initializing agents...</p>
+          </div>
+        </div>
+
+        <!-- Offer status bar -->
+        <div class="neg-status-bar" id="neg-status-bar" style="display:none;">
+          <div class="neg-offers" id="neg-offers"></div>
+          <div class="neg-progress-wrap">
+            <div class="neg-progress-label">Negotiation Progress</div>
+            <div class="neg-progress-track">
+              <div class="neg-progress-fill" id="neg-progress-fill" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Negotiation complete panel -->
+        <div class="neg-complete-panel" id="neg-complete-panel" style="display:none;"></div>
+
+        <div class="nav-row">
+          <button class="btn btn-primary" id="btn-negotiation-restart" style="width: 100%; justify-content: center;">↺
+            Start a New Negotiation</button>
+        </div>
+      </div>
+
+    </section>
+
+    <footer class="app-footer">
+      NegoSim · AI Multi-Agent Negotiation Platform
+    </footer>
+
+  </div>
+
+  <script src="js/data/scenarios.js"></script>
+  <script src="js/data/api.js"></script>
+  <script src="js/state/appState.js"></script>
+  <script src="js/app.js"></script>
 </body>
+
 </html>
