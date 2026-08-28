@@ -1363,3 +1363,417 @@ img, svg {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ==========================================================================
+   Agent Configuration Tabs — Goals | Constraints | Personality
+   ========================================================================== */
+
+/* Tab bar at top of each agent card */
+.agent-config-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 4px;
+  margin: -20px -24px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.agent-config-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  position: relative;
+}
+
+.agent-config-tab-btn:hover:not(.locked) {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.agent-config-tab-btn.active {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.agent-config-tab-btn.done::after {
+  content: '✓';
+  font-size: 11px;
+  color: var(--color-success);
+  margin-left: 2px;
+}
+
+.agent-config-tab-btn.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Tab panels */
+.tab-panel {
+  display: none;
+  animation: fadeIn var(--transition-fast);
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   Goal Chips
+   ========================================================================== */
+
+.goals-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-2);
+}
+
+.goals-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--space-3);
+}
+
+.goal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.goal-chip:hover {
+  border-color: var(--color-primary-light);
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.05);
+  transform: translateY(-1px);
+}
+
+.goal-chip.selected {
+  border-color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.goal-chip.selected::before {
+  content: '✓';
+  font-size: 11px;
+  color: var(--color-primary);
+}
+
+/* Custom goal entry row */
+.custom-goal-row {
+  display: flex;
+  gap: 8px;
+  margin-top: var(--space-3);
+}
+
+.custom-goal-input {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color var(--transition-fast);
+}
+
+.custom-goal-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+.btn-add-goal {
+  padding: 9px 14px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-add-goal:hover {
+  background: var(--color-primary-dark);
+}
+
+/* Selected goals display tags */
+.selected-goals-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-3);
+  min-height: 28px;
+}
+
+.selected-goal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 12px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary-dark);
+}
+
+.remove-goal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: rgba(99,102,241,0.15);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--color-primary-dark);
+  transition: background var(--transition-fast);
+  padding: 0;
+  line-height: 1;
+}
+
+.remove-goal-btn:hover {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.goals-validation-hint {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  margin-top: var(--space-2);
+}
+
+.goals-validation-hint.error {
+  color: var(--color-danger);
+}
+
+/* ==========================================================================
+   Constraint Options
+   ========================================================================== */
+
+.constraint-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: var(--space-3);
+}
+
+.constraint-option-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.constraint-option-row:hover {
+  border-color: var(--color-primary-light);
+  background: rgba(99, 102, 241, 0.03);
+}
+
+.constraint-option-row.selected {
+  border-color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.constraint-option-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.constraint-checkbox {
+  width: 17px;
+  height: 17px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  transition: all var(--transition-fast);
+  background: var(--color-surface);
+  color: #fff;
+}
+
+.constraint-option-row.selected .constraint-checkbox {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.constraint-option-row.selected .constraint-checkbox::after {
+  content: '✓';
+}
+
+.constraint-option-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  flex: 1;
+}
+
+/* Numeric input within constraint */
+.constraint-numeric-wrap {
+  padding-left: 27px;
+  display: none;
+}
+
+.constraint-option-row.selected .constraint-numeric-wrap {
+  display: block;
+}
+
+.constraint-numeric-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.constraint-numeric-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  background: var(--color-bg-alt);
+  color: var(--color-text);
+  transition: border-color var(--transition-fast);
+}
+
+.constraint-numeric-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+/* ==========================================================================
+   Tab navigation buttons (next step)
+   ========================================================================== */
+
+.tab-next-btn {
+  width: 100%;
+  margin-top: var(--space-4);
+  padding: 11px 20px;
+  background: var(--gradient-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  font-family: var(--font-sans);
+}
+
+.tab-next-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.tab-next-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==========================================================================
+   Config progress dots (in agent card header)
+   ========================================================================== */
+
+.agent-config-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.config-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+  transition: background var(--transition-fast);
+}
+
+.config-step-dot.done  { background: var(--color-success); }
+.config-step-dot.active { background: var(--color-primary); }
+
+.config-progress-label {
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+/* ==========================================================================
+   Summary — extended with goals
+   ========================================================================== */
+
+.summary-goals-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.summary-goals-list li {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.summary-goals-list li::before {
+  content: '›';
+  color: var(--color-primary);
+  font-weight: 700;
+  flex-shrink: 0;
+}

@@ -29,17 +29,21 @@ const ApiService = (function () {
   }
 
   async function createNegotiation(scenarioId, personalitiesMap, options = {}) {
-    const agents = Object.entries(personalitiesMap).map(([id, personality]) => ({
+    const state   = window.AppState.getState();
+    const agents  = Object.entries(personalitiesMap).map(([id, personality]) => ({
       id,
       personality,
+      goals:       window.AppState.getGoals(id),
+      constraints: window.AppState.getConstraints(id),
     }));
 
     const body = {
-      scenario_id: scenarioId,
+      scenario_id:     scenarioId,
       agents,
-      maximum_rounds: options.maxRounds || 10,
-      mode: options.mode || "simulation",
+      maximum_rounds:  options.maxRounds || 10,
+      mode:            options.mode || 'simulation',
     };
+
 
     const response = await fetch(`${BASE_URL}/negotiations`, {
       method: "POST",

@@ -24,7 +24,17 @@ function getScenarios(req, res, next) {
 /**
  * POST /api/negotiations
  * Create a new negotiation session.
- * Body: { scenario_id, agents: [{id, personality}], maximum_rounds?, mode? }
+ * Body: {
+ *   scenario_id,
+ *   agents: [{
+ *     id,
+ *     personality,
+ *     goals?: string[],
+ *     constraints?: { selected?: string[], numericMax?: number, numericMin?: number }
+ *   }],
+ *   maximum_rounds?,
+ *   mode?
+ * }
  */
 function createNegotiation(req, res, next) {
   try {
@@ -43,6 +53,22 @@ function createNegotiation(req, res, next) {
       return next(err);
     }
 
+    if (!agents || !Array.isArray(agents) || agents.length === 0) {
+      const err = new Error('agents array is required and must be non-empty');
+      err.statusCode = 400;
+      return next(err);
+    }
+
+    // Validate maximum_rounds if provided
+    if (maximum_rounds !== undefined) {
+      const rounds = Number(maximum_rounds);
+      if (isNaN(rounds) || rounds < 1 || rounds > 50) {
+        const err = new Error('maximum_rounds must be a number between 1 and 50');
+        err.statusCode = 400;
+        return next(err);
+      }
+    }
+
     const session = negotiationService.createSession({
       scenario_id,
       agents,
@@ -50,7 +76,7 @@ function createNegotiation(req, res, next) {
       mode,
     });
 
-    logger.negotiation(`Created: ${session.id}`);
+    logger.negotiation(`Created: ${session.id} | Agents: ${agents.map(a => a.id).join(', ')}`);
     res.status(201).json(session);
   } catch (err) {
     next(err);

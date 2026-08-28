@@ -2,40 +2,49 @@
  * engine/NegotiationEngine.js
  * The central orchestrator for multi-agent negotiations.
  *
- * Flow:
- *   start() → initialize agents → round loop → emit WS events → detect end → finalize
+ * Architecture (Milestone 1 — Rule-Based):
+ *
+ *   start() → initialize agents → round loop
+ *           → AgentDecisionProvider.decide()   ← abstraction (swap for LLM in M2)
+ *           → trackConcession()
+ *           → appendNegotiationHistory()
+ *           → emit WebSocket events
+ *           → detect termination → finalize()
  *
  * WebSocket events emitted:
  *   negotiation_started, round_started, agent_thinking, agent_message,
  *   offer_updated, negotiation_completed, negotiation_failed
  */
 
-const { initializeAgents } = require('../services/agent.service');
-const { generateAgentResponse } = require('../services/llm.service');
+const { initializeAgents }                    = require('../services/agent.service');
+const { trackConcession, getConcessionSummary } = require('../services/concession.service');
 const { checkAgreement, checkRejection, checkMaxRounds, checkDeadlock } = require('../services/evaluation.service');
-const { updateSession } = require('../services/negotiation.service');
-const { createMessage } = require('../models/message.model');
-const { STATUS, RESULT, serializeNegotiation } = require('../models/negotiation.model');
-const { config } = require('../config/env');
-const logger = require('../utils/logger');
+const { updateSession }                        = require('../services/negotiation.service');
+const { createMessage }                        = require('../models/message.model');
+const { STATUS, RESULT, appendNegotiationHistory } = require('../models/negotiation.model');
+const { ACTION, decisionToAction }             = require('../models/offer.model');
+const { RuleBasedDecisionProvider }            = require('./decisionProvider');
+const { config }                               = require('../config/env');
+const logger                                   = require('../utils/logger');
+
+// ============================================================
+// Decision Provider — swap RuleBasedDecisionProvider → LLMDecisionProvider in M2
+// ============================================================
+const decisionProvider = new RuleBasedDecisionProvider();
 
 // WebSocket clients map: negotiationId → Set of ws connections
 const wsClients = new Map();
 
-/**
- * Register a WebSocket client for a negotiation session.
- */
+// ============================================================
+// WebSocket helpers
+// ============================================================
+
 function registerClient(negotiationId, ws) {
-  if (!wsClients.has(negotiationId)) {
-    wsClients.set(negotiationId, new Set());
-  }
+  if (!wsClients.has(negotiationId)) wsClients.set(negotiationId, new Set());
   wsClients.get(negotiationId).add(ws);
   logger.info('Engine', `Client registered for ${negotiationId}. Total: ${wsClients.get(negotiationId).size}`);
 }
 
-/**
- * Remove a WebSocket client.
- */
 function unregisterClient(negotiationId, ws) {
   const clients = wsClients.get(negotiationId);
   if (clients) {
@@ -44,9 +53,6 @@ function unregisterClient(negotiationId, ws) {
   }
 }
 
-/**
- * Broadcast a structured event to all connected clients for a negotiation.
- */
 function broadcast(negotiationId, event, data) {
   const clients = wsClients.get(negotiationId);
   if (!clients || clients.size === 0) return;
@@ -55,33 +61,32 @@ function broadcast(negotiationId, event, data) {
 
   for (const ws of clients) {
     try {
-      if (ws.readyState === 1) {  // WebSocket.OPEN
-        ws.send(payload);
-      }
+      if (ws.readyState === 1) ws.send(payload); // WebSocket.OPEN
     } catch (err) {
       logger.warn('Engine', `Failed to send to client: ${err.message}`);
     }
   }
 }
 
-/**
- * Sleep helper.
- */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ============================================================
+// Main negotiation runner
+// ============================================================
+
 /**
- * Main negotiation runner.
- * Runs as a detached async process — does not block the HTTP response.
+ * Run the negotiation engine for a session.
+ * Executes asynchronously — does not block the HTTP response.
  *
- * @param {object} session  — live session from negotiation service
+ * @param {object} session — live session from negotiation service
  */
 async function run(session) {
   const negotiationId = session.id;
-  logger.negotiation(`Engine starting: ${negotiationId}`);
+  logger.negotiation(`Engine starting (rule-based): ${negotiationId}`);
 
-  // Initialize agents
+  // Initialize agent instances
   let agents;
   try {
     agents = initializeAgents(session);
@@ -92,213 +97,209 @@ async function run(session) {
     return;
   }
 
-  // Update status
-  updateSession(negotiationId, { status: STATUS.IN_PROGRESS });
+  // Transition to IN_PROGRESS
+  updateSession(negotiationId, {
+    status:           STATUS.IN_PROGRESS,
+    currentAgentTurn: agents[0]?.id || null,
+  });
 
-  // Emit start event
   broadcast(negotiationId, 'negotiation_started', {
-    scenario: session.scenario,
-    agents: agents.map(a => ({ id: a.id, name: a.name, role: a.role, personality: a.personality })),
+    scenario:  session.scenario,
+    agents:    agents.map(a => ({ id: a.id, name: a.name, role: a.role, personality: a.personality })),
     maxRounds: session.maxRounds,
   });
 
   logger.negotiation(`${negotiationId}: ${agents.length} agents initialized. Starting rounds...`);
 
   let currentAgentIndex = 0;
-  let continueNegotiation = true;
 
   // ======== MAIN NEGOTIATION LOOP ========
-  while (continueNegotiation) {
-    const freshSession = session;  // Live reference
-    const round = freshSession.currentRound + 1;
+  while (true) {
+    const freshSession = session; // live reference
+    const round        = freshSession.currentRound + 1;
 
-    // Update round
-    updateSession(negotiationId, { currentRound: round });
-
-    logger.round(`${negotiationId}: Round ${round} / ${freshSession.maxRounds} started`);
-    broadcast(negotiationId, 'round_started', { round, maxRounds: freshSession.maxRounds });
-
-    const currentAgent = agents[currentAgentIndex];
+    // Update round counter and currentAgentTurn
+    const currentAgent  = agents[currentAgentIndex];
     const opponentIndex = (currentAgentIndex + 1) % agents.length;
-    const opponentAgent = agents[opponentIndex];
 
-    // Find opponent's last message
-    const agentMessages = freshSession.messages;
-    const opponentLastMsg = [...agentMessages].reverse().find(m => m.agentId === opponentAgent.id);
+    updateSession(negotiationId, {
+      currentRound:     round,
+      currentAgentTurn: currentAgent.id,
+    });
 
-    // Emit "thinking" indicator
+    logger.round(`${negotiationId}: Round ${round}/${freshSession.maxRounds} | Turn: ${currentAgent.name}`);
+    broadcast(negotiationId, 'round_started', {
+      round,
+      maxRounds:        freshSession.maxRounds,
+      currentAgentTurn: currentAgent.id,
+      currentAgentName: currentAgent.name,
+    });
+
+    // ---- Thinking indicator ----
     broadcast(negotiationId, 'agent_thinking', {
-      agentId: currentAgent.id,
-      agentName: currentAgent.name,
-      role: currentAgent.role,
+      agentId:       currentAgent.id,
+      agentName:     currentAgent.name,
+      role:          currentAgent.role,
       round,
       thinkingPhrase: getThinkingPhrase(currentAgent.personality),
     });
 
+    // Configurable delay to make the UI feel alive
     await sleep(config.thinkDelayMs);
 
-    // Build offer state
-    const offerState = {};
-    for (const agent of agents) {
-      offerState[agent.id] = freshSession.offers[agent.id] ?? null;
-    }
-
-    // Generate LLM response
-    let llmResponse;
+    // ---- Decision via AgentDecisionProvider (rule-based for M1) ----
+    let decision;
     try {
-      const prompt = currentAgent.buildPrompt({
-        history: freshSession.messages,
-        opponent: opponentLastMsg ? {
-          agentName: opponentLastMsg.agentName,
-          message: opponentLastMsg.message,
-          offer: opponentLastMsg.offer,
-        } : null,
-        round,
-        maxRounds: freshSession.maxRounds,
-        offerState,
-      });
-
-      const rawResponse = await generateAgentResponse(
-        prompt, 
-        currentAgent.name,
-        currentAgent, // agentConfig
-        round,
-        freshSession.maxRounds,
-        offerState
-      );
-      llmResponse = currentAgent.validateResponse(rawResponse);
-
+      decision = await decisionProvider.decide(currentAgent, freshSession);
     } catch (err) {
-      logger.error('Engine', `LLM error for ${currentAgent.name}: ${err.message}`);
-
-      // Use a graceful fallback instead of crashing the negotiation
-      llmResponse = {
-        message: `I need a moment to reconsider my position. Please allow me to get back to you shortly.`,
-        offer: freshSession.offers[currentAgent.id] ?? null,
+      logger.error('Engine', `DecisionProvider error for ${currentAgent.name}: ${err.message}`);
+      // Graceful fallback — hold position
+      decision = {
+        message:  'I need a moment to reconsider my position. Please allow me to respond shortly.',
+        offer:    freshSession.offers[currentAgent.id] ?? null,
         decision: 'counter_offer',
+        reason:   'Decision provider error — holding position',
+        action:   ACTION.COUNTEROFFER,
       };
     }
 
-    // Create message record
+    // ---- Track concession BEFORE updating offers ----
+    if (decision.offer !== null && decision.offer !== undefined) {
+      trackConcession(freshSession, currentAgent.id, decision.offer);
+
+      // Track initial offer
+      if (!freshSession.initialOffers[currentAgent.id]) {
+        freshSession.initialOffers[currentAgent.id] = decision.offer;
+        currentAgent.initialOffer = decision.offer;
+      }
+
+      // Update current offer in session and agent
+      freshSession.offers[currentAgent.id] = decision.offer;
+      currentAgent.currentOffer = decision.offer;
+    }
+
+    // ---- Create message record ----
     const message = createMessage({
-      agentId: currentAgent.id,
+      agentId:   currentAgent.id,
       agentName: currentAgent.name,
-      role: currentAgent.role,
-      message: llmResponse.message,
-      offer: llmResponse.offer,
-      decision: llmResponse.decision,
+      role:      currentAgent.role,
+      message:   decision.message,
+      offer:     decision.offer,
+      decision:  decision.decision,
       round,
     });
 
-    // Store message
     freshSession.messages.push(message);
 
-    // Update offer tracking
-    if (llmResponse.offer !== null && llmResponse.offer !== undefined) {
-      // Track initial offer
-      if (!freshSession.initialOffers[currentAgent.id]) {
-        freshSession.initialOffers[currentAgent.id] = llmResponse.offer;
-      }
-      freshSession.offers[currentAgent.id] = llmResponse.offer;
-      currentAgent.currentOffer = llmResponse.offer;
-    }
-
-    // Emit the message to frontend
-    broadcast(negotiationId, 'agent_message', {
-      message: message.message,
-      offer: message.offer,
-      decision: message.decision,
-      agentId: message.agentId,
-      agentName: message.agentName,
-      role: message.role,
-      round: message.round,
+    // ---- Append to structured negotiation history ----
+    const action = decision.action || decisionToAction(decision.decision);
+    appendNegotiationHistory(freshSession, {
+      round,
+      agentId:   currentAgent.id,
+      agentName: currentAgent.name,
+      action,
+      offer:     decision.offer,
+      reason:    decision.reason || '',
       timestamp: message.timestamp,
-      id: message.id,
     });
 
-    // Emit offer update if offer changed
-    if (message.offer !== null) {
+    // ---- Broadcast message to frontend ----
+    broadcast(negotiationId, 'agent_message', {
+      message:   message.message,
+      offer:     message.offer,
+      decision:  message.decision,
+      agentId:   message.agentId,
+      agentName: message.agentName,
+      role:      message.role,
+      round:     message.round,
+      timestamp: message.timestamp,
+      id:        message.id,
+    });
+
+    // ---- Broadcast offer update if offer changed ----
+    if (message.offer !== null && message.offer !== undefined) {
       broadcast(negotiationId, 'offer_updated', {
-        agentId: currentAgent.id,
-        agentName: currentAgent.name,
-        offer: message.offer,
-        offers: { ...freshSession.offers },
+        agentId:      currentAgent.id,
+        agentName:    currentAgent.name,
+        offer:        message.offer,
+        offers:       { ...freshSession.offers },
         round,
       });
     }
 
-    logger.agent(`${currentAgent.name} | Round ${round} | Decision: ${llmResponse.decision} | Offer: ${llmResponse.offer}`);
+    logger.agent(
+      `${currentAgent.name} | Round ${round} | Action: ${action} | Offer: ${decision.offer}`
+    );
 
-    // ======== END-CONDITION CHECKS ========
+    // ======== TERMINATION CHECKS ========
 
-    // 1. Agreement check
+    // 1. Agreement
     const agreementCheck = checkAgreement(freshSession, {
-      agentId: currentAgent.id,
+      agentId:   currentAgent.id,
       agentName: currentAgent.name,
-      offer: llmResponse.offer,
-      decision: llmResponse.decision,
+      offer:     decision.offer,
+      decision:  decision.decision,
     });
-
     if (agreementCheck.agreed) {
       await finalize(session, RESULT.AGREEMENT, agreementCheck.finalOffer, agreementCheck.reason, agents, negotiationId);
       return;
     }
 
-    // 2. Rejection check
+    // 2. Rejection
     const rejectionCheck = checkRejection(freshSession, {
-      agentId: currentAgent.id,
-      decision: llmResponse.decision,
+      agentId:  currentAgent.id,
+      decision: decision.decision,
     });
-
     if (rejectionCheck.rejected) {
       await finalize(session, RESULT.REJECTION, null, rejectionCheck.reason, agents, negotiationId);
       return;
     }
 
-    // 3. Max rounds check
+    // 3. Max rounds
     const maxRoundsCheck = checkMaxRounds(freshSession);
     if (maxRoundsCheck.maxReached) {
       await finalize(session, RESULT.MAX_ROUNDS, null, maxRoundsCheck.reason, agents, negotiationId);
       return;
     }
 
-    // 4. Deadlock check
+    // 4. Deadlock
     const deadlockCheck = checkDeadlock(freshSession);
     if (deadlockCheck.deadlocked) {
       await finalize(session, RESULT.REJECTION, null, deadlockCheck.reason, agents, negotiationId);
       return;
     }
 
-    // Switch to next agent
+    // ---- Advance turn ----
     currentAgentIndex = opponentIndex;
-
-    // Small delay between agent turns
     await sleep(500);
   }
 }
 
-/**
- * Finalize the negotiation — update state, compute summary, emit completion event.
- */
+// ============================================================
+// Finalize — close negotiation and emit completion event
+// ============================================================
+
 async function finalize(session, result, finalOffer, reason, agents, negotiationId) {
   const now = new Date().toISOString();
+
   const statusMap = {
-    [RESULT.AGREEMENT]: STATUS.COMPLETED,
-    [RESULT.REJECTION]: STATUS.COMPLETED,
+    [RESULT.AGREEMENT]:  STATUS.COMPLETED,
+    [RESULT.REJECTION]:  STATUS.COMPLETED,
     [RESULT.MAX_ROUNDS]: STATUS.COMPLETED,
-    [RESULT.ERROR]: STATUS.FAILED,
+    [RESULT.ERROR]:      STATUS.FAILED,
   };
 
   updateSession(negotiationId, {
-    status: statusMap[result] || STATUS.COMPLETED,
+    status:      statusMap[result] || STATUS.COMPLETED,
     result,
     resultReason: reason,
     completedAt: now,
-    agreement: result === RESULT.AGREEMENT ? { offer: finalOffer, reason } : null,
+    agreement:   result === RESULT.AGREEMENT ? { offer: finalOffer, reason } : null,
   });
 
-  // Build summary
-  const summary = buildSummary(session, result, finalOffer, agents, reason);
+  // Build summary including concession data
+  const concessionSummary = getConcessionSummary(session);
+  const summary = buildSummary(session, result, finalOffer, agents, reason, concessionSummary);
 
   logger.negotiation(`${negotiationId} finalized. Result: ${result}. Final offer: ${finalOffer}`);
 
@@ -307,38 +308,43 @@ async function finalize(session, result, finalOffer, reason, agents, negotiation
     finalOffer,
     reason,
     summary,
-    rounds: session.currentRound,
-    status: statusMap[result] || STATUS.COMPLETED,
-    agents: agents.map(a => ({
-      id: a.id,
-      name: a.name,
-      role: a.role,
-      decision: result === RESULT.AGREEMENT ? 'accepted' : 'rejected',
+    concessionSummary,
+    rounds:  session.currentRound,
+    status:  statusMap[result] || STATUS.COMPLETED,
+    agents:  agents.map(a => ({
+      id:           a.id,
+      name:         a.name,
+      role:         a.role,
+      decision:     result === RESULT.AGREEMENT ? 'accepted' : 'rejected',
       initialOffer: session.initialOffers[a.id] || null,
-      finalOffer: session.offers[a.id] || null,
+      finalOffer:   session.offers[a.id] || null,
     })),
   });
 }
 
-/**
- * Build a human-readable negotiation summary.
- */
-function buildSummary(session, result, finalOffer, agents, reason) {
+// ============================================================
+// Summary builder
+// ============================================================
+
+function buildSummary(session, result, finalOffer, agents, reason, concessionSummary) {
   const summary = {
     result,
     reason,
     finalOffer,
-    totalRounds: session.currentRound,
-    maxRounds: session.maxRounds,
+    totalRounds:  session.currentRound,
+    maxRounds:    session.maxRounds,
     agentSummaries: agents.map(a => ({
-      id: a.id,
-      name: a.name,
-      role: a.role,
-      personality: a.personality,
+      id:           a.id,
+      name:         a.name,
+      role:         a.role,
+      personality:  a.personality,
+      goals:        a.goals || [a.goal],
       initialOffer: session.initialOffers[a.id] || null,
-      finalOffer: session.offers[a.id] || null,
+      finalOffer:   session.offers[a.id] || null,
+      concessions:  concessionSummary?.[a.id] || {},
     })),
-    messages: session.messages,
+    negotiationHistory: session.negotiationHistory,
+    messages:           session.messages,
   };
 
   if (result === RESULT.AGREEMENT) {
@@ -351,16 +357,21 @@ function buildSummary(session, result, finalOffer, agents, reason) {
   return summary;
 }
 
-/**
- * Get a contextual thinking phrase based on personality.
- */
+// ============================================================
+// Thinking phrases (personality-aware)
+// ============================================================
+
 function getThinkingPhrase(personality) {
   const phrases = {
-    aggressive: ['Formulating a strong counter...', 'Assessing leverage...', 'Preparing a firm response...'],
+    aggressive:    ['Formulating a strong counter...', 'Assessing leverage...', 'Preparing a firm response...'],
     collaborative: ['Considering mutual benefits...', 'Looking for common ground...', 'Analyzing your proposal...'],
     'risk-averse': ['Carefully evaluating risks...', 'Reviewing the terms...', 'Calculating a safe move...'],
+    competitive:   ['Identifying winning strategy...', 'Analyzing opponent position...', 'Preparing to win...'],
+    flexible:      ['Adapting my approach...', 'Exploring options...', 'Finding the best angle...'],
+    analytical:    ['Running the numbers...', 'Evaluating data points...', 'Computing optimal response...'],
+    professional:  ['Reviewing the proposal...', 'Consulting my guidelines...', 'Preparing a structured response...'],
   };
-  const options = phrases[personality] || phrases['collaborative'];
+  const options = phrases[(personality || '').toLowerCase()] || phrases['collaborative'];
   return options[Math.floor(Math.random() * options.length)];
 }
 
