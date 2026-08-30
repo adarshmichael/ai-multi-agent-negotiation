@@ -5,8 +5,8 @@
  */
 
 const ApiService = (function () {
-  const BASE_URL = "http://localhost:8001/api";
-  const WS_URL = "ws://localhost:8001";
+  const BASE_URL = "https://ai-multi-agent-negotiation.onrender.com/api";
+  const WS_URL = "wss://ai-multi-agent-negotiation.onrender.com";
 
   // Active WebSocket connection
   let activeWs = null;
