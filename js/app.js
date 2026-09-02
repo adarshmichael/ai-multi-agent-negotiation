@@ -1098,6 +1098,16 @@ async function init() {
     window.ApiService.disconnectWebSocket();
     AppState.reset();
     AppState.resetNegotiation();
+    const chat = document.getElementById('neg-chat');
+    if (chat) chat.innerHTML = '<div class="neg-chat-empty" id="neg-chat-empty"><div class="thinking-dots"><span></span><span></span><span></span></div><p>Initializing agents...</p></div>';
+    const offersEl = document.getElementById('neg-offers');
+    if (offersEl) offersEl.innerHTML = '';
+    const progressFill = document.getElementById('neg-progress-fill');
+    if (progressFill) progressFill.style.width = '0%';
+    const statusBar = document.getElementById('neg-status-bar');
+    if (statusBar) statusBar.style.display = 'none';
+    const completePanel = document.getElementById('neg-complete-panel');
+    if (completePanel) completePanel.style.display = 'none';
     window.history.replaceState({}, document.title, window.location.pathname);
   });
 
@@ -1107,6 +1117,16 @@ async function init() {
     window.ApiService.disconnectWebSocket();
     AppState.reset();
     AppState.resetNegotiation();
+    const chat = document.getElementById('neg-chat');
+    if (chat) chat.innerHTML = '<div class="neg-chat-empty" id="neg-chat-empty"><div class="thinking-dots"><span></span><span></span><span></span></div><p>Initializing agents...</p></div>';
+    const offersEl = document.getElementById('neg-offers');
+    if (offersEl) offersEl.innerHTML = '';
+    const progressFill = document.getElementById('neg-progress-fill');
+    if (progressFill) progressFill.style.width = '0%';
+    const statusBar = document.getElementById('neg-status-bar');
+    if (statusBar) statusBar.style.display = 'none';
+    const completePanel = document.getElementById('neg-complete-panel');
+    if (completePanel) completePanel.style.display = 'none';
     window.history.replaceState({}, document.title, window.location.pathname);
   });
 
