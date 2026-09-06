@@ -1,8 +1,8 @@
 """
 llm_interface.py
 ================
-Provides generate_agent_response() — the single entry point for getting
-an agent's next action. In real mode, calls Gemini 2.0 Flash. With --mock
+Provides generate_agent_response() -- the single entry point for getting
+an agent's next action. In real mode, calls Gemini 3.5 Flash. With --mock
 flag (or when NEGOSIM_MOCK=1 env var), uses deterministic rule-based logic.
 
 BUG FIXES vs Milestone 2:
@@ -10,22 +10,22 @@ BUG FIXES vs Milestone 2:
   and "offer.value" for numeric proposals, matching the orchestrator.
 - Added JSON parse retry + safe fallback on malformed Gemini output.
 - API key is loaded from .env via python-dotenv; never hardcoded.
+- Em dash / special Unicode chars replaced with ASCII for Windows compatibility.
 """
 
 import json
 import os
 import re
-import time
 import sys
+import time
 from typing import Dict, Any
 
 from dotenv import load_dotenv
+from agent_input import AgentInputPayload
 
 # Load .env from the orchestrator directory (where this file lives)
 _HERE = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(_HERE, ".env"))
-
-from agent_input import AgentInputPayload
 
 # ---------------------------------------------------------------------------
 # Determine operating mode
@@ -68,7 +68,7 @@ RESPONSE_SCHEMA = {
 # ---------------------------------------------------------------------------
 def _format_history(history: list) -> str:
     if not history:
-        return "No moves yet — this is the opening offer."
+        return "No moves yet -- this is the opening offer."
     lines = []
     for entry in history:
         agent = entry.get("agent_id", "?")
@@ -81,7 +81,7 @@ def _format_history(history: list) -> str:
         reasoning = det.get("reasoning", "")
         line = f"  [Round {rnd}] {agent}: {action}"
         if value is not None:
-            line += f" — value: {value:,.0f}" if isinstance(value, (int, float)) else f" — value: {value}"
+            line += f" - value: {value:,.0f}" if isinstance(value, (int, float)) else f" - value: {value}"
         if terms:
             line += f" | terms: {terms}"
         if reasoning:
@@ -113,7 +113,7 @@ The opponent's CURRENT OFFER for you to respond to:
     hint_block = ""
     if hint:
         hint_block = f"""
-[NEGOTIATION GUARDRAILS — you MUST respect these numeric boundaries]:
+[NEGOTIATION GUARDRAILS - you MUST respect these numeric boundaries]:
   Recommended offer: {hint.get('recommended_offer')}
   Acceptable range : {hint.get('min_offer')} to {hint.get('max_offer')}
   Engine suggestion: {hint.get('decision')} ({hint.get('reasoning')})
