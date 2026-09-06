@@ -21,6 +21,21 @@
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
 
+  /* ---- Equilibrium brand palette ---- */
+  --color-buyer:          #B8623F;  /* Copper — Buyer Agent */
+  --color-buyer-light:    rgba(184, 98, 63, 0.12);
+  --color-buyer-glow:     rgba(184, 98, 63, 0.3);
+  --color-vendor:         #3A5A45;  /* Forest Green — Vendor Agent */
+  --color-vendor-light:   rgba(58, 90, 69, 0.12);
+  --color-vendor-glow:    rgba(58, 90, 69, 0.3);
+  --color-orchestrator:   #1B2A41;  /* Ink Navy — Orchestrator (structural) */
+  --color-orch-light:     rgba(27, 42, 65, 0.08);
+  --color-orch-glow:      rgba(27, 42, 65, 0.4);
+  --color-state:          #5A5F68;  /* Slate Gray — State records */
+  --color-state-border:   rgba(90, 95, 104, 0.3);
+  --color-success-sage:   #6B8F71;  /* Sage Green — Agreement */
+  --color-warning-amber:  #C79A3D;  /* Muted Amber — Deadlock / timeout */
+
   --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #0ea5e9 100%);
   --gradient-surface: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
 
@@ -44,6 +59,7 @@
   --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.15), 0 12px 36px rgba(99, 102, 241, 0.15);
 
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", "Courier New", monospace;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --transition-fast: 180ms var(--ease-out);
@@ -55,6 +71,7 @@
    ========================================================================== */
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -73,6 +90,11 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   perspective: 1600px;
+  user-select: none;
+}
+
+input, textarea, [contenteditable] {
+  user-select: auto;
 }
 
 h1, h2, h3, h4, p {
@@ -1777,3 +1799,1828 @@ img, svg {
   font-weight: 700;
   flex-shrink: 0;
 }
+
+/* ==========================================================================
+   EQUILIBRIUM — Scenario Info Bar
+   ========================================================================== */
+.neg-scenario-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-scenario-bar-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.neg-scenario-bar-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--color-text-faint);
+}
+
+.neg-scenario-bar-text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.neg-scenario-bar-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.neg-scenario-bar-desc {
+  font-size: 12.5px;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.neg-scenario-bar-desc::before {
+  content: '·';
+  margin-right: var(--space-2);
+  opacity: 0.5;
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Orchestrator Status Bar
+   The orchestrator uses: hexagon shape, Ink Navy color, ALL-CAPS labels.
+   It NEVER shows dialogue — only operational facts.
+   ========================================================================== */
+.neg-orch-status-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 10px var(--space-5);
+  background: var(--color-orchestrator);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  box-shadow: 0 4px 20px -4px var(--color-orch-glow);
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle scanline texture to reinforce "system/machine" quality */
+.neg-orch-status-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255,255,255,0.015) 2px,
+    rgba(255,255,255,0.015) 4px
+  );
+  pointer-events: none;
+}
+
+/* Hexagon node icon */
+.neg-orch-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.neg-orch-hexagon {
+  width: 36px;
+  height: 40px;
+  color: rgba(255,255,255,0.85);
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.15));
+}
+
+.neg-orch-node-pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.neg-orch-node-pulse.active {
+  opacity: 1;
+  animation: orch-pulse 2.4s infinite;
+}
+
+@keyframes orch-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.15); }
+  50%       { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+}
+
+.neg-orch-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.95);
+  white-space: nowrap;
+}
+
+.neg-orch-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255,255,255,0.12);
+  flex-shrink: 0;
+}
+
+.neg-orch-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.neg-orch-stat-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.45);
+}
+
+.neg-orch-stat-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.95);
+  white-space: nowrap;
+}
+
+.neg-orch-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+}
+
+/* Override status indicator colors for the dark bar */
+.neg-orch-status-bar .neg-status-indicator {
+  background: rgba(255,255,255,0.4);
+}
+
+.neg-orch-status-bar .neg-status-indicator.live {
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.25);
+}
+
+.neg-orch-status-bar .neg-status-indicator.completed {
+  background: #818cf8;
+}
+
+.neg-orch-status-bar .neg-status-indicator.failed {
+  background: #f87171;
+}
+
+/* Override stop button for the dark bar */
+.neg-orch-status-bar .btn-secondary {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.75);
+}
+
+.neg-orch-status-bar .btn-secondary:hover {
+  background: rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.95);
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Negotiation Arena (3-column grid)
+   Left: Buyer Agent · Center: Orchestrator Spine · Right: Vendor Agent
+   ========================================================================== */
+.neg-arena {
+  display: grid;
+  grid-template-columns: 1fr 220px 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  align-items: start;
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Agent Panels (Buyer + Vendor)
+   Solid colored left-border = reads as "someone" not "something"
+   ========================================================================== */
+.neg-agent-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow var(--transition-fast);
+}
+
+.neg-agent-panel:focus-within {
+  box-shadow: var(--shadow-lg);
+}
+
+/* The iconic colored left-border — Buyer: Copper, Vendor: Forest Green */
+.neg-buyer-panel {
+  border-left: 3px solid var(--color-buyer);
+}
+
+.neg-vendor-panel {
+  border-left: 3px solid var(--color-vendor);
+}
+
+/* Active panel glow */
+.neg-buyer-panel.panel-active {
+  box-shadow: var(--shadow-md), -2px 0 12px -2px var(--color-buyer-glow);
+  animation: buyer-border-pulse 2s infinite;
+}
+
+.neg-vendor-panel.panel-active {
+  box-shadow: var(--shadow-md), -2px 0 12px -2px var(--color-vendor-glow);
+  animation: vendor-border-pulse 2s infinite;
+}
+
+@keyframes buyer-border-pulse {
+  0%, 100% { border-left-color: var(--color-buyer); }
+  50%       { border-left-color: rgba(184, 98, 63, 0.5); }
+}
+
+@keyframes vendor-border-pulse {
+  0%, 100% { border-left-color: var(--color-vendor); }
+  50%       { border-left-color: rgba(58, 90, 69, 0.5); }
+}
+
+/* Panel header */
+.neg-agent-panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+}
+
+.neg-agent-panel-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.buyer-avatar {
+  background: linear-gradient(135deg, #C4714A, #9B4F2D);
+  box-shadow: 0 4px 12px -4px var(--color-buyer-glow);
+}
+
+.vendor-avatar {
+  background: linear-gradient(135deg, #4A7A5A, #2D5A3A);
+  box-shadow: 0 4px 12px -4px var(--color-vendor-glow);
+}
+
+.neg-agent-panel-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.neg-agent-panel-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.neg-agent-panel-role {
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+  margin-top: 1px;
+}
+
+/* Agent status badge — Waiting / Active / Responded */
+.neg-agent-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  background: rgba(0,0,0,0.04);
+  color: var(--color-text-faint);
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.neg-agent-badge[data-state="waiting"] {
+  color: var(--color-text-faint);
+  background: rgba(0,0,0,0.04);
+  border-color: var(--color-border-strong);
+}
+
+.neg-buyer-panel .neg-agent-badge[data-state="active"] {
+  background: var(--color-buyer-light);
+  border-color: var(--color-buyer);
+  color: var(--color-buyer);
+}
+
+.neg-vendor-panel .neg-agent-badge[data-state="active"] {
+  background: var(--color-vendor-light);
+  border-color: var(--color-vendor);
+  color: var(--color-vendor);
+}
+
+.neg-agent-badge[data-state="responded"] {
+  background: rgba(16,185,129,0.1);
+  border-color: rgba(16,185,129,0.3);
+  color: var(--color-success);
+}
+
+/* Scrollable message area within the panel */
+.neg-agent-chat {
+  padding: var(--space-4);
+  min-height: 340px;
+  max-height: 460px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  scroll-behavior: smooth;
+}
+
+.neg-agent-chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  flex: 1;
+  color: var(--color-text-faint);
+  font-size: 12.5px;
+  padding: var(--space-6) 0;
+  min-height: 200px;
+}
+
+/* Message bubbles within panels */
+.neg-panel-message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: messageIn 350ms var(--ease-out);
+}
+
+.neg-panel-bubble {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  border-top-left-radius: 4px;
+  padding: var(--space-3) var(--space-4);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-buyer-panel .neg-panel-bubble {
+  border-top-left-radius: 4px;
+  background: linear-gradient(135deg, rgba(184,98,63,0.06) 0%, rgba(184,98,63,0.02) 100%);
+  border-color: rgba(184, 98, 63, 0.15);
+}
+
+.neg-vendor-panel .neg-panel-bubble {
+  border-top-left-radius: 4px;
+  background: linear-gradient(135deg, rgba(58,90,69,0.07) 0%, rgba(58,90,69,0.02) 100%);
+  border-color: rgba(58, 90, 69, 0.15);
+}
+
+.neg-panel-bubble-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  flex-wrap: wrap;
+}
+
+/* Typing indicator within panel (reuses .neg-thinking-bubble styling) */
+.neg-panel-thinking {
+  animation: messageIn 300ms var(--ease-out);
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Orchestrator Spine (center column)
+   Uses vertical icon timeline. Narrow (220px). All-caps labels.
+   ========================================================================== */
+.neg-orch-spine {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.neg-orch-spine-header {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-text-faint);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+}
+
+/* Vertical timeline */
+.neg-orch-timeline {
+  padding: var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  min-height: 180px;
+}
+
+.neg-timeline-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  position: relative;
+  padding-bottom: var(--space-3);
+}
+
+/* Vertical connector line */
+.neg-timeline-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 18px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.neg-timeline-step.step-done:not(:last-child)::after {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+/* Step dot */
+.neg-timeline-dot {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 9px;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.neg-timeline-step.step-done .neg-timeline-dot {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1.5px solid var(--color-success);
+  color: var(--color-success);
+}
+
+.neg-timeline-step.step-active .neg-timeline-dot {
+  background: rgba(27, 42, 65, 0.08);
+  border: 2px solid var(--color-orchestrator);
+  animation: step-dot-blink 1.4s infinite;
+}
+
+.neg-timeline-step.step-pending .neg-timeline-dot {
+  background: var(--color-bg-alt);
+  border: 1.5px dashed var(--color-border-strong);
+}
+
+@keyframes step-dot-blink {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(27, 42, 65, 0.2); }
+  50%       { box-shadow: 0 0 0 4px rgba(27, 42, 65, 0.08); }
+}
+
+.neg-timeline-step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.neg-timeline-step-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.neg-timeline-step.step-pending .neg-timeline-step-label {
+  color: var(--color-text-faint);
+}
+
+.neg-timeline-step-time {
+  font-size: 10px;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  margin-top: 1px;
+}
+
+/* Active step — pulsing dot decoration */
+.neg-timeline-step.step-active .neg-timeline-step-label {
+  color: var(--color-orchestrator);
+}
+
+/* Log drawer toggle */
+.neg-log-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-alt);
+  border: none;
+  border-top: 1px solid var(--color-border);
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  letter-spacing: 0.04em;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  font-family: var(--font-sans);
+}
+
+.neg-log-toggle:hover {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.neg-log-toggle-caret {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  transition: transform var(--transition-fast);
+}
+
+.neg-log-toggle[aria-expanded="true"] .neg-log-toggle-caret {
+  transform: rotate(180deg);
+}
+
+/* Collapsible log drawer */
+.neg-orch-log-drawer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 380ms var(--ease-out);
+}
+
+.neg-orch-log-drawer.open {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.neg-orch-log {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #0d1117;  /* GitHub dark log background */
+}
+
+.neg-log-entry {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.neg-log-entry.log-done {
+  color: #8b949e;
+}
+
+.neg-log-entry.log-done .neg-log-icon {
+  color: #3fb950;
+}
+
+.neg-log-entry.log-active {
+  color: #c9d1d9;
+}
+
+.neg-log-entry.log-active .neg-log-icon {
+  color: #e3b341;
+  animation: dot-blink-log 1.2s infinite;
+}
+
+@keyframes dot-blink-log {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.neg-log-entry.log-error .neg-log-icon {
+  color: #f85149;
+}
+
+.neg-log-icon {
+  font-size: 11px;
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.neg-log-time {
+  color: #484f58;
+  flex-shrink: 0;
+  min-width: 65px;
+}
+
+.neg-log-msg {
+  flex: 1;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Negotiation State Metrics Strip
+   Dashed border = reads as "data record", NOT a speaker or participant.
+   Values flash-highlight when they update.
+   ========================================================================== */
+.neg-state-strip {
+  display: flex;
+  align-items: stretch;
+  background: var(--color-surface);
+  border: 1.5px dashed var(--color-state-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-3);
+  gap: 0;
+  overflow-x: auto;
+}
+
+.neg-state-block {
+  flex: 1;
+  min-width: 100px;
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.neg-state-sep {
+  width: 1px;
+  background: var(--color-border);
+  flex-shrink: 0;
+  margin: var(--space-2) 0;
+}
+
+.neg-state-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-state);
+  text-transform: uppercase;
+}
+
+.neg-state-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.neg-state-value.gap-value {
+  color: var(--color-warning-amber);
+}
+
+.neg-state-value.agreement-value {
+  color: var(--color-success-sage);
+}
+
+/* Flash animation when a state value updates */
+@keyframes stat-flash {
+  0%   { background: rgba(99, 102, 241, 0.15); border-radius: 4px; }
+  100% { background: transparent; }
+}
+
+.neg-state-value.flashing {
+  animation: stat-flash 600ms var(--ease-out) forwards;
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Round Progress Bar (segmented)
+   ========================================================================== */
+.neg-round-progress-wrap {
+  margin-bottom: var(--space-4);
+}
+
+.neg-round-progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.neg-round-track {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+}
+
+.neg-round-segment {
+  flex: 1;
+  height: 100%;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.07);
+  transition: background 500ms var(--ease-out);
+}
+
+.neg-round-segment.seg-done {
+  background: var(--gradient-primary);
+}
+
+.neg-round-segment.seg-current {
+  background: var(--color-accent);
+  animation: seg-pulse 1.5s infinite;
+}
+
+@keyframes seg-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Responsive: collapse arena to 1-column on smaller screens
+   ========================================================================== */
+@media (max-width: 900px) {
+  .neg-arena {
+    grid-template-columns: 1fr;
+  }
+
+  .neg-orch-spine {
+    order: -1;  /* Spine floats to top on mobile */
+  }
+
+  .neg-agent-chat {
+    min-height: 200px;
+    max-height: 280px;
+  }
+
+  .neg-orch-status-bar {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .neg-orch-divider {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .neg-state-strip {
+    flex-wrap: wrap;
+    gap: 0;
+  }
+
+  .neg-state-block {
+    min-width: 40%;
+    flex: 0 0 40%;
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-2);
+  }
+
+  .neg-state-sep {
+    display: none;
+  }
+
+  .neg-scenario-bar-desc {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Professional Polish Pass
+   Overrides and refinements to match the premium existing Inter-based UI.
+   ========================================================================== */
+
+/* --- 1. Negotiate screen: max-width, padding, section spacing --- */
+#screen-negotiate {
+  max-width: 100%;
+}
+
+#neg-live-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Remove double margin from child sections within the flexbox */
+#neg-live-panel .neg-scenario-bar,
+#neg-live-panel .neg-orch-status-bar,
+#neg-live-panel .neg-arena,
+#neg-live-panel .neg-state-strip,
+#neg-live-panel .neg-round-progress-wrap,
+#neg-live-panel .neg-complete-panel {
+  margin-bottom: 0;
+}
+
+/* --- 2. Scenario info bar: icon accent, badge-style scenario chip --- */
+.neg-scenario-bar {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.04) 0%, rgba(255,255,255,1) 60%);
+  border-color: rgba(99,102,241,0.15);
+}
+
+.neg-scenario-bar-icon {
+  width: 32px;
+  height: 32px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 8px;
+}
+
+.neg-scenario-bar-icon svg {
+  stroke: var(--color-primary);
+}
+
+.neg-scenario-bar-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.neg-scenario-bar-desc {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* --- 3. Orchestrator status bar: tighten layout, fix hexagon rendering --- */
+.neg-orch-status-bar {
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  gap: var(--space-3);
+}
+
+/* Refined hexagon that looks like an actual hexagon on-screen */
+.neg-orch-node {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.1);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: visible;
+}
+
+/* Override the SVG-based hexagon with a cleaner CSS hex shape */
+.neg-orch-hexagon {
+  display: none; /* Hide SVG, use CSS clip-path instead */
+}
+
+/* Gear / hub icon inside the hexagon via ::after */
+.neg-orch-node::after {
+  content: '⬡';
+  font-size: 20px;
+  color: rgba(255,255,255,0.9);
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(255,255,255,0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.neg-orch-node-pulse {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.neg-orch-node-pulse.active {
+  opacity: 1;
+  animation: orch-pulse 2.4s infinite;
+}
+
+.neg-orch-node.pulsing {
+  animation: hex-node-glow 2.4s infinite;
+}
+
+@keyframes hex-node-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); }
+  50%       { box-shadow: 0 0 12px 4px rgba(255,255,255,0.08); }
+}
+
+.neg-orch-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  font-weight: 800;
+}
+
+.neg-orch-stat-label {
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+}
+
+.neg-orch-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.neg-orch-divider {
+  height: 24px;
+}
+
+/* Status pill refinement */
+.neg-orch-status-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 6px 14px;
+}
+
+/* --- 4. Negotiation arena: equal-height panels via stretch --- */
+.neg-arena {
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
+/* Agent panels fill the row height */
+.neg-agent-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat area takes all remaining vertical space */
+.neg-agent-chat {
+  flex: 1;
+  min-height: 300px;
+  max-height: 420px;
+}
+
+/* --- 5. Custom thin scrollbars for agent chat areas --- */
+.neg-agent-chat::-webkit-scrollbar {
+  width: 4px;
+}
+
+.neg-agent-chat::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.neg-agent-chat::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 999px;
+}
+
+.neg-buyer-panel .neg-agent-chat::-webkit-scrollbar-thumb {
+  background: rgba(184, 98, 63, 0.25);
+}
+
+.neg-vendor-panel .neg-agent-chat::-webkit-scrollbar-thumb {
+  background: rgba(58, 90, 69, 0.25);
+}
+
+/* --- 6. Agent panel header refinements --- */
+.neg-agent-panel-header {
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.neg-buyer-panel .neg-agent-panel-header {
+  background: linear-gradient(135deg, rgba(184,98,63,0.05) 0%, var(--color-surface) 60%);
+}
+
+.neg-vendor-panel .neg-agent-panel-header {
+  background: linear-gradient(135deg, rgba(58,90,69,0.05) 0%, var(--color-surface) 60%);
+}
+
+.neg-agent-panel-name {
+  font-size: 15px;
+  letter-spacing: -0.015em;
+}
+
+.neg-agent-panel-role {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Avatar size and shadow refinement */
+.neg-agent-panel-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Badge label uppercase */
+.neg-agent-badge {
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+}
+
+/* --- 7. Message bubbles inside panels --- */
+.neg-agent-chat {
+  padding: 14px 14px;
+  gap: var(--space-3);
+}
+
+.neg-panel-bubble {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  line-height: 1.6;
+  box-shadow: none;
+  border-width: 1px;
+}
+
+.neg-panel-bubble-footer {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Buyer footer separator matches brand */
+.neg-buyer-panel .neg-panel-bubble-footer {
+  border-top-color: rgba(184,98,63,0.1);
+}
+
+.neg-vendor-panel .neg-panel-bubble-footer {
+  border-top-color: rgba(58,90,69,0.1);
+}
+
+.neg-round-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(0,0,0,0.06);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.neg-panel-bubble-footer > span:last-child {
+  font-size: 10.5px;
+  color: var(--color-text-faint);
+}
+
+/* Offer badges within panel bubbles */
+.neg-panel-bubble .neg-offer-badge {
+  margin-top: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 5px 12px;
+}
+
+/* Empty state placeholder */
+.neg-agent-chat-empty {
+  gap: var(--space-3);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+/* --- 8. Orchestrator spine refinements --- */
+.neg-orch-spine {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+.neg-orch-spine-header {
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(27,42,65,0.05) 0%, var(--color-bg-alt) 100%);
+  color: var(--color-orchestrator);
+  font-weight: 800;
+  border-bottom: 1px solid rgba(27,42,65,0.1);
+}
+
+.neg-orch-timeline {
+  padding: 12px 12px;
+  min-height: 200px;
+}
+
+.neg-timeline-step {
+  padding-bottom: 10px;
+}
+
+.neg-timeline-dot {
+  width: 18px;
+  height: 18px;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.neg-timeline-step-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.neg-timeline-step.step-done .neg-timeline-step-label {
+  color: var(--color-text-muted);
+}
+
+.neg-timeline-step.step-active .neg-timeline-step-label {
+  color: var(--color-orchestrator);
+  font-weight: 700;
+}
+
+.neg-timeline-step-time {
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+/* Log toggle button */
+.neg-log-toggle {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  padding: 8px 14px;
+  text-transform: uppercase;
+  color: var(--color-orchestrator);
+  background: rgba(27,42,65,0.04);
+  border-top: 1px solid rgba(27,42,65,0.1);
+  opacity: 0.75;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.neg-log-toggle:hover {
+  opacity: 1;
+  background: rgba(27,42,65,0.08);
+  color: var(--color-orchestrator);
+}
+
+/* Log drawer refinement */
+.neg-orch-log {
+  padding: 10px 12px;
+  gap: 3px;
+  border-top: none;
+}
+
+.neg-log-entry {
+  font-size: 10px;
+  line-height: 1.6;
+  gap: 8px;
+}
+
+.neg-log-time {
+  min-width: 60px;
+  font-size: 10px;
+}
+
+.neg-log-msg {
+  font-size: 10px;
+}
+
+/* --- 9. State metrics strip: more visual weight, consistent heights --- */
+.neg-state-strip {
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px dashed var(--color-state-border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(90,95,104,0.03) 0%, var(--color-surface) 100%);
+}
+
+.neg-state-block {
+  padding: 8px var(--space-3);
+  min-width: 90px;
+}
+
+.neg-state-label {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  margin-bottom: 5px;
+}
+
+.neg-state-value {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-family: var(--font-sans);
+}
+
+/* Agreement value override */
+.neg-state-value.agreement-value {
+  color: var(--color-success-sage);
+}
+
+/* --- 10. Round progress bar: taller segments, better spacing --- */
+.neg-round-progress-wrap {
+  padding: var(--space-3) 0;
+}
+
+.neg-round-progress-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+}
+
+.neg-round-track {
+  height: 10px;
+  gap: 4px;
+}
+
+.neg-round-segment {
+  border-radius: 4px;
+  background: rgba(0,0,0,0.06);
+}
+
+.neg-round-segment.seg-done {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 2px 6px -2px rgba(99,102,241,0.4);
+}
+
+.neg-round-segment.seg-current {
+  background: var(--color-accent);
+  box-shadow: 0 2px 6px -2px rgba(14,165,233,0.5);
+}
+
+/* --- 11. Completion panel: match existing card shadow/radius --- */
+.neg-complete-panel {
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+/* --- 12. Nav row at bottom of live panel --- */
+#neg-live-panel .nav-row {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+#btn-negotiation-restart {
+  max-width: 320px;
+  margin: 0 auto;
+  width: 100%;
+  justify-content: center;
+}
+
+/* --- 13. Thinking bubble inside panels: match panel brand color --- */
+.neg-buyer-panel .neg-thinking-bubble {
+  border-color: rgba(184, 98, 63, 0.2);
+  background: rgba(184, 98, 63, 0.04);
+}
+
+.neg-vendor-panel .neg-thinking-bubble {
+  border-color: rgba(58, 90, 69, 0.2);
+  background: rgba(58, 90, 69, 0.04);
+}
+
+/* Thinking dots in buyer panel use copper color */
+.neg-buyer-panel .thinking-dots span {
+  background: var(--color-buyer);
+}
+
+.neg-vendor-panel .thinking-dots span {
+  background: var(--color-vendor);
+}
+
+/* --- 14. General: prevent text selection on badges/labels --- */
+.neg-agent-badge,
+.neg-orch-label,
+.neg-orch-stat-label,
+.neg-state-label,
+.neg-orch-spine-header,
+.neg-round-progress-label {
+  user-select: none;
+}
+
+/* --- 15. Responsive: tighten on medium screens --- */
+@media (max-width: 1200px) {
+  .neg-arena {
+    grid-template-columns: 1fr 200px 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .neg-arena {
+    grid-template-columns: 1fr 180px 1fr;
+  }
+  .neg-orch-stat-value {
+    font-size: 12px;
+  }
+  .neg-orch-divider {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .neg-arena {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  .neg-orch-spine {
+    order: -1;
+  }
+  .neg-agent-chat {
+    min-height: 180px;
+    max-height: 260px;
+  }
+}
+
+/* ==========================================================================
+   Live Negotiation Components
+   ========================================================================== */
+
+/* Layout & Mount Points */
+.ln-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+@media (max-width: 900px) {
+  .ln-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.ln-orch-indicator-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.ln-section-mount {
+  margin-top: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* Common Header Styles */
+.ln-component-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+}
+.ln-component-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.ln-component-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ln-component-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--color-orchestrator);
+}
+.ln-component-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-orchestrator);
+  text-transform: uppercase;
+}
+.ln-component-sub {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  margin-top: 2px;
+}
+.ln-component-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ================== State Panel (sp-) ================== */
+.sp-root {
+  display: flex;
+  flex-direction: column;
+  transition: background-color var(--transition-med);
+}
+.sp-flash {
+  animation: spFlashAnim 1s ease-out;
+}
+@keyframes spFlashAnim {
+  0% { background-color: var(--color-orch-light); }
+  100% { background-color: transparent; }
+}
+
+.sp-header {
+  display: flex;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+  gap: var(--space-3);
+}
+.sp-header-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--color-orchestrator);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+.sp-header-icon svg { width: 18px; height: 18px; stroke: white; }
+.sp-header-text { flex: 1; }
+.sp-header-title { font-size: 15px; font-weight: 700; color: var(--color-orchestrator); letter-spacing: 0.05em; }
+.sp-header-sub { font-size: 12px; color: var(--color-text-faint); font-family: var(--font-mono); margin-top: 2px; text-transform: uppercase; }
+
+.sp-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid currentColor;
+}
+.sp-status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.sp-dot-live { animation: pulseOpacity 1.5s infinite alternate; }
+
+.sp-status-idle { color: var(--color-text-muted); background: var(--color-bg); }
+.sp-status-starting { color: var(--color-accent); background: rgba(14, 165, 233, 0.1); }
+.sp-status-live { color: var(--color-primary); background: rgba(99, 102, 241, 0.1); }
+.sp-status-accepted { color: var(--color-success-sage); background: rgba(107, 143, 113, 0.1); }
+.sp-status-terminated { color: var(--color-danger); background: rgba(239, 68, 68, 0.1); }
+.sp-status-timeout { color: var(--color-warning-amber); background: rgba(199, 154, 61, 0.1); }
+
+.sp-metrics {
+  display: flex;
+  align-items: stretch;
+}
+.sp-metric-block {
+  flex: 1;
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+}
+.sp-metric-sep {
+  width: 1px;
+  background: var(--color-border);
+  margin: var(--space-4) 0;
+}
+.sp-metric-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-2);
+}
+.sp-metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-orchestrator);
+  font-family: var(--font-mono);
+  margin-bottom: var(--space-2);
+}
+.sp-metric-bar-wrap {
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: auto;
+}
+.sp-metric-bar-fill {
+  height: 100%;
+  background: var(--color-orchestrator);
+  transition: width var(--transition-med);
+}
+.sp-metric-hint {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  margin-top: auto;
+}
+.sp-turn-value { text-transform: uppercase; }
+
+/* ================== Offer/Counteroffer Timeline (nt-) ================== */
+.nt-root { display: flex; flex-direction: column; }
+.nt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+}
+.nt-header-left { display: flex; align-items: center; gap: var(--space-3); }
+.nt-header-icon {
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  display: flex; align-items: center; justify-content: center;
+}
+.nt-header-icon svg { width: 16px; height: 16px; stroke: var(--color-orchestrator); }
+.nt-header-title { font-size: 14px; font-weight: 700; letter-spacing: 0.05em; color: var(--color-orchestrator); }
+.nt-header-sub { font-size: 12px; color: var(--color-text-faint); margin-top: 2px; }
+
+.nt-header-right { display: flex; align-items: center; gap: var(--space-3); }
+.nt-count-badge { font-size: 12px; font-weight: 600; color: var(--color-text-faint); background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 999px; }
+.nt-toggle-btn {
+  background: none; border: 1px solid var(--color-border); border-radius: 4px;
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  color: var(--color-text-muted); cursor: pointer; transition: all 0.2s;
+}
+.nt-toggle-btn:hover { background: var(--color-border); }
+.nt-toggle-btn svg { width: 16px; height: 16px; transition: transform 0.3s; }
+
+.nt-body {
+  max-height: 500px;
+  overflow-y: auto;
+  transition: max-height var(--transition-med);
+}
+.nt-body-collapsed {
+  max-height: 0;
+  overflow: hidden;
+}
+.nt-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: var(--space-6); color: var(--color-text-faint); font-size: 14px;
+}
+.nt-empty-icon { font-size: 24px; margin-bottom: var(--space-2); opacity: 0.5; }
+.nt-list { padding: var(--space-5); display: flex; flex-direction: column; gap: 0; }
+
+.nt-entry {
+  display: flex; gap: var(--space-4); position: relative;
+  transition: opacity 0.4s, transform 0.4s;
+}
+.nt-entry-new { opacity: 0; transform: translateX(-10px); }
+.nt-entry-left {
+  display: flex; flex-direction: column; align-items: center; width: 16px;
+}
+.nt-entry-dot {
+  width: 12px; height: 12px; border-radius: 50%; z-index: 2; border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+.nt-entry-connector-line {
+  width: 2px; flex: 1; background: var(--color-border); margin-top: 4px; margin-bottom: 4px;
+}
+.nt-entry:last-child .nt-entry-connector-line { background: transparent; }
+
+.nt-agent-buyer { background-color: var(--color-buyer); color: var(--color-buyer); }
+.nt-agent-vendor { background-color: var(--color-vendor); color: var(--color-vendor); }
+
+.nt-entry-body {
+  flex: 1; padding-bottom: var(--space-5);
+}
+.nt-entry-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2);
+}
+.nt-entry-meta { display: flex; align-items: center; gap: var(--space-2); }
+.nt-entry-agent { font-size: 13px; font-weight: 700; }
+.nt-entry-round { font-size: 11px; font-weight: 600; color: var(--color-text-faint); background: var(--color-bg-alt); padding: 2px 6px; border-radius: 4px; }
+
+.nt-decision-tag {
+  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+.nt-decision-offer { color: var(--color-primary); background: rgba(99, 102, 241, 0.1); }
+.nt-decision-counter { color: var(--color-warning); background: rgba(245, 158, 11, 0.1); }
+.nt-decision-accept { color: var(--color-success-sage); background: rgba(107, 143, 113, 0.1); }
+.nt-decision-reject { color: var(--color-danger); background: rgba(239, 68, 68, 0.1); }
+
+.nt-entry-time { font-size: 12px; color: var(--color-text-faint); font-family: var(--font-mono); }
+
+.nt-entry-offer-row {
+  display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-2);
+}
+.nt-offer-amount { font-size: 22px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.5px; }
+.nt-offer-final { color: var(--color-success-sage); }
+.nt-offer-final-tag { font-size: 11px; font-weight: 700; color: var(--color-success-sage); }
+
+.nt-entry-message {
+  font-size: 14px; line-height: 1.5; color: var(--color-text-muted);
+  background: var(--color-bg-alt); padding: var(--space-3); border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border); margin-bottom: var(--space-2);
+}
+
+.nt-entry-orch-note {
+  display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-text-faint);
+  font-family: var(--font-mono); text-transform: uppercase; opacity: 0.8;
+}
+.nt-entry-orch-note svg { fill: var(--color-text-faint); }
+
+.nt-entry-accept .nt-entry-body { background: rgba(107, 143, 113, 0.05); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid rgba(107, 143, 113, 0.2); }
+.nt-entry-reject .nt-entry-body { background: rgba(239, 68, 68, 0.05); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+
+/* ================== Orchestrator Activity Indicator (oi-) ================== */
+.oi-root { display: flex; flex-direction: column; }
+.oi-header {
+  display: flex; align-items: center; padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border); background: var(--color-bg-alt); gap: var(--space-3);
+}
+.oi-header-icon {
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  background: var(--color-orchestrator); display: flex; align-items: center; justify-content: center;
+}
+.oi-header-icon svg { width: 16px; height: 16px; stroke: white; }
+.oi-header-title { font-size: 14px; font-weight: 700; letter-spacing: 0.05em; color: var(--color-orchestrator); }
+.oi-header-sub { font-size: 12px; color: var(--color-text-faint); margin-top: 2px; }
+
+.oi-body {
+  display: flex; padding: var(--space-5); gap: var(--space-6); align-items: center;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.oi-node-wrap {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+  width: 160px;
+}
+.oi-node-pulse-ring {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--color-orchestrator);
+  opacity: 0; pointer-events: none;
+}
+.oi-pulsing { animation: oiPulseAnim 2s infinite; }
+@keyframes oiPulseAnim {
+  0% { transform: translateX(-50%) scale(0.8); opacity: 0.5; }
+  100% { transform: translateX(-50%) scale(1.5); opacity: 0; }
+}
+
+.oi-hex-node {
+  position: relative; width: 60px; height: 60px; color: var(--color-orchestrator);
+  transition: color 0.4s; z-index: 2; margin-top: 20px;
+}
+.oi-hex-svg { width: 100%; height: 100%; display: block; }
+.oi-node-label {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 10px; font-weight: 800; font-family: var(--font-mono); letter-spacing: 0.05em;
+}
+
+.oi-phase-state-pass { color: var(--color-primary); }
+.oi-phase-agent-turn { color: var(--color-accent); }
+.oi-phase-state-updated { color: var(--color-success-sage); }
+.oi-phase-termination { color: var(--color-warning-amber); }
+.oi-phase-complete { color: var(--color-text-muted); }
+
+.oi-node-phase-label {
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono); text-align: center;
+  color: var(--color-text-muted); padding: 4px 8px; border-radius: 4px; background: var(--color-bg-alt);
+  min-height: 24px; transition: color 0.3s, background 0.3s;
+}
+.oi-label-active { background: var(--color-orch-light); color: var(--color-orchestrator); }
+
+.oi-pipeline {
+  flex: 1; display: flex; justify-content: space-between; align-items: flex-start; position: relative;
+  padding-top: 10px;
+}
+.oi-pipe-step {
+  display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; flex: 1;
+}
+.oi-pipe-dot {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--color-surface);
+  border: 2px solid var(--color-border-strong); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; margin-bottom: 8px; transition: all 0.3s;
+}
+.oi-pipe-content { text-align: center; }
+.oi-pipe-label { font-size: 11px; font-weight: 700; color: var(--color-text-faint); margin-bottom: 4px; }
+.oi-pipe-time { font-size: 10px; color: var(--color-text-muted); font-family: var(--font-mono); min-height: 12px; }
+
+.oi-step-active .oi-pipe-dot { border-color: var(--color-orchestrator); color: var(--color-orchestrator); background: var(--color-orch-light); box-shadow: 0 0 0 4px rgba(27,42,65,0.1); }
+.oi-step-active .oi-pipe-label { color: var(--color-orchestrator); }
+.oi-step-done .oi-pipe-dot { border-color: var(--color-success-sage); color: white; background: var(--color-success-sage); }
+.oi-step-done .oi-pipe-label { color: var(--color-text-muted); }
+
+.oi-pipe-connector {
+  position: absolute; top: 11px; left: 50%; right: -50%; height: 2px; background: var(--color-border-strong); z-index: -1;
+}
+.oi-pipe-step:last-child .oi-pipe-connector { display: none; }
+.oi-step-done .oi-pipe-connector { background: var(--color-success-sage); }
+
+.oi-activity-log {
+  padding: var(--space-3) var(--space-5); background: #1e1e1e; font-family: var(--font-mono);
+  font-size: 11px; max-height: 120px; overflow-y: auto; color: #a0a0a0;
+}
+.oi-log-entry { display: flex; gap: var(--space-3); padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.oi-log-icon { width: 14px; text-align: center; }
+.oi-log-ts { color: #666; }
+.oi-log-msg { color: #d4d4d4; }
+.oi-log-state_pass .oi-log-msg { color: #818cf8; }
+.oi-log-agent_turn .oi-log-msg { color: #38bdf8; }
+.oi-log-state_updated .oi-log-msg { color: #a3e635; }
+.oi-log-termination_check .oi-log-msg { color: #fbbf24; }
+.oi-log-complete .oi-log-msg { color: #94a3b8; }
+
+
+/* ================== Conversation History Log (cl-) ================== */
+.cl-root { display: flex; flex-direction: column; }
+.cl-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-border); background: var(--color-bg-alt);
+}
+.cl-header-left { display: flex; align-items: center; gap: var(--space-3); }
+.cl-header-icon {
+  width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--color-surface);
+  border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center;
+}
+.cl-header-icon svg { width: 16px; height: 16px; stroke: var(--color-orchestrator); }
+.cl-header-title { font-size: 14px; font-weight: 700; letter-spacing: 0.05em; color: var(--color-orchestrator); }
+.cl-header-sub { font-size: 12px; color: var(--color-text-faint); margin-top: 2px; }
+
+.cl-header-right { display: flex; align-items: center; gap: var(--space-3); }
+.cl-count-badge { font-size: 12px; font-weight: 600; color: var(--color-text-faint); background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 999px; }
+.cl-toggle-btn {
+  background: none; border: 1px solid var(--color-border); border-radius: 4px; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); cursor: pointer; transition: all 0.2s;
+}
+.cl-toggle-btn:hover { background: var(--color-border); }
+.cl-toggle-btn svg { width: 16px; height: 16px; transition: transform 0.3s; }
+
+.cl-body {
+  max-height: 600px; overflow-y: auto; transition: max-height var(--transition-med); background: #fafafa;
+}
+.cl-body-collapsed { max-height: 0; overflow: hidden; }
+.cl-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: var(--space-6); color: var(--color-text-faint); font-size: 14px;
+}
+.cl-empty-icon { font-size: 24px; margin-bottom: var(--space-2); opacity: 0.5; }
+
+.cl-list { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-5); }
+.cl-entry {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm);
+  transition: opacity 0.4s, transform 0.4s;
+}
+.cl-entry-new { opacity: 0; transform: translateY(10px); }
+
+.cl-entry-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--space-3) var(--space-4); background: var(--color-bg-alt); border-bottom: 1px solid var(--color-border);
+}
+.cl-entry-agent { display: flex; align-items: center; gap: var(--space-2); }
+.cl-agent-dot { width: 10px; height: 10px; border-radius: 50%; }
+.cl-agent-buyer { background-color: var(--color-buyer); color: var(--color-buyer); }
+.cl-agent-vendor { background-color: var(--color-vendor); color: var(--color-vendor); }
+.cl-agent-name { font-size: 13px; font-weight: 700; }
+.cl-entry-round { font-size: 11px; font-weight: 600; color: var(--color-text-faint); padding-left: 8px; border-left: 1px solid var(--color-border-strong); }
+.cl-entry-ts { font-size: 11px; color: var(--color-text-faint); font-family: var(--font-mono); }
+
+.cl-io-block { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.cl-io-row { display: flex; flex-direction: column; gap: var(--space-2); }
+.cl-io-label { font-size: 10px; font-weight: 800; font-family: var(--font-mono); letter-spacing: 0.05em; display: inline-block; padding: 2px 6px; border-radius: 4px; align-self: flex-start; }
+.cl-io-label-in { background: rgba(99, 102, 241, 0.1); color: var(--color-primary); }
+.cl-io-label-out { background: rgba(16, 185, 129, 0.1); color: var(--color-success); }
+.cl-io-text { font-family: var(--font-mono); font-size: 12px; line-height: 1.5; padding: var(--space-3); border-radius: var(--radius-sm); white-space: pre-wrap; word-wrap: break-word; }
+.cl-io-in { background: #f8fafc; border: 1px dashed var(--color-border-strong); color: var(--color-text-muted); }
+.cl-io-out { background: #1e1e1e; border: 1px solid #333; color: #d4d4d4; }
+.cl-io-divider { text-align: center; color: var(--color-border-strong); font-size: 16px; font-weight: bold; }

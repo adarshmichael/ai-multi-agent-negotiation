@@ -8,7 +8,8 @@
   <meta name="description"
     content="AI-powered multi-agent negotiation training and simulation platform. Configure agents, set goals, and watch live negotiations unfold." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css" />
 </head>
 
@@ -143,51 +144,110 @@
         </div>
       </div>
 
-      <!-- ---- Live Negotiation Chat ---- -->
+      <!-- ---- Live Negotiation (Equilibrium Layout) ---- -->
       <div id="neg-live-panel" style="display:none;">
 
-        <!-- Header bar -->
-        <div class="neg-header">
-          <div class="neg-header-left">
-            <div class="neg-status-indicator" id="neg-status-dot"></div>
-            <div>
-              <div class="neg-scenario-name" id="neg-scenario-name">Negotiation</div>
-              <div class="neg-status-text" id="neg-status-text">Starting...</div>
-            </div>
+        <!-- 1. Scenario info bar -->
+        <div class="neg-scenario-bar" id="neg-scenario-bar">
+          <div class="neg-scenario-bar-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
           </div>
-          <div class="neg-header-right">
-            <div class="neg-round-badge" id="neg-round-badge">Round 0 / 10</div>
+          <div class="neg-scenario-bar-text">
+            <span class="neg-scenario-bar-name" id="neg-scenario-name">Negotiation</span>
+            <span class="neg-scenario-bar-desc" id="neg-scenario-desc"></span>
+          </div>
+        </div>
+
+        <!-- 2. Orchestrator status bar (persistent) -->
+        <div class="neg-orch-status-bar" id="neg-orch-status-bar">
+          <div class="neg-orch-node" id="neg-orch-node" aria-label="Orchestrator">
+            <!-- CSS hexagon shape with gear icon via ::after — see style.css -->
+            <div class="neg-orch-node-pulse" id="neg-orch-pulse"></div>
+          </div>
+          <div class="neg-orch-label">ORCHESTRATOR</div>
+          <div class="neg-orch-divider" aria-hidden="true"></div>
+          <div class="neg-orch-stat">
+            <span class="neg-orch-stat-label">ROUND</span>
+            <span class="neg-orch-stat-value" id="neg-orch-round">— / —</span>
+          </div>
+          <div class="neg-orch-divider" aria-hidden="true"></div>
+          <div class="neg-orch-stat">
+            <span class="neg-orch-stat-label">ACTIVE TURN</span>
+            <span class="neg-orch-stat-value" id="neg-orch-turn">—</span>
+          </div>
+          <div class="neg-orch-divider" aria-hidden="true"></div>
+          <div class="neg-orch-status-pill" id="neg-orch-status-pill">
+            <span class="neg-status-indicator" id="neg-status-dot"></span>
+            <span id="neg-status-text">Starting...</span>
+          </div>
+          <div style="margin-left:auto;">
             <button class="btn btn-secondary btn-sm" id="btn-stop-negotiation" title="Stop negotiation">■ Stop</button>
           </div>
         </div>
 
-        <!-- Chat messages area -->
-        <div class="neg-chat" id="neg-chat">
-          <div class="neg-chat-empty" id="neg-chat-empty">
-            <div class="thinking-dots"><span></span><span></span><span></span></div>
-            <p>Initializing agents...</p>
-          </div>
-        </div>
+        <!-- 3. Main negotiation arena: 3-column grid -->
+        <!-- 7. Negotiation State Panel (Moved to top) -->
+        <div id="ln-state-panel" class="ln-section-mount" aria-label="Negotiation State Panel" style="margin-top: 0; margin-bottom: var(--space-4);"></div>
 
-        <!-- Offer status bar -->
-        <div class="neg-status-bar" id="neg-status-bar" style="display:none;">
-          <div class="neg-offers" id="neg-offers"></div>
-          <div class="neg-progress-wrap">
-            <div class="neg-progress-label">Negotiation Progress</div>
-            <div class="neg-progress-track">
-              <div class="neg-progress-fill" id="neg-progress-fill" style="width:0%"></div>
+        <div class="neg-arena">
+
+          <!-- Left: Buyer Agent Panel -->
+          <div class="neg-agent-panel neg-buyer-panel" id="neg-buyer-panel">
+            <div class="neg-agent-panel-header">
+              <div class="neg-agent-panel-avatar buyer-avatar" id="neg-buyer-avatar">BA</div>
+              <div class="neg-agent-panel-info">
+                <div class="neg-agent-panel-name" id="neg-buyer-name">Buyer Agent</div>
+                <div class="neg-agent-panel-role" id="neg-buyer-role">Buyer</div>
+              </div>
+              <div class="neg-agent-badge" id="neg-buyer-badge" data-state="idle">Idle</div>
+            </div>
+            <div class="neg-agent-chat" id="neg-buyer-chat">
+              <div class="neg-agent-chat-empty" id="neg-buyer-empty">
+                <div class="thinking-dots"><span></span><span></span><span></span></div>
+                <span>Waiting for turn...</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Negotiation complete panel -->
-        <div class="neg-complete-panel" id="neg-complete-panel" style="display:none;"></div>
+          <!-- Center: Orchestrator Indicator (New Hexagon UI replacing legacy spine) -->
+          <div id="ln-orch-indicator" aria-label="Orchestrator Activity Indicator" class="ln-orch-indicator-wrapper"></div>
+
+          <!-- Right: Vendor Agent Panel -->
+          <div class="neg-agent-panel neg-vendor-panel" id="neg-vendor-panel">
+            <div class="neg-agent-panel-header">
+              <div class="neg-agent-panel-avatar vendor-avatar" id="neg-vendor-avatar">VA</div>
+              <div class="neg-agent-panel-info">
+                <div class="neg-agent-panel-name" id="neg-vendor-name">Vendor Agent</div>
+                <div class="neg-agent-panel-role" id="neg-vendor-role">Vendor</div>
+              </div>
+              <div class="neg-agent-badge" id="neg-vendor-badge" data-state="idle">Idle</div>
+            </div>
+            <div class="neg-agent-chat" id="neg-vendor-chat">
+              <div class="neg-agent-chat-empty" id="neg-vendor-empty">
+                <div class="thinking-dots"><span></span><span></span><span></span></div>
+                <span>Waiting for turn...</span>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- end .neg-arena -->
+
+        <div class="ln-bottom-grid">
+          <!-- Offer / Counteroffer Timeline -->
+          <div id="ln-timeline" class="ln-section-mount" aria-label="Offer Counteroffer Timeline"></div>
+
+          <!-- Conversation History Log -->
+          <div id="ln-conv-log" class="ln-section-mount" aria-label="Conversation History Log"></div>
+        </div>
 
         <div class="nav-row">
-          <button class="btn btn-primary" id="btn-negotiation-restart" style="width: 100%; justify-content: center;">↺
-            Start a New Negotiation</button>
+          <button class="btn btn-primary" id="btn-negotiation-restart" style="width: 100%; justify-content: center;">↺ Start a New Negotiation</button>
         </div>
-      </div>
+
+      </div><!-- end #neg-live-panel -->
 
     </section>
 
@@ -200,6 +260,13 @@
   <script src="js/data/scenarios.js"></script>
   <script src="js/data/api.js"></script>
   <script src="js/state/appState.js"></script>
+  <!-- Live Negotiation components (loaded before app.js so app.js can call them) -->
+  <script src="js/mock/mock-engine.js"></script>
+  <script src="js/components/state-panel.js"></script>
+  <script src="js/components/negotiation-timeline.js"></script>
+  <script src="js/components/orchestrator-indicator.js"></script>
+  <script src="js/components/conversation-log.js"></script>
+  <script src="js/screens/live-negotiation.js"></script>
   <script src="js/app.js"></script>
 </body>
 

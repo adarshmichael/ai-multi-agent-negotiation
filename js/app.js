@@ -175,10 +175,48 @@ function renderAgentGrid() {
     return;
   }
 
-  grid.innerHTML = scenario.agents.map(agent => renderAgentCard(agent)).join('');
+  const newHTML = scenario.agents.map(agent => renderAgentCard(agent)).join('');
+  
+  // Capture focus
+  let focusedSelector = null;
+  let focusedStart = null, focusedEnd = null;
+  if (document.activeElement && grid.contains(document.activeElement)) {
+    const el = document.activeElement;
+    if (el.id) {
+      focusedSelector = `#${el.id}`;
+    } else {
+      focusedSelector = el.tagName.toLowerCase();
+      if (el.classList.length > 0) focusedSelector += `.${[...el.classList].join('.')}`;
+      if (el.dataset.agentId) focusedSelector += `[data-agent-id="${el.dataset.agentId}"]`;
+      if (el.dataset.constraintId) focusedSelector += `[data-constraint-id="${el.dataset.constraintId}"]`;
+      if (el.dataset.tab) focusedSelector += `[data-tab="${el.dataset.tab}"]`;
+      if (el.dataset.goal) focusedSelector += `[data-goal="${el.dataset.goal}"]`;
+      if (el.dataset.personalityId) focusedSelector += `[data-personality-id="${el.dataset.personalityId}"]`;
+    }
+    if (el.tagName === 'INPUT') {
+      focusedStart = el.selectionStart;
+      focusedEnd = el.selectionEnd;
+    }
+  }
+
+  grid.innerHTML = newHTML;
 
   // Wire up interactions for all agent cards
   scenario.agents.forEach(agent => wireAgentCard(agent));
+
+  // Restore focus
+  if (focusedSelector) {
+    // try catch in case selector is invalid
+    try {
+      const toFocus = grid.querySelector(focusedSelector);
+      if (toFocus) {
+        toFocus.focus();
+        if (focusedStart !== null && toFocus.setSelectionRange) {
+          toFocus.setSelectionRange(focusedStart, focusedEnd);
+        }
+      }
+    } catch (e) {}
+  }
 }
 
 function renderAgentCard(agent) {
@@ -796,14 +834,41 @@ async function handleStartNegotiation() {
   btn.disabled = true;
   document.getElementById('btn-start-text').textContent = '⏳ Starting Negotiation...';
 
-  // Check backend health
+  // Check backend health — fall back to mock demo if unavailable
   const isHealthy = await window.ApiService.checkHealth();
   if (!isHealthy) {
+    // Launch mock demo mode so the UI is demonstrable without a backend
+    const maxRoundsEl = document.getElementById('input-max-rounds');
+    const maxRounds   = maxRoundsEl ? parseInt(maxRoundsEl.value, 10) || 5 : 5;
+    const agents = scenario.agents || [];
+
     document.getElementById('backend-validation-msg').textContent =
-      'Cannot connect to backend (localhost:8001). Please run: cd backend && npm run dev';
+      '⚡ Demo mode — backend unavailable. Running mock negotiation engine for preview.';
     backendValidation.classList.add('show');
-    btn.disabled = false;
-    document.getElementById('btn-start-text').textContent = '🚀 Start Negotiation';
+    btn.disabled = true;
+    document.getElementById('btn-start-text').textContent = '⏳ Running Demo...';
+
+    AppState.setNegotiationState({ negotiationStatus: 'in_progress', maxRounds });
+
+    // Show live panel
+    document.getElementById('neg-start-panel').style.display = 'none';
+    document.getElementById('neg-live-panel').style.display  = 'block';
+
+    // Init existing Equilibrium layout
+    const scenarioNameEl = document.getElementById('neg-scenario-name');
+    const scenarioDescEl = document.getElementById('neg-scenario-desc');
+    if (scenarioNameEl) scenarioNameEl.textContent = scenario.name;
+    if (scenarioDescEl) scenarioDescEl.textContent = scenario.description || '';
+    initAgentPanels(agents);
+    updateOrchStatusBar(0, maxRounds, '—', 'in_progress');
+    addOrchTimelineStep('Demo mode — mock engine active', 'done');
+    addOrchLogEntry('done', 'Mock negotiation engine initialized');
+
+    // Init Live Negotiation components and start demo
+    if (window.LiveNegotiationScreen) {
+      LiveNegotiationScreen.init(agents, scenario, maxRounds);
+      LiveNegotiationScreen.startDemo();
+    }
     return;
   }
 
@@ -833,6 +898,19 @@ async function handleStartNegotiation() {
 
     const agents = scenario.agents || [];
     updateNegotiationHeader('starting', 0, session.maxRounds || maxRounds, scenario.name);
+
+    // Equilibrium — init scenario bar and agent panels
+    const scenarioNameEl = document.getElementById('neg-scenario-name');
+    const scenarioDescEl = document.getElementById('neg-scenario-desc');
+    if (scenarioNameEl) scenarioNameEl.textContent = scenario.name;
+    if (scenarioDescEl) scenarioDescEl.textContent = scenario.description || '';
+    initAgentPanels(agents);
+    updateOrchStatusBar(0, session.maxRounds || maxRounds, '—', 'starting');
+
+    // Live Negotiation components — init (backend-connected path)
+    if (window.LiveNegotiationScreen) {
+      LiveNegotiationScreen.init(agents, scenario, session.maxRounds || maxRounds);
+    }
 
     // 3. Connect WebSocket
     window.ApiService.connectWebSocket(negotiationId, {
@@ -869,6 +947,374 @@ async function handleStartNegotiation() {
   }
 }
 
+/* ============================== Equilibrium — New Rendering Helpers ============================== */
+
+/**
+ * Returns HH:MM:SS timestamp string for log entries.
+ */
+function orchTimestamp() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+
+/**
+ * Add a step to the vertical orchestrator timeline.
+ * @param {string} label   — Human-readable step label
+ * @param {'done'|'active'|'pending'} status
+ * @param {string} [stepId] — Optional ID to allow updating an existing step
+ */
+function addOrchTimelineStep(label, status, stepId) {
+  const timeline = document.getElementById('neg-orch-timeline');
+  if (!timeline) return;
+
+  // If stepId given, try to update existing step
+  if (stepId) {
+    const existing = document.getElementById(stepId);
+    if (existing) {
+      existing.className = `neg-timeline-step step-${status}`;
+      const dot = existing.querySelector('.neg-timeline-dot');
+      if (dot) dot.textContent = status === 'done' ? '✓' : status === 'active' ? '●' : '';
+      const lbl = existing.querySelector('.neg-timeline-step-label');
+      if (lbl) lbl.textContent = label;
+      const time = existing.querySelector('.neg-timeline-step-time');
+      if (time && status !== 'pending') time.textContent = orchTimestamp();
+      return;
+    }
+  }
+
+  // Demote any current 'active' step to pending-done (keep label, mark done)
+  timeline.querySelectorAll('.neg-timeline-step.step-active').forEach(s => {
+    if (!stepId || s.id !== stepId) {
+      s.className = 'neg-timeline-step step-done';
+      const dot = s.querySelector('.neg-timeline-dot');
+      if (dot) dot.textContent = '✓';
+    }
+  });
+
+  const dotContent = status === 'done' ? '✓' : '';
+  const timeStr    = status !== 'pending' ? orchTimestamp() : '';
+
+  const div = document.createElement('div');
+  div.className = `neg-timeline-step step-${status}`;
+  if (stepId) div.id = stepId;
+  div.innerHTML = `
+    <div class="neg-timeline-dot">${dotContent}</div>
+    <div class="neg-timeline-step-content">
+      <div class="neg-timeline-step-label">${escapeHtml(label)}</div>
+      ${timeStr ? `<div class="neg-timeline-step-time">${timeStr}</div>` : ''}
+    </div>
+  `;
+  timeline.appendChild(div);
+  timeline.scrollTop = timeline.scrollHeight;
+}
+
+/**
+ * Add a monospace entry to the expandable log drawer.
+ * @param {'done'|'active'|'error'} status
+ * @param {string} message
+ */
+function addOrchLogEntry(status, message) {
+  const log = document.getElementById('neg-orch-log');
+  if (!log) return;
+
+  const icon = status === 'done' ? '✓' : status === 'error' ? '✕' : '●';
+  const ts   = orchTimestamp();
+
+  const entry = document.createElement('div');
+  entry.className = `neg-log-entry log-${status}`;
+  entry.innerHTML = `
+    <span class="neg-log-icon">${icon}</span><span class="neg-log-time">${ts}</span><span class="neg-log-msg">${escapeHtml(message)}</span>
+  `;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+/**
+ * Update the persistent Orchestrator status bar.
+ */
+function updateOrchStatusBar(round, maxRounds, activeAgentName, status) {
+  const roundEl  = document.getElementById('neg-orch-round');
+  const turnEl   = document.getElementById('neg-orch-turn');
+  const statusDot = document.getElementById('neg-status-dot');
+  const statusText = document.getElementById('neg-status-text');
+  const pulse    = document.getElementById('neg-orch-pulse');
+
+  if (roundEl)  roundEl.textContent  = round > 0 ? `${round} / ${maxRounds}` : `\u2014 / ${maxRounds || '\u2014'}`;
+  if (turnEl)   turnEl.textContent   = activeAgentName || '\u2014';
+
+  if (statusDot) {
+    statusDot.className = 'neg-status-indicator';
+    if (status === 'in_progress' || status === 'starting') {
+      statusDot.classList.add('live');
+      if (statusText) statusText.textContent = '● LIVE';
+    } else if (status === 'completed') {
+      statusDot.classList.add('completed');
+      if (statusText) statusText.textContent = 'Completed';
+    } else if (status === 'failed' || status === 'error') {
+      statusDot.classList.add('failed');
+      if (statusText) statusText.textContent = 'Failed';
+    } else if (status === 'stopped') {
+      if (statusText) statusText.textContent = 'Stopped';
+    } else {
+      if (statusText) statusText.textContent = status || 'Starting...';
+    }
+  }
+
+  if (pulse) {
+    const isActive = status === 'in_progress' || status === 'starting';
+    pulse.classList.toggle('active', isActive);
+  }
+}
+
+/**
+ * Update the segmented round progress bar.
+ */
+function updateRoundProgress(round, maxRounds) {
+  const track   = document.getElementById('neg-round-track');
+  const badge   = document.getElementById('neg-round-badge');
+  const wrap    = document.getElementById('neg-round-progress-wrap');
+  if (!track || !maxRounds) return;
+
+  if (wrap) wrap.style.display = 'block';
+  if (badge) badge.textContent = `${round} / ${maxRounds}`;
+
+  // Rebuild segments if count changed
+  if (track.children.length !== maxRounds) {
+    track.innerHTML = Array.from({ length: maxRounds }, (_, i) =>
+      `<div class="neg-round-segment" id="neg-seg-${i + 1}"></div>`
+    ).join('');
+  }
+
+  // Colour segments
+  for (let i = 1; i <= maxRounds; i++) {
+    const seg = document.getElementById(`neg-seg-${i}`);
+    if (!seg) continue;
+    if (i < round) {
+      seg.className = 'neg-round-segment seg-done';
+    } else if (i === round) {
+      seg.className = 'neg-round-segment seg-current';
+    } else {
+      seg.className = 'neg-round-segment';
+    }
+  }
+}
+
+/**
+ * Flash a state value element to indicate an update.
+ */
+function flashStateValue(el) {
+  if (!el) return;
+  el.classList.remove('flashing');
+  // Force reflow to restart animation
+  void el.offsetWidth;
+  el.classList.add('flashing');
+}
+
+/**
+ * Update the state metrics strip (dashed-border data record).
+ */
+function updateStateStrip(prevOffer, currOffer, agents, round, maxRounds, negotiationStatus) {
+  const strip     = document.getElementById('neg-state-strip');
+  const roundEl   = document.getElementById('neg-strip-round');
+  const prevEl    = document.getElementById('neg-strip-prev-offer');
+  const currEl    = document.getElementById('neg-strip-curr-offer');
+  const gapEl     = document.getElementById('neg-strip-gap');
+  const statusEl  = document.getElementById('neg-strip-status');
+
+  if (!strip) return;
+  strip.style.display = 'flex';
+
+  if (roundEl) {
+    const newRound = round > 0 ? `${round} / ${maxRounds}` : `\u2014 / ${maxRounds || '\u2014'}`;
+    if (roundEl.textContent !== newRound) { roundEl.textContent = newRound; flashStateValue(roundEl); }
+  }
+
+  if (prevEl) {
+    const newPrev = prevOffer !== null && prevOffer !== undefined ? formatINR(prevOffer) : '\u2014';
+    if (prevEl.textContent !== newPrev) { prevEl.textContent = newPrev; flashStateValue(prevEl); }
+  }
+
+  if (currEl) {
+    const newCurr = currOffer !== null && currOffer !== undefined ? formatINR(currOffer) : '\u2014';
+    if (currEl.textContent !== newCurr) { currEl.textContent = newCurr; flashStateValue(currEl); }
+  }
+
+  if (gapEl) {
+    let newGap = '\u2014';
+    if (prevOffer !== null && prevOffer !== undefined && currOffer !== null && currOffer !== undefined) {
+      newGap = formatINR(Math.abs(currOffer - prevOffer));
+    }
+    if (gapEl.textContent !== newGap) { gapEl.textContent = newGap; flashStateValue(gapEl); }
+  }
+
+  if (statusEl) {
+    const statusMap = {
+      in_progress: '● In Progress',
+      completed:   '✓ Complete',
+      failed:      '✕ Failed',
+      stopped:     '■ Stopped',
+      starting:    '⏳ Starting',
+    };
+    const newStatus = statusMap[negotiationStatus] || negotiationStatus || '\u2014';
+    if (statusEl.textContent !== newStatus) { statusEl.textContent = newStatus; flashStateValue(statusEl); }
+  }
+}
+
+/**
+ * Update the agent badge (Waiting / Active / Responded / Idle) in a panel header.
+ * @param {number} agentIndex  — 0 = buyer, 1 = vendor
+ * @param {'idle'|'waiting'|'active'|'responded'} badgeState
+ */
+function updateAgentBadge(agentIndex, badgeState) {
+  const badgeId = agentIndex === 0 ? 'neg-buyer-badge' : 'neg-vendor-badge';
+  const badge   = document.getElementById(badgeId);
+  if (!badge) return;
+
+  badge.dataset.state = badgeState;
+  const labels = { idle: 'Idle', waiting: 'Waiting', active: 'Active', responded: 'Responded ✓' };
+  badge.textContent = labels[badgeState] || badgeState;
+}
+
+/**
+ * Add/remove the "panel-active" glow class on an agent panel.
+ */
+function setAgentPanelActive(agentIndex, isActive) {
+  const panelId = agentIndex === 0 ? 'neg-buyer-panel' : 'neg-vendor-panel';
+  const panel   = document.getElementById(panelId);
+  if (!panel) return;
+  panel.classList.toggle('panel-active', isActive);
+}
+
+/**
+ * Show typing indicator in the correct agent panel.
+ * Replaces the old showThinkingIndicator for the new split-panel layout.
+ */
+function showAgentThinking(agentName, agentIndex, phrase) {
+  removeAgentThinking(agentIndex);
+  const chatId  = agentIndex === 0 ? 'neg-buyer-chat' : 'neg-vendor-chat';
+  const emptyId = agentIndex === 0 ? 'neg-buyer-empty' : 'neg-vendor-empty';
+  const chat    = document.getElementById(chatId);
+  const empty   = document.getElementById(emptyId);
+  if (chat)  empty && (empty.style.display = 'none');
+  if (!chat) return;
+
+  const div = document.createElement('div');
+  div.id        = `neg-panel-thinking-${agentIndex}`;
+  div.className = 'neg-panel-thinking';
+  div.innerHTML = `
+    <div class="neg-thinking-bubble">
+      <div class="thinking-dots"><span></span><span></span><span></span></div>
+      <div class="neg-thinking-text">${escapeHtml(phrase || 'Thinking...')}</div>
+    </div>
+  `;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeAgentThinking(agentIndex) {
+  if (agentIndex !== undefined) {
+    const el = document.getElementById(`neg-panel-thinking-${agentIndex}`);
+    if (el) el.remove();
+  } else {
+    // Remove both
+    [0, 1].forEach(i => {
+      const el = document.getElementById(`neg-panel-thinking-${i}`);
+      if (el) el.remove();
+    });
+  }
+}
+
+/**
+ * Append a message to the correct agent panel.
+ * Replaces appendChatMessage for the new split-panel layout.
+ */
+function appendAgentMessage(data, agentIndex) {
+  removeAgentThinking(agentIndex);
+  const chatId  = agentIndex === 0 ? 'neg-buyer-chat' : 'neg-vendor-chat';
+  const emptyId = agentIndex === 0 ? 'neg-buyer-empty' : 'neg-vendor-empty';
+  const chat    = document.getElementById(chatId);
+  if (!chat) return;
+  const empty = document.getElementById(emptyId);
+  if (empty) empty.style.display = 'none';
+
+  let offerBadgeHtml = '';
+  if (data.offer !== null && data.offer !== undefined) {
+    let offerClass = '', offerIcon = '💰';
+    if (data.decision === 'accept') { offerClass = 'offer-accept'; offerIcon = '✅'; }
+    if (data.decision === 'reject') { offerClass = 'offer-reject'; offerIcon = '❌'; }
+    offerBadgeHtml = `<div class="neg-offer-badge ${offerClass}">${offerIcon} Offer: ${formatINR(data.offer)}</div>`;
+  } else if (data.decision === 'accept') {
+    offerBadgeHtml = `<div class="neg-offer-badge offer-accept">✅ Accepted</div>`;
+  } else if (data.decision === 'reject') {
+    offerBadgeHtml = `<div class="neg-offer-badge offer-reject">❌ No Deal</div>`;
+  }
+
+  const time = new Date(data.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const div = document.createElement('div');
+  div.className = 'neg-panel-message';
+  div.innerHTML = `
+    <div class="neg-panel-bubble">
+      <div class="neg-message-text">${escapeHtml(data.message)}</div>
+      ${offerBadgeHtml}
+      <div class="neg-panel-bubble-footer">
+        <span class="neg-round-label">Round ${data.round}</span>
+        <span>${time}</span>
+      </div>
+    </div>
+  `;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/**
+ * Initialize agent panel headers from scenario agent data.
+ */
+function initAgentPanels(agents) {
+  agents.forEach((agent, i) => {
+    const prefix  = i === 0 ? 'buyer' : 'vendor';
+    const nameEl  = document.getElementById(`neg-${prefix}-name`);
+    const roleEl  = document.getElementById(`neg-${prefix}-role`);
+    const avatarEl = document.getElementById(`neg-${prefix}-avatar`);
+    if (nameEl)   nameEl.textContent  = agent.name;
+    if (roleEl)   roleEl.textContent  = agent.role || (i === 0 ? 'Buyer' : 'Vendor');
+    if (avatarEl) avatarEl.textContent = initials(agent.name);
+    updateAgentBadge(i, 'waiting');
+  });
+}
+
+/**
+ * Clear all Equilibrium live panels for restart.
+ */
+function clearEquilibriumPanels() {
+  ['neg-buyer-chat', 'neg-vendor-chat'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) {
+      const prefix = i === 0 ? 'buyer' : 'vendor';
+      el.innerHTML = `
+        <div class="neg-agent-chat-empty" id="neg-${prefix}-empty">
+          <div class="thinking-dots"><span></span><span></span><span></span></div>
+          <span>Waiting for turn...</span>
+        </div>
+      `;
+    }
+  });
+  const timeline = document.getElementById('neg-orch-timeline');
+  if (timeline) timeline.innerHTML = '';
+  const log = document.getElementById('neg-orch-log');
+  if (log) log.innerHTML = '';
+  const strip = document.getElementById('neg-state-strip');
+  if (strip) strip.style.display = 'none';
+  const progressWrap = document.getElementById('neg-round-progress-wrap');
+  if (progressWrap) progressWrap.style.display = 'none';
+  const track = document.getElementById('neg-round-track');
+  if (track) track.innerHTML = '';
+  [0, 1].forEach(i => { updateAgentBadge(i, 'idle'); setAgentPanelActive(i, false); });
+  const pulse = document.getElementById('neg-orch-pulse');
+  if (pulse) pulse.classList.remove('active');
+  // Reset Live Negotiation components
+  if (window.LiveNegotiationScreen) LiveNegotiationScreen.reset();
+}
+
 /* ============================== WebSocket Event Handler ============================== */
 
 function handleNegotiationEvent(eventName, data, agents) {
@@ -880,6 +1326,9 @@ function handleNegotiationEvent(eventName, data, agents) {
       if (data.messages && data.messages.length > 0) {
         data.messages.forEach(msg => {
           const agentIndex = agents.findIndex(a => a.id === msg.agentId);
+          // New split-panel render
+          appendAgentMessage(msg, agentIndex >= 0 ? agentIndex : 0);
+          // Legacy fallback
           appendChatMessage(msg, agentIndex >= 0 ? agentIndex : 0);
         });
         if (data.offers) {
@@ -892,6 +1341,10 @@ function handleNegotiationEvent(eventName, data, agents) {
     case 'negotiation_started': {
       AppState.setNegotiationState({ negotiationStatus: 'in_progress' });
       updateNegotiationHeader('in_progress', 0, data.maxRounds || state.maxRounds, data.scenario?.name);
+      // Live Negotiation components
+      if (window.LiveNegotiationScreen) {
+        LiveNegotiationScreen.onRoundStarted(0, data.maxRounds || state.maxRounds);
+      }
       break;
     }
 
@@ -899,32 +1352,70 @@ function handleNegotiationEvent(eventName, data, agents) {
       AppState.setNegotiationState({ currentRound: data.round });
       updateNegotiationHeader('in_progress', data.round, data.maxRounds || state.maxRounds, AppState.getSelectedScenario()?.name);
       document.getElementById('neg-round-badge').textContent = `Round ${data.round} / ${data.maxRounds || state.maxRounds}`;
+      // Reset both badges to 'waiting'
+      agents.forEach((_, i) => { updateAgentBadge(i, 'waiting'); setAgentPanelActive(i, false); });
+      // Live Negotiation components
+      if (window.LiveNegotiationScreen) {
+        LiveNegotiationScreen.onRoundStarted(data.round, mx);
+      }
       break;
     }
 
     case 'agent_thinking': {
       const agentIndex = agents.findIndex(a => a.id === data.agentId);
-      showThinkingIndicator(data.agentName, agentIndex >= 0 ? agentIndex : 0, data.thinkingPhrase);
+      const idx = agentIndex >= 0 ? agentIndex : 0;
+      // Legacy
+      showThinkingIndicator(data.agentName, idx, data.thinkingPhrase);
+      // Equilibrium
+      showAgentThinking(data.agentName, idx, data.thinkingPhrase);
+      updateAgentBadge(idx, 'active');
+      setAgentPanelActive(idx, true);
+      setAgentPanelActive(idx === 0 ? 1 : 0, false);
+      updateAgentBadge(idx === 0 ? 1 : 0, 'waiting');
+      // Live Negotiation components
+      if (window.LiveNegotiationScreen) {
+        LiveNegotiationScreen.onAgentThinking(data.agentName, data.agentId);
+      }
       break;
     }
 
     case 'agent_message': {
       const agentIndex = agents.findIndex(a => a.id === data.agentId);
-      appendChatMessage(data, agentIndex >= 0 ? agentIndex : 0);
+      const idx = agentIndex >= 0 ? agentIndex : 0;
+      // Legacy
+      appendChatMessage(data, idx);
+      // Equilibrium
+      appendAgentMessage(data, idx);
       AppState.addMessage(data);
+      updateAgentBadge(idx, 'responded');
+      setAgentPanelActive(idx, false);
+      // Live Negotiation components
+      if (window.LiveNegotiationScreen) {
+        LiveNegotiationScreen.onAgentMessage(data, idx);
+      }
       break;
     }
 
     case 'offer_updated': {
-      const freshState   = AppState.getState();
+      const freshState    = AppState.getState();
       const updatedOffers = { ...freshState.offers, ...(data.offers || { [data.agentId]: data.offer }) };
       AppState.setNegotiationState({ offers: updatedOffers });
-      updateStatusBar(updatedOffers, agents, data.round || freshState.currentRound, freshState.maxRounds);
+      // Live Negotiation components
+      if (window.LiveNegotiationScreen) {
+        const offerAgent = agents.find(a => a.id === data.agentId);
+        LiveNegotiationScreen.onOfferUpdated(
+          offerAgent?.name || data.agentId,
+          data.agentId,
+          data.offer,
+          data.round || freshState.currentRound
+        );
+      }
       break;
     }
 
     case 'negotiation_completed': {
       removeThinkingIndicator();
+      removeAgentThinking();
       AppState.setNegotiationState({
         negotiationStatus:  'completed',
         negotiationResult:  data.result,
@@ -934,6 +1425,15 @@ function handleNegotiationEvent(eventName, data, agents) {
 
       const finalStatus = data.result === 'agreement' ? 'completed' : 'failed';
       updateNegotiationHeader(finalStatus, state.currentRound, state.maxRounds, AppState.getSelectedScenario()?.name);
+
+      // Equilibrium
+      const endLabel = data.result === 'agreement' ? 'Agreement reached ✓' : data.result === 'rejection' ? 'No agreement — rejected' : 'Max rounds reached';
+      addOrchTimelineStep(endLabel, 'done');
+      addOrchLogEntry(data.result === 'agreement' ? 'done' : 'error', `Negotiation ended: ${data.result}`);
+      updateOrchStatusBar(state.currentRound, state.maxRounds, '\u2014', finalStatus);
+      [0, 1].forEach(i => { updateAgentBadge(i, 'idle'); setAgentPanelActive(i, false); });
+      const pulse = document.getElementById('neg-orch-pulse');
+      if (pulse) pulse.classList.remove('active');
 
       const stopBtn = document.getElementById('btn-stop-negotiation');
       if (stopBtn) stopBtn.style.display = 'none';
@@ -945,14 +1445,25 @@ function handleNegotiationEvent(eventName, data, agents) {
         maxRounds: state.maxRounds,
       });
 
+      // Live Negotiation components
+      if (window.LiveNegotiationScreen) {
+        LiveNegotiationScreen.onNegotiationComplete(data.result, data.finalOffer);
+      }
+
       window.ApiService.disconnectWebSocket();
       break;
     }
 
     case 'negotiation_failed': {
       removeThinkingIndicator();
+      removeAgentThinking();
       AppState.setNegotiationState({ negotiationStatus: 'failed' });
       updateNegotiationHeader('failed', state.currentRound, state.maxRounds, AppState.getSelectedScenario()?.name);
+      // Equilibrium
+      addOrchTimelineStep('Negotiation failed', 'done');
+      addOrchLogEntry('error', data.reason || 'Unexpected error occurred');
+      updateOrchStatusBar(state.currentRound, state.maxRounds, '\u2014', 'failed');
+      [0, 1].forEach(i => { updateAgentBadge(i, 'idle'); setAgentPanelActive(i, false); });
       showCompletionPanel({
         result:    'error',
         reason:    data.reason || 'An unexpected error occurred.',
@@ -961,11 +1472,16 @@ function handleNegotiationEvent(eventName, data, agents) {
         agents:    [],
         finalOffer: null,
       });
+      // Live Negotiation components
+      if (window.LiveNegotiationScreen) {
+        LiveNegotiationScreen.onNegotiationFailed(data.reason);
+      }
       window.ApiService.disconnectWebSocket();
       break;
     }
   }
 }
+
 
 /* ============================== Stop Negotiation ============================== */
 
@@ -981,7 +1497,13 @@ async function handleStopNegotiation() {
     window.ApiService.disconnectWebSocket();
     AppState.setNegotiationState({ negotiationStatus: 'stopped' });
     removeThinkingIndicator();
+    removeAgentThinking();
     updateNegotiationHeader('stopped', AppState.getState().currentRound, AppState.getState().maxRounds, AppState.getSelectedScenario()?.name);
+    // Equilibrium
+    addOrchTimelineStep('Negotiation stopped by user', 'done');
+    addOrchLogEntry('error', 'Negotiation stopped by user');
+    updateOrchStatusBar(AppState.getState().currentRound, AppState.getState().maxRounds, '—', 'stopped');
+    [0, 1].forEach(i => { updateAgentBadge(i, 'idle'); setAgentPanelActive(i, false); });
     showCompletionPanel({
       result:    'stopped',
       reason:    'Negotiation was stopped by you.',
@@ -1041,6 +1563,14 @@ async function init() {
 
       updateNegotiationHeader('starting', 0, session.maxRounds || 10, scenario.name);
 
+      // Equilibrium — init scenario bar and agent panels for negId boot
+      const _snEl = document.getElementById('neg-scenario-name');
+      const _sdEl = document.getElementById('neg-scenario-desc');
+      if (_snEl) _snEl.textContent = scenario.name;
+      if (_sdEl) _sdEl.textContent = scenario.description || '';
+      initAgentPanels(agents);
+      updateOrchStatusBar(0, session.maxRounds || 10, '—', 'starting');
+
       window.ApiService.connectWebSocket(negId, {
         onOpen: () => console.log('[Negotiation] WebSocket connected'),
         onEvent: (eventName, data) => handleNegotiationEvent(eventName, data, agents),
@@ -1098,8 +1628,9 @@ async function init() {
     window.ApiService.disconnectWebSocket();
     AppState.reset();
     AppState.resetNegotiation();
+    clearEquilibriumPanels();
     const chat = document.getElementById('neg-chat');
-    if (chat) chat.innerHTML = '<div class="neg-chat-empty" id="neg-chat-empty"><div class="thinking-dots"><span></span><span></span><span></span></div><p>Initializing agents...</p></div>';
+    if (chat) chat.innerHTML = '';
     const offersEl = document.getElementById('neg-offers');
     if (offersEl) offersEl.innerHTML = '';
     const progressFill = document.getElementById('neg-progress-fill');
@@ -1113,12 +1644,27 @@ async function init() {
 
   // Screen 4 — Live panel
   document.getElementById('btn-stop-negotiation').addEventListener('click', handleStopNegotiation);
+
+  // Orchestrator log drawer toggle
+  const logToggle = document.getElementById('neg-log-toggle');
+  const logDrawer = document.getElementById('neg-orch-log-drawer');
+  if (logToggle && logDrawer) {
+    logToggle.addEventListener('click', () => {
+      const isOpen = logToggle.getAttribute('aria-expanded') === 'true';
+      logToggle.setAttribute('aria-expanded', String(!isOpen));
+      logDrawer.setAttribute('aria-hidden', String(isOpen));
+      logDrawer.classList.toggle('open', !isOpen);
+      document.getElementById('neg-log-toggle-label').textContent = !isOpen ? 'Collapse logs' : 'Expand logs';
+    });
+  }
+
   document.getElementById('btn-negotiation-restart').addEventListener('click', () => {
     window.ApiService.disconnectWebSocket();
     AppState.reset();
     AppState.resetNegotiation();
+    clearEquilibriumPanels();
     const chat = document.getElementById('neg-chat');
-    if (chat) chat.innerHTML = '<div class="neg-chat-empty" id="neg-chat-empty"><div class="thinking-dots"><span></span><span></span><span></span></div><p>Initializing agents...</p></div>';
+    if (chat) chat.innerHTML = '';
     const offersEl = document.getElementById('neg-offers');
     if (offersEl) offersEl.innerHTML = '';
     const progressFill = document.getElementById('neg-progress-fill');
