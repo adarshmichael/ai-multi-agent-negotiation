@@ -103,54 +103,51 @@ A single `AppState` module (`js/state/appState.js`) tracks:
 
 All UI re-renders reactively whenever state changes, via a simple subscribe/notify pattern.
 
-## 6. Backend Integration & Execution (Milestone 2)
+## 6. Orchestrator Agent & Negotiation Engine (Milestone 2 — Full)
 
-A fully functional FastAPI backend has been integrated to power the negotiation logic via Google Gemini.
+This milestone delivers the complete foundational Python backend for NegoSim: a modular negotiation engine powered by **Google Gemini 3.5 Flash**, with deterministic concession logic and full end-to-end multi-round simulation across all three scenario templates.
 
-### Backend Architecture
-- **FastAPI**: REST endpoints for Scenarios, Agents, and Negotiations.
-- **PostgreSQL & SQLAlchemy**: Database models for persisting negotiation histories. (Configurable to SQLite for simple local testing via `.env`).
-- **Orchestrator**: Manages AI turns, constraint validation (preventing agents from exceeding budgets/minimums), and simulation loops.
-- **LLM Service**: Connects to the Gemini 1.5 API to generate intelligent negotiation offers/counteroffers in strict JSON schemas.
+### What was built
 
-### How to Run the Backend
-1. Open a terminal in the `backend/` folder.
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/Scripts/activate  # (Windows) or venv/bin/activate (Mac/Linux)
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Configure environment variables:
-   - Create a `.env` file based on `.env.example` inside the `backend/` directory.
-   - Add your `GEMINI_API_KEY`.
-   - Set `DATABASE_URL=sqlite:///./negosim.db` for quick local testing, or use a PostgreSQL connection string.
-5. Initialize the Database and Seed Data:
-   ```bash
-   python -m app.db.init_db
-   ```
-6. Start the FastAPI server:
-   ```bash
-   uvicorn app.main:app --reload --port 8001
-   ```
-   *The Swagger API documentation will be available at `http://localhost:8001/docs`.*
+| File | Purpose |
+|------|---------|
+| `negotiation_state.py` | `NegotiationState` data model — tracks rounds, turn order, full history, offers, decisions. JSON-serializable. |
+| `orchestrator.py` | Turn-taking loop with correct round counting, state recording, and end-condition detection. |
+| `agent_input.py` | `AgentProfile` + `AgentInputPayload` — structured prompt payload sent to the LLM. |
+| `concession_engine.py` | Personality-based concession math (Aggressive/Collaborative/Risk-Averse). Deterministic and testable without API. |
+| `llm_interface.py` | `generate_agent_response()` — calls Gemini 3.5 Flash with structured JSON output. Safe fallback on parse errors. |
+| `agents.py` | `Agent` class — wraps profile, concession engine, and LLM interface into a single `take_turn()` call. |
+| `scenarios/vendor_pricing.py` | Buyer vs Vendor scenario |
+| `scenarios/job_offer.py` | Candidate vs Hiring Manager scenario |
+| `scenarios/budget_allocation.py` | Project Manager vs Finance Director scenario |
 
-### Frontend Connection
-1. In a separate terminal at the project root `d:\Infosys Springboard`, start the frontend:
-   ```bash
-   python -m http.server 8000
-   ```
-2. Open `http://localhost:8000` in your browser.
-3. Select the **Vendor Pricing Negotiation** scenario, configure agent personalities, and proceed to the Summary.
-4. Click **Ready to Start Negotiation**. The frontend will now call the backend to create the negotiation, trigger the AI Simulation Mode, and display the final outcome directly on the screen!
+### How to Run
+
+```bash
+# Install dependencies (once)
+pip install -r orchestrator/requirements.txt
+
+# Add your Gemini API key to orchestrator/.env
+echo "GEMINI_API_KEY=your_key_here" > orchestrator/.env
+
+# Run all 3 scenarios with real Gemini AI
+python orchestrator/run_all_scenarios_demo.py
+
+# Run in mock mode (no API key needed — deterministic rule-based responses)
+python orchestrator/run_all_scenarios_demo.py --mock
+
+# Single scenario quick-test
+python orchestrator/run_vendor_pricing_demo.py --mock
+```
+
+See [`orchestrator/README.md`](orchestrator/README.md) for full architecture documentation.
 
 ## Known Limitations
-- The negotiation transcript is not yet visualized round-by-round on the UI; currently, the Simulation Mode runs automatically on the backend and returns the final outcome summary to the UI.
-- Practice Mode API is built but not yet connected to a dedicated UI screen.
+- The negotiation transcript is not yet visualized round-by-round on the UI.
+- Practice Mode (human vs AI) is not yet wired to a UI screen.
 
 ## Planned for Future Phases
-- Real-time WebSockets or polling for round-by-round live UI updates.
+- Real-time round-by-round display in the frontend via WebSockets or polling.
 - Practice Mode UI allowing the human player to submit text offers.
+- Evaluation scoring: coaching feedback on human negotiation performance.
+
