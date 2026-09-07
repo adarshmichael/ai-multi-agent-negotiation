@@ -40,6 +40,12 @@ const OrchestratorIndicator = (function () {
       cls:       'oi-phase-state-updated',
       pulsing:   false,
     },
+    concession_check: {
+      label:     'CONCESSION CHECK',
+      sublabel:  'Evaluating offer deltas',
+      cls:       'oi-phase-concession',
+      pulsing:   true,
+    },
     termination_check: {
       label:     'TERMINATION CHECK',
       sublabel:  'Evaluating exit conditions',
@@ -59,6 +65,7 @@ const OrchestratorIndicator = (function () {
     { id: 'state_pass',         label: 'STATE PASS' },
     { id: 'agent_turn',         label: 'AGENT TURN' },
     { id: 'state_updated',      label: 'STATE UPDATED' },
+    { id: 'concession_check',   label: 'CONCESSION CHECK' },
     { id: 'termination_check',  label: 'TERMINATION CHECK' },
   ];
 
@@ -114,6 +121,10 @@ const OrchestratorIndicator = (function () {
                 <div class="oi-pipe-content">
                   <div class="oi-pipe-label">${p.label}</div>
                   <div class="oi-pipe-time" id="oi-time-${p.id}"></div>
+                  ${p.id === 'concession_check' ? `<div class="oi-concession-tooltip" id="oi-concession-tooltip" style="display:none;">
+                    <div class="oi-tooltip-tag">DETERMINISTIC CALC</div>
+                    <div id="oi-concession-delta"></div>
+                  </div>` : ''}
                 </div>
                 <div class="oi-pipe-connector" aria-hidden="true"></div>
               </div>
@@ -129,9 +140,21 @@ const OrchestratorIndicator = (function () {
     _render();
   }
 
-  function setPhase(phase, label) {
+  function setPhase(phase, label, meta = null) {
     _currentPhase = phase;
     _customLabel  = label || null;
+
+    if (phase === 'concession_check' && meta) {
+      const tooltip = _container.querySelector('#oi-concession-tooltip');
+      const deltaEl = _container.querySelector('#oi-concession-delta');
+      if (tooltip && deltaEl) {
+        tooltip.style.display = 'block';
+        deltaEl.textContent = meta.delta ? `Delta: ${meta.delta}` : '';
+      }
+    } else {
+      const tooltip = _container.querySelector('#oi-concession-tooltip');
+      if (tooltip) tooltip.style.display = 'none';
+    }
 
     // Log to activity history
     const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });

@@ -1,6 +1,7 @@
 /**
  * js/components/negotiation-timeline.js
- * Offer / Counteroffer Timeline — chronological log of all monetary moves.
+ * Expandable Round Timeline (Concept C) — horizontal row of hexagon/dot nodes.
+ * Each node represents one round. Clicking expands to show offers, counteroffers, and decisions.
  * Mounts into #ln-timeline.
  *
  * Public API:
@@ -9,23 +10,25 @@
  *   NegotiationTimeline.reset()
  *
  * Entry shape:
- *   { round, agentId, agentName, offer, decision, message, timestamp? }
+ *   { round, agentId, agentName, offer, decision, message, timestamp?, source? }
  */
 
 const NegotiationTimeline = (function () {
 
   let _container   = null;
-  let _listEl      = null;
+  let _nodesEl     = null;
+  let _expandedEl  = null;
   let _emptyEl     = null;
   let _countEl     = null;
   let _entries     = [];
-  let _isCollapsed = false;
+  let _expandedRound = null;
+  let _maxRound      = 0;
 
   const DECISION_META = {
-    offer:         { icon: '💰', label: 'OFFER',        cls: 'nt-decision-offer' },
-    counteroffer:  { icon: '↩', label: 'COUNTER',       cls: 'nt-decision-counter' },
-    accept:        { icon: '✅', label: 'ACCEPTED',      cls: 'nt-decision-accept' },
-    reject:        { icon: '❌', label: 'REJECTED',      cls: 'nt-decision-reject' },
+    offer:        { label: 'OFFER',    cls: 'offer' },
+    counteroffer: { label: 'COUNTER',  cls: 'counteroffer' },
+    accept:       { label: 'ACCEPTED', cls: 'accept' },
+    reject:       { label: 'REJECTED', cls: 'reject' },
   };
 
   function _formatINR(amount) {
@@ -35,8 +38,10 @@ const NegotiationTimeline = (function () {
     }).format(amount);
   }
 
-  function _formatTime(ts) {
-    return new Date(ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  function _escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
   }
 
   function mount(containerId = 'ln-timeline') {
@@ -44,130 +49,199 @@ const NegotiationTimeline = (function () {
     if (!_container) return;
 
     _container.innerHTML = `
-      <div class="nt-root">
-        <div class="nt-header">
-          <div class="nt-header-left">
-            <div class="nt-header-icon" aria-hidden="true">
+      <div class="rt-root">
+        <div class="rt-header">
+          <div class="rt-header-left">
+            <div class="rt-header-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
               </svg>
             </div>
             <div>
-              <div class="nt-header-title">OFFER / COUNTEROFFER TIMELINE</div>
-              <div class="nt-header-sub">All monetary moves — routed through orchestrator</div>
+              <div class="rt-header-title">ROUND TIMELINE</div>
+              <div class="rt-header-sub">Click a round to expand details — routed through orchestrator</div>
             </div>
           </div>
-          <div class="nt-header-right">
-            <span class="nt-count-badge" id="nt-count">0 entries</span>
-            <button class="nt-toggle-btn" id="nt-toggle" aria-expanded="true" title="Collapse timeline">
-              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="18 15 12 9 6 15"/>
-              </svg>
-            </button>
-          </div>
+          <span class="rt-count-badge" id="rt-count">0 rounds</span>
         </div>
 
-        <div class="nt-body" id="nt-body">
-          <div class="nt-empty" id="nt-empty">
-            <div class="nt-empty-icon">📊</div>
-            <div class="nt-empty-text">No offers yet — waiting for round 1 to begin</div>
-          </div>
-          <div class="nt-list" id="nt-list"></div>
+        <div class="rt-nodes" id="rt-nodes"></div>
+
+        <div class="rt-empty" id="rt-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg>
+          Round timeline will populate as offers are exchanged.
         </div>
+
+        <div class="rt-expanded" id="rt-expanded"></div>
       </div>
     `;
 
-    _listEl  = _container.querySelector('#nt-list');
-    _emptyEl = _container.querySelector('#nt-empty');
-    _countEl = _container.querySelector('#nt-count');
-
-    // Toggle
-    const toggleBtn = _container.querySelector('#nt-toggle');
-    const body      = _container.querySelector('#nt-body');
-    if (toggleBtn && body) {
-      toggleBtn.addEventListener('click', () => {
-        _isCollapsed = !_isCollapsed;
-        body.classList.toggle('nt-body-collapsed', _isCollapsed);
-        toggleBtn.setAttribute('aria-expanded', String(!_isCollapsed));
-        toggleBtn.querySelector('svg').style.transform = _isCollapsed ? 'rotate(180deg)' : '';
-      });
-    }
+    _nodesEl    = _container.querySelector('#rt-nodes');
+    _expandedEl = _container.querySelector('#rt-expanded');
+    _emptyEl    = _container.querySelector('#rt-empty');
+    _countEl    = _container.querySelector('#rt-count');
   }
 
   function addEntry(entry) {
-    if (!_listEl) return;
+    if (!_container) return;
     _entries.push(entry);
+
+    // Track max round
+    if (entry.round > _maxRound) _maxRound = entry.round;
 
     // Hide empty state
     if (_emptyEl) _emptyEl.style.display = 'none';
 
-    // Update count badge
+    // Update count
     if (_countEl) {
-      _countEl.textContent = `${_entries.length} entr${_entries.length === 1 ? 'y' : 'ies'}`;
+      const uniqueRounds = new Set(_entries.map(e => e.round));
+      _countEl.textContent = `${uniqueRounds.size} round${uniqueRounds.size !== 1 ? 's' : ''}`;
     }
 
-    const meta     = DECISION_META[entry.decision] || DECISION_META.offer;
-    const isAccept = entry.decision === 'accept';
-    const isReject = entry.decision === 'reject';
-    const isBuyer  = entry.agentId === 'buyer' || entry.agentId === 'candidate' || entry.agentId === 'project-manager';
+    _renderNodes();
 
-    const agentColorClass = isBuyer ? 'nt-agent-buyer' : 'nt-agent-vendor';
+    // If the expanded panel is showing this round, refresh it
+    if (_expandedRound === entry.round) {
+      _showExpanded(entry.round);
+    }
+  }
 
-    const div = document.createElement('div');
-    div.className = `nt-entry ${isAccept ? 'nt-entry-accept' : isReject ? 'nt-entry-reject' : ''} nt-entry-new`;
-    div.innerHTML = `
-      <div class="nt-entry-left">
-        <div class="nt-entry-connector-line"></div>
-        <div class="nt-entry-dot ${agentColorClass}"></div>
+  function _renderNodes() {
+    if (!_nodesEl) return;
+
+    const roundNumbers = [...new Set(_entries.map(e => e.round))].sort((a, b) => a - b);
+    if (roundNumbers.length === 0) return;
+
+    // Determine current active round (the latest with entries)
+    const activeRound = Math.max(...roundNumbers);
+
+    // Check if round is "complete" (has entries from both agents)
+    function isRoundComplete(r) {
+      const rEntries = _entries.filter(e => e.round === r);
+      const uniqueAgents = new Set(rEntries.map(e => e.agentId));
+      return uniqueAgents.size >= 2;
+    }
+
+    let html = '';
+    roundNumbers.forEach((round, idx) => {
+      const complete = isRoundComplete(round);
+      const isActive = round === activeRound && !complete;
+      const state = complete ? 'done' : isActive ? 'active' : 'pending';
+      const isSelected = _expandedRound === round;
+
+      html += `
+        <div class="rt-node" data-round="${round}" data-state="${state}" ${isSelected ? 'style="transform: scale(1.1);"' : ''}>
+          <div class="rt-node-hex">
+            <svg viewBox="0 0 34 34" fill="none">
+              <polygon points="17,2 31,9.5 31,24.5 17,32 3,24.5 3,9.5"
+                       stroke="currentColor" stroke-width="1.5"
+                       fill="currentColor" fill-opacity="${state === 'done' ? '0.12' : state === 'active' ? '0.08' : '0.04'}"/>
+            </svg>
+            <span class="rt-node-num">${state === 'done' ? '✓' : round}</span>
+          </div>
+          <div class="rt-node-label">R${round}</div>
+        </div>
+      `;
+
+      // Add connector between nodes
+      if (idx < roundNumbers.length - 1) {
+        const nextComplete = isRoundComplete(roundNumbers[idx + 1]);
+        const connState = complete ? (nextComplete ? 'done' : 'active') : '';
+        html += `<div class="rt-connector ${connState}"></div>`;
+      }
+    });
+
+    _nodesEl.innerHTML = html;
+
+    // Bind click events
+    _nodesEl.querySelectorAll('.rt-node').forEach(node => {
+      node.addEventListener('click', () => {
+        const round = parseInt(node.dataset.round, 10);
+        if (_expandedRound === round) {
+          _hideExpanded();
+        } else {
+          _showExpanded(round);
+        }
+      });
+    });
+  }
+
+  function _showExpanded(round) {
+    if (!_expandedEl) return;
+    _expandedRound = round;
+
+    const roundEntries = _entries.filter(e => e.round === round);
+    if (roundEntries.length === 0) {
+      _hideExpanded();
+      return;
+    }
+
+    const entriesHtml = roundEntries.map(entry => {
+      const meta = DECISION_META[entry.decision] || DECISION_META.offer;
+      const isBuyer = entry.agentId === 'buyer' || entry.agentId === 'candidate' || entry.agentId === 'project-manager';
+      const dotCls = isBuyer ? 'buyer' : 'vendor';
+
+      return `
+        <div class="rt-expanded-entry">
+          <div class="rt-expanded-entry-dot ${dotCls}"></div>
+          <div class="rt-expanded-entry-body">
+            <div class="rt-expanded-entry-meta">
+              <span>${_escapeHtml(entry.agentName)}</span>
+              <span class="rt-expanded-entry-decision ${meta.cls}">${meta.label}</span>
+            </div>
+            ${entry.offer !== null && entry.offer !== undefined
+              ? `<div class="rt-expanded-entry-amount">${_formatINR(entry.offer)}</div>`
+              : ''}
+            ${entry.message
+              ? `<div class="rt-expanded-entry-msg">${_escapeHtml(entry.message)}</div>`
+              : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    _expandedEl.innerHTML = `
+      <div class="rt-expanded-header">
+        <span class="rt-expanded-round">ROUND ${round} DETAILS</span>
+        <button class="rt-expanded-close" id="rt-close-expanded" title="Close">✕</button>
       </div>
-      <div class="nt-entry-body">
-        <div class="nt-entry-header">
-          <div class="nt-entry-meta">
-            <span class="nt-entry-agent ${agentColorClass}">${entry.agentName}</span>
-            <span class="nt-entry-round">R${entry.round}</span>
-            <span class="nt-decision-tag ${meta.cls}">${meta.icon} ${meta.label}</span>
-          </div>
-          <span class="nt-entry-time">${_formatTime(entry.timestamp)}</span>
-        </div>
-
-        ${entry.offer !== null && entry.offer !== undefined ? `
-          <div class="nt-entry-offer-row">
-            <div class="nt-offer-amount ${isAccept ? 'nt-offer-final' : ''}">${_formatINR(entry.offer)}</div>
-            ${isAccept ? '<span class="nt-offer-final-tag">FINAL AGREED PRICE</span>' : ''}
-          </div>
-        ` : ''}
-
-        ${entry.message ? `
-          <div class="nt-entry-message">${_escapeHtml(entry.message)}</div>
-        ` : ''}
-
-        <div class="nt-entry-orch-note">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="10" height="10">
-            <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
-          </svg>
-          Via orchestrator — state recorded
-        </div>
+      <div class="rt-expanded-entries">
+        ${entriesHtml}
       </div>
     `;
 
-    _listEl.appendChild(div);
-    _listEl.scrollTop = _listEl.scrollHeight;
+    _expandedEl.classList.add('visible');
 
-    // Remove animation class after it plays
-    setTimeout(() => div.classList.remove('nt-entry-new'), 600);
+    // Close button
+    const closeBtn = _expandedEl.querySelector('#rt-close-expanded');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _hideExpanded();
+      });
+    }
+
+    // Re-render nodes to update selected state
+    _renderNodes();
   }
 
-  function _escapeHtml(text) {
-    const d = document.createElement('div');
-    d.textContent = text;
-    return d.innerHTML;
+  function _hideExpanded() {
+    _expandedRound = null;
+    if (_expandedEl) {
+      _expandedEl.classList.remove('visible');
+      _expandedEl.innerHTML = '';
+    }
+    _renderNodes();
   }
 
   function reset() {
     _entries = [];
-    if (_listEl)  _listEl.innerHTML = '';
-    if (_emptyEl) _emptyEl.style.display = 'flex';
-    if (_countEl) _countEl.textContent = '0 entries';
+    _maxRound = 0;
+    _expandedRound = null;
+    if (_nodesEl)    _nodesEl.innerHTML = '';
+    if (_expandedEl) { _expandedEl.classList.remove('visible'); _expandedEl.innerHTML = ''; }
+    if (_emptyEl)    _emptyEl.style.display = 'flex';
+    if (_countEl)    _countEl.textContent = '0 rounds';
   }
 
   return { mount, addEntry, reset };

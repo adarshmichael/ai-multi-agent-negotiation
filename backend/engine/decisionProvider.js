@@ -333,14 +333,93 @@ class RuleBasedDecisionProvider extends AgentDecisionProvider {
 // LLMDecisionProvider — stub for Milestone 2
 // ============================================================
 
+const { generateAgentResponse } = require('../services/llm.service');
+
 class LLMDecisionProvider extends AgentDecisionProvider {
   async decide(agent, session) {
-    // Will be implemented in Milestone 2 using Gemini / llm.service.js
-    throw new Error('LLMDecisionProvider is not yet implemented. Use RuleBasedDecisionProvider for Milestone 1.');
+    const round = session.currentRound;
+    const maxRounds = session.maxRounds;
+    
+    // Build conversation history for prompt
+    let historyText = session.negotiationHistory.map(item => {
+      let line = `Round ${item.round}: ${item.agentName} chose ${item.action}`;
+      if (item.offer !== null) line += ` with offer ${formatINR(item.offer)}`;
+      return line;
+    }).join('\n');
+    
+    if (!historyText) historyText = 'No moves yet. This is the opening offer.';
+
+    const opponent = session.agents.find(a => a.id !== agent.id);
+    const opponentOffer = opponent ? (session.offers[opponent.id] ?? null) : null;
+
+    let oppBlock = '';
+    if (opponentOffer !== null) {
+      oppBlock = `The opponent's CURRENT OFFER for you to respond to: ${formatINR(opponentOffer)}`;
+    }
+
+    const prompt = `You are an AI negotiating agent in a structured negotiation simulation.
+
+=== YOUR PERSONA ===
+Agent Name : ${agent.name}
+Role       : ${agent.role}
+Goals      : ${agent.goals.join(', ')}
+Constraints: ${agent.constraints.join(', ')}
+Personality: ${agent.personality}
+Scenario   : ${session.scenario.name}
+Current Round: ${round} of ${maxRounds}
+
+=== NEGOTIATION HISTORY (complete log) ===
+${historyText}
+
+${oppBlock}
+
+=== YOUR TASK ===
+Based on your role, personality, goals, and constraints, decide your next move.
+Respond ONLY with a valid JSON object. Do NOT include any explanation outside the JSON.
+
+Required JSON format:
+{
+  "decision": "accept" | "counter_offer" | "reject",
+  "offer": <number or null if accepting/rejecting>,
+  "reasoning": "<short internal reasoning for logs>"
+}
+
+Rules:
+- If you ACCEPT, set decision="accept", offer=null.
+- If you COUNTER, set decision="counter_offer" with a numeric offer.
+- If you REJECT, set decision="reject", offer=null.
+- Do not exceed your numeric constraints.
+- Keep reasoning concise (1-2 sentences).`;
+
+    const offerState = { ...session.offers };
+    const response = await generateAgentResponse(prompt, agent.name, agent, round, maxRounds, offerState);
+    
+    let action = 'OFFER';
+    if (response.decision === 'counter_offer') {
+      action = (round === 1 || session.negotiationHistory.length === 0) ? 'OFFER' : 'COUNTEROFFER';
+    } else if (response.decision === 'accept') {
+      action = 'ACCEPT';
+    } else {
+      action = 'REJECT';
+    }
+
+    return {
+      message: response.message || `I have decided to ${response.decision}.`,
+      offer: response.offer,
+      decision: response.decision,
+      reason: response.reasoning || '',
+      action: action,
+    };
   }
 
   evaluateOffer(agent, offer) {
-    throw new Error('LLMDecisionProvider.evaluateOffer() not yet implemented.');
+    const nc = agent.numericConstraint;
+    const satisfied = this.evaluateConstraint(nc, offer);
+    return {
+      acceptable: satisfied,
+      constraintSatisfied: satisfied,
+      reason: satisfied ? 'Offer satisfies constraints.' : 'Offer violates constraints.',
+    };
   }
 }
 

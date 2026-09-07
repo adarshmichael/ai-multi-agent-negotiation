@@ -9,7 +9,9 @@
     content="AI-powered multi-agent negotiation training and simulation platform. Configure agents, set goals, and watch live negotiations unfold." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/style.css" />
 </head>
 
@@ -59,7 +61,8 @@
       <div class="screen-header">
         <div class="screen-eyebrow">Step 2 of 4</div>
         <h2 class="screen-title" id="configure-title">Configure Agents</h2>
-        <p class="screen-subtitle">For each agent, configure their Goals, Constraints, and Personality — in that order. Personality is unlocked only after goals and constraints are set.</p>
+        <p class="screen-subtitle">For each agent, configure their Goals, Constraints, and Personality — in that order.
+          Personality is unlocked only after goals and constraints are set.</p>
       </div>
 
       <div class="validation-banner" id="personality-validation">
@@ -81,7 +84,7 @@
       </div>
     </section>
 
-    <!-- ================= SCREEN 3: GOALS & CONSTRAINTS SUMMARY ================= -->
+    <!-- ================= SCREEN 3: SUMMARY ================= -->
     <section class="screen" id="screen-summary">
       <div class="screen-header">
         <div class="screen-eyebrow">Step 3 of 4</div>
@@ -93,12 +96,24 @@
 
       <div class="config-section" style="margin-top: 32px;">
         <h3 class="config-title">Simulation Settings</h3>
-        <div class="form-group" style="max-width: 300px; margin-top: 16px;">
-          <label for="input-max-rounds" class="form-label">Maximum Rounds</label>
-          <input type="number" id="input-max-rounds" class="form-control" value="10" min="1" max="50"
-            style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px;">
-          <p class="form-hint" style="margin-top: 8px; font-size: 13px; color: var(--text-secondary);">The simulation
-            will automatically terminate if an agreement isn't reached by this round.</p>
+        <div style="display:flex; gap: 24px; margin-top: 16px;">
+          <div class="form-group" style="flex:1;">
+            <label for="input-max-rounds" class="form-label">Maximum Rounds</label>
+            <input type="number" id="input-max-rounds" class="form-control" value="10" min="1" max="50"
+              style="width: 100%; padding: 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 15px;">
+            <p class="form-hint" style="margin-top: 8px; font-size: 13px; color: var(--color-text-faint);">The
+              simulation will automatically terminate if an agreement isn't reached by this round.</p>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label for="input-ai-provider" class="form-label">AI Provider</label>
+            <select id="input-ai-provider" class="form-control"
+              style="width: 100%; padding: 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 15px;">
+              <option value="simulation">Mock Agents (Rule-Based)</option>
+              <option value="gemini">Gemini API (Real AI)</option>
+            </select>
+            <p class="form-hint" style="margin-top: 8px; font-size: 13px; color: var(--color-text-faint);">Select
+              whether to use the local mock engine or real Gemini AI.</p>
+          </div>
         </div>
       </div>
 
@@ -114,7 +129,7 @@
     <!-- ================= SCREEN 4: LIVE NEGOTIATION ================= -->
     <section class="screen" id="screen-negotiate">
 
-      <!-- ---- Pre-start: Start panel ---- -->
+      <!-- ---- Pre-start panel ---- -->
       <div id="neg-start-panel">
         <div class="ready-panel">
           <div class="ready-icon">
@@ -144,107 +159,191 @@
         </div>
       </div>
 
-      <!-- ---- Live Negotiation (Equilibrium Layout) ---- -->
+      <!-- ---- Live Negotiation Console ---- -->
       <div id="neg-live-panel" style="display:none;">
 
-        <!-- 1. Scenario info bar -->
-        <div class="neg-scenario-bar" id="neg-scenario-bar">
-          <div class="neg-scenario-bar-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-            </svg>
+        <!-- ═══ ORCHESTRATOR CONTROL BAR ═══ -->
+        <div class="neg-control-bar" id="neg-control-bar">
+          <div class="neg-control-bar-left">
+            <div class="neg-orch-pulse-wrap" aria-hidden="true">
+              <svg viewBox="0 0 36 36" fill="none" width="26" height="26">
+                <polygon points="18,2 33,10 33,26 18,34 3,26 3,10" stroke="currentColor" stroke-width="1.5"
+                  fill="currentColor" fill-opacity="0.1" />
+                <circle cx="18" cy="18" r="4" fill="currentColor" opacity="0.8" />
+              </svg>
+              <div class="neg-orch-node-pulse" id="neg-orch-pulse"></div>
+            </div>
+            <div class="neg-control-label">ORCHESTRATOR</div>
+            <div class="neg-control-divider"></div>
+            <div class="neg-control-stat">
+              <span class="neg-control-stat-label">ROUND</span>
+              <span class="neg-control-stat-value" id="neg-orch-round">— / —</span>
+            </div>
+            <div class="neg-control-divider"></div>
+            <div class="neg-control-stat">
+              <span class="neg-control-stat-label">ACTIVE</span>
+              <span class="neg-control-stat-value" id="neg-orch-turn">—</span>
+            </div>
+            <div class="neg-control-divider"></div>
+            <div class="neg-status-pill" id="neg-orch-status-pill" data-status="starting">
+              <span class="neg-status-dot" id="neg-status-dot"></span>
+              <span id="neg-status-text">INITIALIZING</span>
+            </div>
           </div>
-          <div class="neg-scenario-bar-text">
-            <span class="neg-scenario-bar-name" id="neg-scenario-name">Negotiation</span>
-            <span class="neg-scenario-bar-desc" id="neg-scenario-desc"></span>
+          <div class="neg-control-bar-right">
+            <button class="btn-control" id="btn-pause-negotiation" title="Pause">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
+              </svg>
+              Pause
+            </button>
+            <button class="btn-control" id="btn-resume-negotiation" title="Resume" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              Resume
+            </button>
+            <button class="btn-control btn-control-danger" id="btn-stop-negotiation" title="Stop">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+              </svg>
+              Stop
+            </button>
+            <button class="btn-control" id="btn-reset-negotiation" title="Reset">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="13" height="13">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              Reset
+            </button>
           </div>
         </div>
 
-        <!-- 2. Orchestrator status bar (persistent) -->
-        <div class="neg-orch-status-bar" id="neg-orch-status-bar">
-          <div class="neg-orch-node" id="neg-orch-node" aria-label="Orchestrator">
-            <!-- CSS hexagon shape with gear icon via ::after — see style.css -->
-            <div class="neg-orch-node-pulse" id="neg-orch-pulse"></div>
-          </div>
-          <div class="neg-orch-label">ORCHESTRATOR</div>
-          <div class="neg-orch-divider" aria-hidden="true"></div>
-          <div class="neg-orch-stat">
-            <span class="neg-orch-stat-label">ROUND</span>
-            <span class="neg-orch-stat-value" id="neg-orch-round">— / —</span>
-          </div>
-          <div class="neg-orch-divider" aria-hidden="true"></div>
-          <div class="neg-orch-stat">
-            <span class="neg-orch-stat-label">ACTIVE TURN</span>
-            <span class="neg-orch-stat-value" id="neg-orch-turn">—</span>
-          </div>
-          <div class="neg-orch-divider" aria-hidden="true"></div>
-          <div class="neg-orch-status-pill" id="neg-orch-status-pill">
-            <span class="neg-status-indicator" id="neg-status-dot"></span>
-            <span id="neg-status-text">Starting...</span>
-          </div>
-          <div style="margin-left:auto;">
-            <button class="btn btn-secondary btn-sm" id="btn-stop-negotiation" title="Stop negotiation">■ Stop</button>
-          </div>
+        <!-- ═══ SCENARIO STRIP ═══ -->
+        <div class="neg-scenario-strip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <span class="neg-scenario-strip-name" id="neg-scenario-name">Negotiation</span>
+          <span class="neg-scenario-strip-sep">·</span>
+          <span class="neg-scenario-strip-desc" id="neg-scenario-desc"></span>
+          <span class="neg-scenario-strip-mode" id="neg-mode-badge">MOCK</span>
         </div>
 
-        <!-- 3. Main negotiation arena: 3-column grid -->
-        <!-- 7. Negotiation State Panel (Moved to top) -->
-        <div id="ln-state-panel" class="ln-section-mount" aria-label="Negotiation State Panel" style="margin-top: 0; margin-bottom: var(--space-4);"></div>
+        <!-- ═══ MAIN ARENA: 3-column layout ═══ -->
+        <div class="neg-arena-v2">
 
-        <div class="neg-arena">
-
-          <!-- Left: Buyer Agent Panel -->
-          <div class="neg-agent-panel neg-buyer-panel" id="neg-buyer-panel">
-            <div class="neg-agent-panel-header">
-              <div class="neg-agent-panel-avatar buyer-avatar" id="neg-buyer-avatar">BA</div>
-              <div class="neg-agent-panel-info">
-                <div class="neg-agent-panel-name" id="neg-buyer-name">Buyer Agent</div>
-                <div class="neg-agent-panel-role" id="neg-buyer-role">Buyer</div>
+          <!-- Left: Buyer Agent Card -->
+          <div class="neg-agent-card neg-agent-card-buyer" id="neg-buyer-panel">
+            <div class="neg-agent-card-header">
+              <div class="neg-agent-avatar neg-agent-avatar-buyer" id="neg-buyer-avatar">
+                <span id="neg-buyer-initials">BA</span>
               </div>
-              <div class="neg-agent-badge" id="neg-buyer-badge" data-state="idle">Idle</div>
+              <div class="neg-agent-card-meta">
+                <div class="neg-agent-card-name" id="neg-buyer-name">Buyer Agent</div>
+                <div class="neg-agent-card-role" id="neg-buyer-role">Buyer</div>
+              </div>
             </div>
-            <div class="neg-agent-chat" id="neg-buyer-chat">
-              <div class="neg-agent-chat-empty" id="neg-buyer-empty">
-                <div class="thinking-dots"><span></span><span></span><span></span></div>
-                <span>Waiting for turn...</span>
+            <div class="neg-agent-status-row">
+              <div class="neg-agent-status-chip" id="neg-buyer-badge" data-state="idle">
+                <span class="status-chip-dot"></span>
+                <span class="status-chip-label">IDLE</span>
+              </div>
+              <div class="agent-personality-tag" id="neg-buyer-personality"></div>
+            </div>
+            <div class="neg-agent-offer-block">
+              <div class="neg-agent-offer-label">CURRENT OFFER</div>
+              <div class="neg-agent-offer-value" id="neg-buyer-offer-value">—</div>
+            </div>
+            <div class="neg-agent-info-grid">
+              <div class="neg-agent-info-item">
+                <div class="neg-agent-info-label">GOAL</div>
+                <div class="neg-agent-info-val" id="neg-buyer-goal">—</div>
+              </div>
+              <div class="neg-agent-info-item">
+                <div class="neg-agent-info-label">LAST ACTION</div>
+                <div class="neg-agent-info-val" id="neg-buyer-action">—</div>
+              </div>
+            </div>
+            <div class="neg-agent-thinking" id="neg-buyer-thinking" style="display:none;">
+              <div class="thinking-dots"><span></span><span></span><span></span></div>
+              <span id="neg-buyer-thinking-phrase">Thinking...</span>
+            </div>
+          </div>
+
+          <!-- Center: Live Chat Timeline -->
+          <div class="neg-chat-column">
+            <div class="neg-chat-header">
+              <div class="neg-chat-live-badge">
+                <span class="neg-chat-live-dot"></span>
+                LIVE NEGOTIATION
+              </div>
+            </div>
+            <div class="neg-chat-timeline" id="neg-chat-timeline">
+              <div class="neg-chat-empty" id="neg-chat-empty">
+                <div class="neg-chat-empty-icon">⚡</div>
+                <div class="neg-chat-empty-text">Negotiation starting…</div>
+                <div class="neg-chat-empty-sub">Agent messages will appear here in real time.</div>
+              </div>
+            </div>
+            <div class="neg-orch-log" id="neg-orch-log">
+              <div class="neg-orch-log-header">◈ ORCHESTRATOR LOG</div>
+              <div class="neg-orch-log-entries" id="neg-orch-log-entries">
+                <div class="neg-orch-log-entry neg-log-pending">Session initialized. Awaiting engine start…</div>
               </div>
             </div>
           </div>
 
-          <!-- Center: Orchestrator Indicator (New Hexagon UI replacing legacy spine) -->
-          <div id="ln-orch-indicator" aria-label="Orchestrator Activity Indicator" class="ln-orch-indicator-wrapper"></div>
-
-          <!-- Right: Vendor Agent Panel -->
-          <div class="neg-agent-panel neg-vendor-panel" id="neg-vendor-panel">
-            <div class="neg-agent-panel-header">
-              <div class="neg-agent-panel-avatar vendor-avatar" id="neg-vendor-avatar">VA</div>
-              <div class="neg-agent-panel-info">
-                <div class="neg-agent-panel-name" id="neg-vendor-name">Vendor Agent</div>
-                <div class="neg-agent-panel-role" id="neg-vendor-role">Vendor</div>
+          <!-- Right: Vendor Agent Card -->
+          <div class="neg-agent-card neg-agent-card-vendor" id="neg-vendor-panel">
+            <div class="neg-agent-card-header">
+              <div class="neg-agent-avatar neg-agent-avatar-vendor" id="neg-vendor-avatar">
+                <span id="neg-vendor-initials">VA</span>
               </div>
-              <div class="neg-agent-badge" id="neg-vendor-badge" data-state="idle">Idle</div>
+              <div class="neg-agent-card-meta">
+                <div class="neg-agent-card-name" id="neg-vendor-name">Vendor Agent</div>
+                <div class="neg-agent-card-role" id="neg-vendor-role">Vendor</div>
+              </div>
             </div>
-            <div class="neg-agent-chat" id="neg-vendor-chat">
-              <div class="neg-agent-chat-empty" id="neg-vendor-empty">
-                <div class="thinking-dots"><span></span><span></span><span></span></div>
-                <span>Waiting for turn...</span>
+            <div class="neg-agent-status-row">
+              <div class="neg-agent-status-chip" id="neg-vendor-badge" data-state="idle">
+                <span class="status-chip-dot"></span>
+                <span class="status-chip-label">IDLE</span>
               </div>
+              <div class="agent-personality-tag" id="neg-vendor-personality"></div>
+            </div>
+            <div class="neg-agent-offer-block">
+              <div class="neg-agent-offer-label">CURRENT OFFER</div>
+              <div class="neg-agent-offer-value" id="neg-vendor-offer-value">—</div>
+            </div>
+            <div class="neg-agent-info-grid">
+              <div class="neg-agent-info-item">
+                <div class="neg-agent-info-label">GOAL</div>
+                <div class="neg-agent-info-val" id="neg-vendor-goal">—</div>
+              </div>
+              <div class="neg-agent-info-item">
+                <div class="neg-agent-info-label">LAST ACTION</div>
+                <div class="neg-agent-info-val" id="neg-vendor-action">—</div>
+              </div>
+            </div>
+            <div class="neg-agent-thinking" id="neg-vendor-thinking" style="display:none;">
+              <div class="thinking-dots"><span></span><span></span><span></span></div>
+              <span id="neg-vendor-thinking-phrase">Thinking...</span>
             </div>
           </div>
 
-        </div><!-- end .neg-arena -->
+        </div><!-- end .neg-arena-v2 -->
 
-        <div class="ln-bottom-grid">
-          <!-- Offer / Counteroffer Timeline -->
-          <div id="ln-timeline" class="ln-section-mount" aria-label="Offer Counteroffer Timeline"></div>
-
-          <!-- Conversation History Log -->
-          <div id="ln-conv-log" class="ln-section-mount" aria-label="Conversation History Log"></div>
-        </div>
-
-        <div class="nav-row">
-          <button class="btn btn-primary" id="btn-negotiation-restart" style="width: 100%; justify-content: center;">↺ Start a New Negotiation</button>
+        <!-- ═══ TERMINAL RESULT CARD (hidden until complete) ═══ -->
+        <div class="neg-result-card" id="neg-result-card" style="display:none;">
+          <div class="neg-result-icon" id="neg-result-icon">✓</div>
+          <div class="neg-result-title" id="neg-result-title">Agreement Reached</div>
+          <div class="neg-result-subtitle" id="neg-result-subtitle"></div>
+          <div class="neg-result-stats" id="neg-result-stats"></div>
+          <button class="btn btn-primary" id="btn-negotiation-restart" style="margin-top:24px;">
+            ↺ Start a New Negotiation
+          </button>
         </div>
 
       </div><!-- end #neg-live-panel -->
@@ -260,8 +359,6 @@
   <script src="js/data/scenarios.js"></script>
   <script src="js/data/api.js"></script>
   <script src="js/state/appState.js"></script>
-  <!-- Live Negotiation components (loaded before app.js so app.js can call them) -->
-  <script src="js/mock/mock-engine.js"></script>
   <script src="js/components/state-panel.js"></script>
   <script src="js/components/negotiation-timeline.js"></script>
   <script src="js/components/orchestrator-indicator.js"></script>

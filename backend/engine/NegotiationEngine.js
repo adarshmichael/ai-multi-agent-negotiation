@@ -1,43 +1,50 @@
 /**
  * engine/NegotiationEngine.js
- * The central orchestrator for multi-agent negotiations.
+ * The central autonomous orchestrator for multi-agent negotiations.
  *
- * Architecture (Milestone 1 — Rule-Based):
- *
- *   start() → initialize agents → round loop
- *           → AgentDecisionProvider.decide()   ← abstraction (swap for LLM in M2)
- *           → trackConcession()
- *           → appendNegotiationHistory()
- *           → emit WebSocket events
- *           → detect termination → finalize()
+ * Architecture:
+ *   run() → initializeAgents (once, stored on session._agents)
+ *         → autonomous while loop
+ *         → executeTurn() per agent, per round
+ *         → broadcast WebSocket events after each event
+ *         → detect terminal conditions → finalize()
  *
  * WebSocket events emitted:
  *   negotiation_started, round_started, agent_thinking, agent_message,
  *   offer_updated, negotiation_completed, negotiation_failed
+ *
+ * Pause/Resume:
+ *   session._paused = true  → loop will finish current turn then stop
+ *   session._paused = false → loop continues
  */
 
-const { initializeAgents }                    = require('../services/agent.service');
-const { trackConcession, getConcessionSummary } = require('../services/concession.service');
+const { initializeAgents }                       = require('../services/agent.service');
+const { trackConcession, getConcessionSummary }  = require('../services/concession.service');
 const { checkAgreement, checkRejection, checkMaxRounds, checkDeadlock } = require('../services/evaluation.service');
-const { updateSession }                        = require('../services/negotiation.service');
-const { createMessage }                        = require('../models/message.model');
+const { updateSession }                          = require('../services/negotiation.service');
+const { createMessage }                          = require('../models/message.model');
 const { STATUS, RESULT, appendNegotiationHistory } = require('../models/negotiation.model');
-const { ACTION, decisionToAction }             = require('../models/offer.model');
-const { RuleBasedDecisionProvider }            = require('./decisionProvider');
-const { config }                               = require('../config/env');
-const logger                                   = require('../utils/logger');
+const { ACTION, decisionToAction }               = require('../models/offer.model');
+const { RuleBasedDecisionProvider, LLMDecisionProvider } = require('./decisionProvider');
+const { config }                                 = require('../config/env');
+const logger                                     = require('../utils/logger');
 
 // ============================================================
-// Decision Provider — swap RuleBasedDecisionProvider → LLMDecisionProvider in M2
+// Decision Provider — selected by session mode
 // ============================================================
-const decisionProvider = new RuleBasedDecisionProvider();
 
-// WebSocket clients map: negotiationId → Set of ws connections
+function getDecisionProvider(mode) {
+  if (mode === 'gemini') {
+    return new LLMDecisionProvider();
+  }
+  return new RuleBasedDecisionProvider();
+}
+
+// ============================================================
+// WebSocket client registry
+// ============================================================
+
 const wsClients = new Map();
-
-// ============================================================
-// WebSocket helpers
-// ============================================================
 
 function registerClient(negotiationId, ws) {
   if (!wsClients.has(negotiationId)) wsClients.set(negotiationId, new Set());
@@ -73,34 +80,49 @@ function sleep(ms) {
 }
 
 // ============================================================
-// Main negotiation runner
+// Main negotiation runner — AUTONOMOUS LOOP
 // ============================================================
 
 /**
  * Run the negotiation engine for a session.
- * Executes asynchronously — does not block the HTTP response.
+ * Executes autonomously — fires and keeps running until a terminal condition.
+ * Prevents duplicate execution via session._running flag.
  *
- * @param {object} session — live session from negotiation service
+ * @param {object} session — live session object from negotiation service
  */
 async function run(session) {
   const negotiationId = session.id;
-  logger.negotiation(`Engine starting (rule-based): ${negotiationId}`);
 
-  // Initialize agent instances
-  let agents;
-  try {
-    agents = initializeAgents(session);
-  } catch (err) {
-    logger.error('Engine', `Agent initialization failed: ${err.message}`);
-    updateSession(negotiationId, { status: STATUS.FAILED, result: RESULT.ERROR, resultReason: err.message });
-    broadcast(negotiationId, 'negotiation_failed', { reason: 'Agent initialization failed.' });
+  // ---- Guard: prevent double-start ----
+  if (session._running) {
+    logger.warn('Engine', `${negotiationId}: Already running — ignoring duplicate start.`);
     return;
   }
+  session._running = true;
+  session._paused  = false;
 
-  // Transition to IN_PROGRESS
+  logger.negotiation(`Engine starting autonomously: ${negotiationId}`);
+
+  // ---- Initialize agent instances (once, stored on session) ----
+  if (!session._agents) {
+    try {
+      session._agents = initializeAgents(session);
+    } catch (err) {
+      logger.error('Engine', `Agent initialization failed: ${err.message}`);
+      updateSession(negotiationId, { status: STATUS.FAILED, result: RESULT.ERROR, resultReason: err.message });
+      broadcast(negotiationId, 'negotiation_failed', { reason: 'Agent initialization failed.' });
+      session._running = false;
+      return;
+    }
+  }
+
+  const agents = session._agents;
+
+  // ---- Transition to IN_PROGRESS ----
   updateSession(negotiationId, {
-    status:           STATUS.IN_PROGRESS,
-    currentAgentTurn: agents[0]?.id || null,
+    status:            STATUS.IN_PROGRESS,
+    currentAgentTurn:  agents[0]?.id || null,
+    currentAgentIndex: 0,
   });
 
   broadcast(negotiationId, 'negotiation_started', {
@@ -109,174 +131,244 @@ async function run(session) {
     maxRounds: session.maxRounds,
   });
 
-  logger.negotiation(`${negotiationId}: ${agents.length} agents initialized. Starting rounds...`);
+  logger.negotiation(`${negotiationId}: ${agents.length} agents initialized. Autonomous loop starting...`);
 
-  let currentAgentIndex = 0;
-
-  // ======== MAIN NEGOTIATION LOOP ========
+  // ---- AUTONOMOUS ORCHESTRATION LOOP ----
   while (true) {
-    const freshSession = session; // live reference
-    const round        = freshSession.currentRound + 1;
-
-    // Update round counter and currentAgentTurn
-    const currentAgent  = agents[currentAgentIndex];
-    const opponentIndex = (currentAgentIndex + 1) % agents.length;
-
-    updateSession(negotiationId, {
-      currentRound:     round,
-      currentAgentTurn: currentAgent.id,
-    });
-
-    logger.round(`${negotiationId}: Round ${round}/${freshSession.maxRounds} | Turn: ${currentAgent.name}`);
-    broadcast(negotiationId, 'round_started', {
-      round,
-      maxRounds:        freshSession.maxRounds,
-      currentAgentTurn: currentAgent.id,
-      currentAgentName: currentAgent.name,
-    });
-
-    // ---- Thinking indicator ----
-    broadcast(negotiationId, 'agent_thinking', {
-      agentId:       currentAgent.id,
-      agentName:     currentAgent.name,
-      role:          currentAgent.role,
-      round,
-      thinkingPhrase: getThinkingPhrase(currentAgent.personality),
-    });
-
-    // Configurable delay to make the UI feel alive
-    await sleep(config.thinkDelayMs);
-
-    // ---- Decision via AgentDecisionProvider (rule-based for M1) ----
-    let decision;
-    try {
-      decision = await decisionProvider.decide(currentAgent, freshSession);
-    } catch (err) {
-      logger.error('Engine', `DecisionProvider error for ${currentAgent.name}: ${err.message}`);
-      // Graceful fallback — hold position
-      decision = {
-        message:  'I need a moment to reconsider my position. Please allow me to respond shortly.',
-        offer:    freshSession.offers[currentAgent.id] ?? null,
-        decision: 'counter_offer',
-        reason:   'Decision provider error — holding position',
-        action:   ACTION.COUNTEROFFER,
-      };
+    // Check session is still in progress
+    if (session.status !== STATUS.IN_PROGRESS) {
+      logger.negotiation(`${negotiationId}: Loop exiting — status is ${session.status}`);
+      break;
     }
 
-    // ---- Track concession BEFORE updating offers ----
-    if (decision.offer !== null && decision.offer !== undefined) {
-      trackConcession(freshSession, currentAgent.id, decision.offer);
-
-      // Track initial offer
-      if (!freshSession.initialOffers[currentAgent.id]) {
-        freshSession.initialOffers[currentAgent.id] = decision.offer;
-        currentAgent.initialOffer = decision.offer;
-      }
-
-      // Update current offer in session and agent
-      freshSession.offers[currentAgent.id] = decision.offer;
-      currentAgent.currentOffer = decision.offer;
+    // Check pause flag
+    if (session._paused) {
+      logger.negotiation(`${negotiationId}: Paused. Waiting...`);
+      await sleep(500);
+      continue;
     }
 
-    // ---- Create message record ----
-    const message = createMessage({
+    // Execute one turn — returns 'continue' or 'terminate'
+    const turnResult = await executeTurn(session);
+    if (turnResult === 'terminate') {
+      break;
+    }
+
+    // Natural delay between turns so UI can animate
+    await sleep(300);
+  }
+
+  session._running = false;
+  logger.negotiation(`${negotiationId}: Autonomous loop complete.`);
+}
+
+// ============================================================
+// Single turn execution
+// ============================================================
+
+/**
+ * Execute exactly one agent's turn.
+ * Returns 'continue' to keep loop going, 'terminate' to stop.
+ */
+async function executeTurn(session) {
+  const negotiationId    = session.id;
+  const agents           = session._agents;
+
+  if (!agents || agents.length === 0) {
+    logger.error('Engine', `${negotiationId}: No agents available for turn.`);
+    return 'terminate';
+  }
+
+  const currentAgentIndex = session.currentAgentIndex || 0;
+  const currentAgent      = agents[currentAgentIndex];
+  const opponentIndex     = (currentAgentIndex + 1) % agents.length;
+  const round             = session.currentRound + 1;
+
+  // Update session with new round and current agent
+  updateSession(negotiationId, {
+    currentRound:      round,
+    currentAgentTurn:  currentAgent.id,
+    currentAgentIndex: currentAgentIndex,
+  });
+
+  logger.round(`${negotiationId}: Round ${round}/${session.maxRounds} | Turn: ${currentAgent.name}`);
+
+  // ---- Broadcast: round started ----
+  broadcast(negotiationId, 'round_started', {
+    round,
+    maxRounds:        session.maxRounds,
+    currentAgentTurn: currentAgent.id,
+    currentAgentName: currentAgent.name,
+  });
+
+  // ---- Broadcast: agent thinking ----
+  broadcast(negotiationId, 'agent_thinking', {
+    agentId:        currentAgent.id,
+    agentName:      currentAgent.name,
+    role:           currentAgent.role,
+    round,
+    thinkingPhrase: getThinkingPhrase(currentAgent.personality),
+  });
+
+  // ---- Thinking delay (makes the UI feel alive) ----
+  await sleep(config.thinkDelayMs);
+
+  // Check if session was paused or stopped during thinking delay
+  if (session._paused || session.status !== STATUS.IN_PROGRESS) {
+    return session.status !== STATUS.IN_PROGRESS ? 'terminate' : 'continue';
+  }
+
+  // ---- Generate decision via AgentDecisionProvider ----
+  const decisionProvider = getDecisionProvider(session.mode);
+  let decision;
+  try {
+    decision = await decisionProvider.decide(currentAgent, session);
+  } catch (err) {
+    logger.error('Engine', `DecisionProvider error for ${currentAgent.name}: ${err.message}`);
+    // Graceful fallback — hold position with a realistic message
+    decision = {
+      message:  'I need a moment to reconsider. Please bear with me.',
+      offer:    session.offers[currentAgent.id] ?? null,
+      decision: 'counter_offer',
+      reason:   'Provider error — holding position',
+      action:   ACTION.COUNTEROFFER,
+    };
+  }
+
+  // ---- Track concession and update offers BEFORE termination checks ----
+  if (decision.offer !== null && decision.offer !== undefined) {
+    trackConcession(session, currentAgent.id, decision.offer);
+
+    // Track initial offer
+    if (!session.initialOffers[currentAgent.id]) {
+      session.initialOffers[currentAgent.id] = decision.offer;
+      currentAgent.initialOffer = decision.offer;
+    }
+
+    // Update current offer in both session and agent instance
+    session.offers[currentAgent.id]   = decision.offer;
+    currentAgent.currentOffer         = decision.offer;
+  }
+
+  // ---- Create and store message ----
+  const message = createMessage({
+    agentId:   currentAgent.id,
+    agentName: currentAgent.name,
+    role:      currentAgent.role,
+    message:   decision.message,
+    offer:     decision.offer,
+    decision:  decision.decision,
+    round,
+  });
+
+  session.messages.push(message);
+
+  // ---- Append to structured negotiation history ----
+  const action = decision.action || decisionToAction(decision.decision);
+  appendNegotiationHistory(session, {
+    round,
+    agentId:   currentAgent.id,
+    agentName: currentAgent.name,
+    action,
+    offer:     decision.offer,
+    reason:    decision.reason || '',
+    timestamp: message.timestamp,
+  });
+
+  // ---- Broadcast: agent message (the core conversation event) ----
+  broadcast(negotiationId, 'agent_message', {
+    message:   message.message,
+    offer:     message.offer,
+    decision:  message.decision,
+    agentId:   message.agentId,
+    agentName: message.agentName,
+    role:      message.role,
+    round:     message.round,
+    timestamp: message.timestamp,
+    id:        message.id,
+  });
+
+  // ---- Broadcast: offer updated ----
+  if (message.offer !== null && message.offer !== undefined) {
+    broadcast(negotiationId, 'offer_updated', {
       agentId:   currentAgent.id,
       agentName: currentAgent.name,
-      role:      currentAgent.role,
-      message:   decision.message,
-      offer:     decision.offer,
-      decision:  decision.decision,
-      round,
-    });
-
-    freshSession.messages.push(message);
-
-    // ---- Append to structured negotiation history ----
-    const action = decision.action || decisionToAction(decision.decision);
-    appendNegotiationHistory(freshSession, {
-      round,
-      agentId:   currentAgent.id,
-      agentName: currentAgent.name,
-      action,
-      offer:     decision.offer,
-      reason:    decision.reason || '',
-      timestamp: message.timestamp,
-    });
-
-    // ---- Broadcast message to frontend ----
-    broadcast(negotiationId, 'agent_message', {
-      message:   message.message,
       offer:     message.offer,
-      decision:  message.decision,
-      agentId:   message.agentId,
-      agentName: message.agentName,
-      role:      message.role,
-      round:     message.round,
-      timestamp: message.timestamp,
-      id:        message.id,
+      offers:    { ...session.offers },
+      round,
     });
+  }
 
-    // ---- Broadcast offer update if offer changed ----
-    if (message.offer !== null && message.offer !== undefined) {
-      broadcast(negotiationId, 'offer_updated', {
-        agentId:      currentAgent.id,
-        agentName:    currentAgent.name,
-        offer:        message.offer,
-        offers:       { ...freshSession.offers },
-        round,
-      });
-    }
+  logger.agent(`${currentAgent.name} | Round ${round} | Action: ${action} | Offer: ${decision.offer}`);
 
-    logger.agent(
-      `${currentAgent.name} | Round ${round} | Action: ${action} | Offer: ${decision.offer}`
-    );
+  // ======== TERMINATION CHECKS ========
 
-    // ======== TERMINATION CHECKS ========
+  // 1. Agreement
+  const agreementCheck = checkAgreement(session, {
+    agentId:   currentAgent.id,
+    agentName: currentAgent.name,
+    offer:     decision.offer,
+    decision:  decision.decision,
+  });
+  if (agreementCheck.agreed) {
+    await finalize(session, RESULT.AGREEMENT, agreementCheck.finalOffer, agreementCheck.reason, agents, negotiationId);
+    return 'terminate';
+  }
 
-    // 1. Agreement
-    const agreementCheck = checkAgreement(freshSession, {
-      agentId:   currentAgent.id,
-      agentName: currentAgent.name,
-      offer:     decision.offer,
-      decision:  decision.decision,
-    });
-    if (agreementCheck.agreed) {
-      await finalize(session, RESULT.AGREEMENT, agreementCheck.finalOffer, agreementCheck.reason, agents, negotiationId);
-      return;
-    }
+  // 2. Explicit Rejection
+  const rejectionCheck = checkRejection(session, {
+    agentId:  currentAgent.id,
+    decision: decision.decision,
+  });
+  if (rejectionCheck.rejected) {
+    await finalize(session, RESULT.REJECTION, null, rejectionCheck.reason, agents, negotiationId);
+    return 'terminate';
+  }
 
-    // 2. Rejection
-    const rejectionCheck = checkRejection(freshSession, {
-      agentId:  currentAgent.id,
-      decision: decision.decision,
-    });
-    if (rejectionCheck.rejected) {
-      await finalize(session, RESULT.REJECTION, null, rejectionCheck.reason, agents, negotiationId);
-      return;
-    }
+  // 3. Max rounds
+  const maxRoundsCheck = checkMaxRounds(session);
+  if (maxRoundsCheck.maxReached) {
+    await finalize(session, RESULT.MAX_ROUNDS, null, maxRoundsCheck.reason, agents, negotiationId);
+    return 'terminate';
+  }
 
-    // 3. Max rounds
-    const maxRoundsCheck = checkMaxRounds(freshSession);
-    if (maxRoundsCheck.maxReached) {
-      await finalize(session, RESULT.MAX_ROUNDS, null, maxRoundsCheck.reason, agents, negotiationId);
-      return;
-    }
+  // 4. Deadlock
+  const deadlockCheck = checkDeadlock(session);
+  if (deadlockCheck.deadlocked) {
+    await finalize(session, RESULT.REJECTION, null, deadlockCheck.reason, agents, negotiationId);
+    return 'terminate';
+  }
 
-    // 4. Deadlock
-    const deadlockCheck = checkDeadlock(freshSession);
-    if (deadlockCheck.deadlocked) {
-      await finalize(session, RESULT.REJECTION, null, deadlockCheck.reason, agents, negotiationId);
-      return;
-    }
+  // ---- Advance to next agent ----
+  updateSession(negotiationId, { currentAgentIndex: opponentIndex });
 
-    // ---- Advance turn ----
-    currentAgentIndex = opponentIndex;
-    await sleep(500);
+  return 'continue';
+}
+
+// ============================================================
+// Pause / Resume
+// ============================================================
+
+function pauseNegotiation(session) {
+  if (session.status === STATUS.IN_PROGRESS) {
+    session._paused = true;
+    updateSession(session.id, { status: 'paused' });
+    broadcast(session.id, 'negotiation_paused', { round: session.currentRound });
+    logger.negotiation(`${session.id}: Paused.`);
+  }
+}
+
+function resumeNegotiation(session) {
+  if (session._paused || session.status === 'paused') {
+    session._paused = false;
+    updateSession(session.id, { status: STATUS.IN_PROGRESS });
+    broadcast(session.id, 'negotiation_resumed', { round: session.currentRound });
+    logger.negotiation(`${session.id}: Resumed.`);
   }
 }
 
 // ============================================================
-// Finalize — close negotiation and emit completion event
+// Finalize
 // ============================================================
 
 async function finalize(session, result, finalOffer, reason, agents, negotiationId) {
@@ -297,7 +389,6 @@ async function finalize(session, result, finalOffer, reason, agents, negotiation
     agreement:   result === RESULT.AGREEMENT ? { offer: finalOffer, reason } : null,
   });
 
-  // Build summary including concession data
   const concessionSummary = getConcessionSummary(session);
   const summary = buildSummary(session, result, finalOffer, agents, reason, concessionSummary);
 
@@ -331,8 +422,8 @@ function buildSummary(session, result, finalOffer, agents, reason, concessionSum
     result,
     reason,
     finalOffer,
-    totalRounds:  session.currentRound,
-    maxRounds:    session.maxRounds,
+    totalRounds:    session.currentRound,
+    maxRounds:      session.maxRounds,
     agentSummaries: agents.map(a => ({
       id:           a.id,
       name:         a.name,
@@ -375,4 +466,11 @@ function getThinkingPhrase(personality) {
   return options[Math.floor(Math.random() * options.length)];
 }
 
-module.exports = { run, registerClient, unregisterClient, broadcast };
+module.exports = {
+  run,
+  pauseNegotiation,
+  resumeNegotiation,
+  registerClient,
+  unregisterClient,
+  broadcast,
+};

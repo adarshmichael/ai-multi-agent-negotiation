@@ -5,99 +5,101 @@
  */
 
 const ApiService = (function () {
-  const BASE_URL = "https://ai-multi-agent-negotiation.onrender.com/api";
-  const WS_URL = "wss://ai-multi-agent-negotiation.onrender.com";
+  const BASE_URL = 'http://localhost:8001/api';
+  const WS_URL   = 'ws://localhost:8001';
 
-  // Active WebSocket connection
   let activeWs = null;
-  let reconnectTimer = null;
 
-  // ==================== HTTP Methods ====================
+  // ==================== HTTP Helpers ====================
 
-  async function getScenarios() {
-    const response = await fetch(`${BASE_URL}/scenarios`);
-    if (!response.ok) throw new Error("Failed to fetch scenarios");
+  async function _post(path, body) {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
     return response.json();
   }
 
+  async function _get(path) {
+    const response = await fetch(`${BASE_URL}${path}`);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+    return response.json();
+  }
+
+  // ==================== Scenarios ====================
+
+  async function getScenarios() {
+    return _get('/scenarios');
+  }
+
   async function getScenarioById(scenarioId) {
-    const response = await fetch(`${BASE_URL}/scenarios`);
-    const scenarios = await response.json();
-    const scenario = scenarios.find((s) => s.id === scenarioId);
-    if (!scenario) throw new Error("Scenario not found");
+    const scenarios = await getScenarios();
+    const scenario = scenarios.find(s => s.id === scenarioId);
+    if (!scenario) throw new Error('Scenario not found');
     return scenario;
   }
 
+  // ==================== Negotiation ====================
+
   async function createNegotiation(scenarioId, personalitiesMap, options = {}) {
-    const state   = window.AppState.getState();
-    const agents  = Object.entries(personalitiesMap).map(([id, personality]) => ({
+    const agents = Object.entries(personalitiesMap).map(([id, personality]) => ({
       id,
       personality,
       goals:       window.AppState.getGoals(id),
       constraints: window.AppState.getConstraints(id),
     }));
 
-    const body = {
-      scenario_id:     scenarioId,
+    return _post('/negotiations', {
+      scenario_id:    scenarioId,
       agents,
-      maximum_rounds:  options.maxRounds || 10,
-      mode:            options.mode || 'simulation',
-    };
-
-
-    const response = await fetch(`${BASE_URL}/negotiations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      maximum_rounds: options.maxRounds || 10,
+      mode:           options.mode || 'simulation',
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: { message: "Unknown error" } }));
-      throw new Error(err.error?.message || "Failed to create negotiation");
-    }
-    return response.json();
   }
 
   async function startNegotiation(negotiationId) {
-    const response = await fetch(`${BASE_URL}/negotiations/${negotiationId}/start`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: { message: "Unknown error" } }));
-      throw new Error(err.error?.message || "Failed to start negotiation");
-    }
-    return response.json();
+    return _post(`/negotiations/${negotiationId}/start`);
   }
 
-  async function getNegotiation(negotiationId) {
-    const response = await fetch(`${BASE_URL}/negotiations/${negotiationId}`);
-    if (!response.ok) throw new Error("Failed to fetch negotiation");
-    return response.json();
+  async function pauseNegotiation(negotiationId) {
+    return _post(`/negotiations/${negotiationId}/pause`);
   }
 
-  async function getMessages(negotiationId) {
-    const response = await fetch(`${BASE_URL}/negotiations/${negotiationId}/messages`);
-    if (!response.ok) throw new Error("Failed to fetch messages");
-    return response.json();
+  async function resumeNegotiation(negotiationId) {
+    return _post(`/negotiations/${negotiationId}/resume`);
   }
 
   async function stopNegotiation(negotiationId) {
-    const response = await fetch(`${BASE_URL}/negotiations/${negotiationId}/stop`, {
-      method: "POST",
-    });
-    if (!response.ok) throw new Error("Failed to stop negotiation");
-    return response.json();
+    return _post(`/negotiations/${negotiationId}/stop`);
+  }
+
+  async function resetNegotiation(negotiationId) {
+    return _post(`/negotiations/${negotiationId}/reset`);
+  }
+
+  async function getNegotiation(negotiationId) {
+    return _get(`/negotiations/${negotiationId}`);
+  }
+
+  async function getMessages(negotiationId) {
+    return _get(`/negotiations/${negotiationId}/messages`);
   }
 
   async function getOutcome(negotiationId) {
-    const response = await fetch(`${BASE_URL}/negotiations/${negotiationId}/outcome`);
-    if (!response.ok) throw new Error("Failed to fetch outcome");
-    return response.json();
+    return _get(`/negotiations/${negotiationId}/outcome`);
   }
 
   async function checkHealth() {
     try {
-      const response = await fetch(`${BASE_URL}/health`);
+      const response = await fetch(`${BASE_URL}/health`, { signal: AbortSignal.timeout(3000) });
       return response.ok;
     } catch {
       return false;
@@ -106,22 +108,14 @@ const ApiService = (function () {
 
   // ==================== WebSocket ====================
 
-  /**
-   * Connect to the backend WebSocket for a specific negotiation.
-   * @param {string} negotiationId
-   * @param {object} handlers — { onOpen, onMessage, onEvent, onClose, onError }
-   * @returns {WebSocket}
-   */
   function connectWebSocket(negotiationId, handlers = {}) {
-    // Close any existing connection
     disconnectWebSocket();
 
-    const wsUrl = `${WS_URL}?negotiationId=${negotiationId}`;
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(`${WS_URL}?negotiationId=${negotiationId}`);
     activeWs = ws;
 
     ws.onopen = () => {
-      console.log(`[WS] Connected to negotiation: ${negotiationId}`);
+      console.log(`[WS] Connected: ${negotiationId}`);
       if (handlers.onOpen) handlers.onOpen();
     };
 
@@ -129,28 +123,19 @@ const ApiService = (function () {
       try {
         const payload = JSON.parse(event.data);
         const { event: eventName, data } = payload;
-
-        console.log(`[WS] Event: ${eventName}`, data);
-
-        // Call generic message handler
-        if (handlers.onMessage) handlers.onMessage(payload);
-
-        // Call specific event handler if provided
         if (handlers.onEvent) handlers.onEvent(eventName, data);
-
       } catch (err) {
-        console.error("[WS] Failed to parse message:", err);
+        console.error('[WS] Parse error:', err);
       }
     };
 
     ws.onclose = (event) => {
-      console.log(`[WS] Connection closed (code: ${event.code})`);
       activeWs = null;
       if (handlers.onClose) handlers.onClose(event);
     };
 
     ws.onerror = (err) => {
-      console.error("[WS] Error:", err);
+      console.error('[WS] Error:', err);
       if (handlers.onError) handlers.onError(err);
     };
 
@@ -159,31 +144,26 @@ const ApiService = (function () {
 
   function disconnectWebSocket() {
     if (activeWs) {
-      activeWs.close();
+      try { activeWs.close(); } catch (_) {}
       activeWs = null;
     }
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
   }
 
-  function getWebSocket() {
-    return activeWs;
-  }
+  function getWebSocket() { return activeWs; }
 
   return {
-    // HTTP
     getScenarios,
     getScenarioById,
     createNegotiation,
     startNegotiation,
+    pauseNegotiation,
+    resumeNegotiation,
+    stopNegotiation,
+    resetNegotiation,
     getNegotiation,
     getMessages,
-    stopNegotiation,
     getOutcome,
     checkHealth,
-    // WebSocket
     connectWebSocket,
     disconnectWebSocket,
     getWebSocket,
