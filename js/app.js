@@ -1276,6 +1276,17 @@ function initAgentPanels(agents) {
       goalEl.textContent = typeof goalText === 'string' ? goalText.substring(0, 60) + (goalText.length > 60 ? '…' : '') : '—';
     }
 
+    // Fill constraints field
+    const constraintsEl = document.getElementById(`neg-${prefix}-constraints`);
+    if (constraintsEl) {
+      const constraints = agent.constraints || AppState.getConstraints?.(agent.id) || [];
+      if (Array.isArray(constraints) && constraints.length > 0) {
+        constraintsEl.innerHTML = `<ul class="constraints-list">` + constraints.map(c => `<li>${escapeHtml(typeof c === 'string' ? c : c.desc || c.description || JSON.stringify(c))}</li>`).join('') + `</ul>`;
+      } else {
+        constraintsEl.textContent = '—';
+      }
+    }
+
     if (personalityEl) {
       const p = AppState.getPersonality(agent.id);
       if (p) {
@@ -1411,11 +1422,24 @@ function clearEquilibriumPanels() {
     if (offerEl) offerEl.textContent = '—';
     const actionEl = document.getElementById(`neg-${prefix}-action`);
     if (actionEl) actionEl.textContent = '—';
-    const reasoningEl = document.getElementById(`neg-${prefix}-reasoning`);
-    if (reasoningEl) reasoningEl.textContent = '—';
-    const paramsEl = document.getElementById(`neg-${prefix}-parameters`);
-    if (paramsEl) paramsEl.textContent = '—';
   });
+  
+  resetOrchPipeline();
+  updateReasoningPanel(null, null);
+
+  const stateRound = document.getElementById('state-round');
+  const stateStatus = document.getElementById('state-status');
+  const stateAgent = document.getElementById('state-agent');
+  const statePrevOffer = document.getElementById('state-prev-offer');
+  const stateOpponentOffer = document.getElementById('state-opponent-offer');
+  const stateDecision = document.getElementById('state-decision');
+  
+  if (stateRound) stateRound.textContent = '—';
+  if (stateStatus) stateStatus.textContent = '—';
+  if (stateAgent) stateAgent.textContent = '—';
+  if (statePrevOffer) statePrevOffer.textContent = '—';
+  if (stateOpponentOffer) stateOpponentOffer.textContent = '—';
+  if (stateDecision) stateDecision.textContent = '—';
   // Reset result card
   const resultCard = document.getElementById('neg-result-card');
   if (resultCard) resultCard.style.display = 'none';
@@ -1435,6 +1459,44 @@ function clearEquilibriumPanels() {
 /* =============================== WS Event → UI bridge =============================== */
 
 let _lastRoundInChat = 0;
+
+function updateOrchPipeline(activeStepId) {
+  const steps = ['pipe-get-agent', 'pipe-load-profile', 'pipe-load-state', 'pipe-pass-history', 'pipe-llm-reason', 'pipe-update-state', 'pipe-pass-turn'];
+  let foundActive = false;
+  steps.forEach(step => {
+    const el = document.getElementById(step);
+    if (!el) return;
+    if (step === activeStepId) {
+      el.className = 'pipeline-step active';
+      foundActive = true;
+    } else if (!foundActive) {
+      el.className = 'pipeline-step done';
+    } else {
+      el.className = 'pipeline-step pending';
+    }
+  });
+}
+
+function resetOrchPipeline() {
+  const steps = ['pipe-get-agent', 'pipe-load-profile', 'pipe-load-state', 'pipe-pass-history', 'pipe-llm-reason', 'pipe-update-state', 'pipe-pass-turn'];
+  steps.forEach(step => {
+    const el = document.getElementById(step);
+    if (el) el.className = 'pipeline-step pending';
+  });
+}
+
+function updateReasoningPanel(reason, context) {
+  const reasonEl = document.getElementById('ai-reasoning-text');
+  const contextEl = document.getElementById('ai-context-content');
+  if (reasonEl) reasonEl.textContent = reason || 'Waiting for agent response...';
+  if (contextEl) {
+    if (context) {
+      contextEl.textContent = typeof context === 'string' ? context : JSON.stringify(context, null, 2);
+    } else {
+      contextEl.innerHTML = '<div class="context-placeholder">No additional context provided.</div>';
+    }
+  }
+}
 
 function handleNegotiationEvent(eventName, data, agents) {
   const state = AppState.getState();
@@ -1478,6 +1540,20 @@ function handleNegotiationEvent(eventName, data, agents) {
       }
       addOrchLogEntry('active', `Round ${data.round} started — ${data.currentAgentName}'s turn`);
       agents.forEach((_, i) => { updateAgentBadge(i, 'waiting'); setAgentCardThinking(i, false); });
+
+      resetOrchPipeline();
+      setTimeout(() => updateOrchPipeline('pipe-get-agent'), 100);
+      setTimeout(() => updateOrchPipeline('pipe-load-profile'), 300);
+      setTimeout(() => updateOrchPipeline('pipe-load-state'), 500);
+      setTimeout(() => updateOrchPipeline('pipe-pass-history'), 700);
+
+      const stateRound = document.getElementById('state-round');
+      const stateStatus = document.getElementById('state-status');
+      const stateAgent = document.getElementById('state-agent');
+      if (stateRound) stateRound.textContent = `${data.round} / ${data.maxRounds || state.maxRounds}`;
+      if (stateStatus) stateStatus.textContent = 'In Progress';
+      if (stateAgent) stateAgent.textContent = data.currentAgentName || '—';
+
       break;
     }
 
@@ -1491,6 +1567,9 @@ function handleNegotiationEvent(eventName, data, agents) {
       updateAgentBadge(idx, 'thinking');
       updateOrchStatusBar(state.currentRound, state.maxRounds, data.agentName, 'in_progress');
       addOrchLogEntry('active', `${data.agentName} is thinking…`);
+
+      updateOrchPipeline('pipe-llm-reason');
+      updateReasoningPanel('Thinking...', data.context);
       break;
     }
 
@@ -1505,24 +1584,27 @@ function handleNegotiationEvent(eventName, data, agents) {
       setAgentCardThinking(idx, false);
       updateAgentBadge(idx, data.decision === 'accept' ? 'accepted' : 'offer_sent');
       const prefix = idx === 0 ? 'buyer' : 'vendor';
+      
+      const statePrevOffer = document.getElementById('state-prev-offer');
+      const offerEl = document.getElementById(`neg-${prefix}-offer-value`);
+      if (statePrevOffer && offerEl && offerEl.textContent !== '—') {
+        statePrevOffer.textContent = offerEl.textContent;
+      }
+
       const actionEl = document.getElementById(`neg-${prefix}-action`);
       if (actionEl) {
         const actionMap = { offer: 'Offered', counter_offer: 'Counter-offered', accept: 'Accepted ✓', reject: 'Rejected ✗' };
         actionEl.textContent = actionMap[data.decision] || data.decision || '—';
       }
-      const reasoningEl = document.getElementById(`neg-${prefix}-reasoning`);
-      if (reasoningEl) {
-        reasoningEl.textContent = data.reason || '—';
-      }
-      const paramsEl = document.getElementById(`neg-${prefix}-parameters`);
-      if (paramsEl) {
-        if (data.parameters && Object.keys(data.parameters).length > 0) {
-          paramsEl.textContent = Object.entries(data.parameters).map(([k, v]) => `${k}: ${v}`).join(', ');
-        } else {
-          paramsEl.textContent = '—';
-        }
-      }
       addOrchLogEntry('done', `${data.agentName}: ${data.decision || 'offer'}${data.offer ? ` @ ₹${Number(data.offer).toLocaleString('en-IN')}` : ''}`);
+
+      updateOrchPipeline('pipe-update-state');
+      setTimeout(() => updateOrchPipeline('pipe-pass-turn'), 500);
+
+      updateReasoningPanel(data.reason || data.message, data.context || data.parameters);
+
+      const stateDecision = document.getElementById('state-decision');
+      if (stateDecision) stateDecision.textContent = data.decision ? data.decision.toUpperCase() : 'OFFER';
       break;
     }
 
@@ -1539,6 +1621,10 @@ function handleNegotiationEvent(eventName, data, agents) {
         void offerEl.offsetWidth;
         offerEl.classList.add('offer-flash');
         setTimeout(() => offerEl.classList.remove('offer-flash'), 600);
+      }
+      const stateOpponentOffer = document.getElementById('state-opponent-offer');
+      if (stateOpponentOffer) {
+        stateOpponentOffer.textContent = `₹${Number(data.offer).toLocaleString('en-IN')}`;
       }
       break;
     }

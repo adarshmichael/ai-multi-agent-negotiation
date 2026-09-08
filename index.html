@@ -232,62 +232,58 @@
         </div>
 
         <!-- ═══ MAIN ARENA: 3-column layout ═══ -->
-        <div class="neg-arena-v2">
+        <div class="neg-arena-v3">
 
-          <!-- Left: Buyer Agent Card -->
-          <div class="neg-agent-card neg-agent-card-buyer" id="neg-buyer-panel">
-            <div class="neg-agent-card-header">
-              <div class="neg-agent-avatar neg-agent-avatar-buyer" id="neg-buyer-avatar">
-                <span id="neg-buyer-initials">BA</span>
+          <!-- Left: Agent Intelligence -->
+          <div class="neg-agent-profiles-column">
+            <h3 class="column-header">AGENT INTELLIGENCE</h3>
+            
+            <!-- Buyer Agent Profile -->
+            <div class="neg-profile-card neg-profile-buyer" id="neg-buyer-panel">
+              <div class="neg-profile-header">
+                <div class="neg-agent-avatar neg-agent-avatar-buyer" id="neg-buyer-avatar"><span id="neg-buyer-initials">BA</span></div>
+                <div class="neg-profile-meta">
+                  <div class="neg-profile-name" id="neg-buyer-name">Buyer Agent</div>
+                  <div class="neg-profile-role" id="neg-buyer-role">Buyer</div>
+                </div>
+                <div class="neg-agent-status-chip" id="neg-buyer-badge" data-state="idle"><span class="status-chip-dot"></span><span class="status-chip-label">IDLE</span></div>
               </div>
-              <div class="neg-agent-card-meta">
-                <div class="neg-agent-card-name" id="neg-buyer-name">Buyer Agent</div>
-                <div class="neg-agent-card-role" id="neg-buyer-role">Buyer</div>
+              <div class="neg-profile-body">
+                <div class="neg-profile-item"><strong>Persona:</strong> <span id="neg-buyer-personality">—</span></div>
+                <div class="neg-profile-item"><strong>Goal:</strong> <span id="neg-buyer-goal">—</span></div>
+                <div class="neg-profile-item"><strong>Constraints:</strong> <div id="neg-buyer-constraints" class="constraints-block">—</div></div>
               </div>
-            </div>
-            <div class="neg-agent-status-row">
-              <div class="neg-agent-status-chip" id="neg-buyer-badge" data-state="idle">
-                <span class="status-chip-dot"></span>
-                <span class="status-chip-label">IDLE</span>
-              </div>
-              <div class="agent-personality-tag" id="neg-buyer-personality"></div>
-            </div>
-            <div class="neg-agent-offer-block">
-              <div class="neg-agent-offer-label">CURRENT OFFER</div>
-              <div class="neg-agent-offer-value" id="neg-buyer-offer-value">—</div>
-            </div>
-            <div class="neg-agent-info-grid">
-              <div class="neg-agent-info-item">
-                <div class="neg-agent-info-label">GOAL</div>
-                <div class="neg-agent-info-val" id="neg-buyer-goal">—</div>
-              </div>
-              <div class="neg-agent-info-item">
-                <div class="neg-agent-info-label">LAST ACTION</div>
-                <div class="neg-agent-info-val" id="neg-buyer-action">—</div>
-              </div>
-              <div class="neg-agent-info-item">
-                <div class="neg-agent-info-label">REASONING</div>
-                <div class="neg-agent-info-val" id="neg-buyer-reasoning" style="font-size: 11px; font-style: italic;">—</div>
-              </div>
-              <div class="neg-agent-info-item">
-                <div class="neg-agent-info-label">PARAMETERS</div>
-                <div class="neg-agent-info-val" id="neg-buyer-parameters" style="font-size: 11px;">—</div>
+              <div class="neg-agent-thinking" id="neg-buyer-thinking" style="display:none;">
+                <div class="thinking-dots"><span></span><span></span><span></span></div>
+                <span id="neg-buyer-thinking-phrase">Thinking...</span>
               </div>
             </div>
-            <div class="neg-agent-thinking" id="neg-buyer-thinking" style="display:none;">
-              <div class="thinking-dots"><span></span><span></span><span></span></div>
-              <span id="neg-buyer-thinking-phrase">Thinking...</span>
+
+            <!-- Vendor Agent Profile -->
+            <div class="neg-profile-card neg-profile-vendor" id="neg-vendor-panel">
+              <div class="neg-profile-header">
+                <div class="neg-agent-avatar neg-agent-avatar-vendor" id="neg-vendor-avatar"><span id="neg-vendor-initials">VA</span></div>
+                <div class="neg-profile-meta">
+                  <div class="neg-profile-name" id="neg-vendor-name">Vendor Agent</div>
+                  <div class="neg-profile-role" id="neg-vendor-role">Vendor</div>
+                </div>
+                <div class="neg-agent-status-chip" id="neg-vendor-badge" data-state="idle"><span class="status-chip-dot"></span><span class="status-chip-label">IDLE</span></div>
+              </div>
+              <div class="neg-profile-body">
+                <div class="neg-profile-item"><strong>Persona:</strong> <span id="neg-vendor-personality">—</span></div>
+                <div class="neg-profile-item"><strong>Goal:</strong> <span id="neg-vendor-goal">—</span></div>
+                <div class="neg-profile-item"><strong>Constraints:</strong> <div id="neg-vendor-constraints" class="constraints-block">—</div></div>
+              </div>
+              <div class="neg-agent-thinking" id="neg-vendor-thinking" style="display:none;">
+                <div class="thinking-dots"><span></span><span></span><span></span></div>
+                <span id="neg-vendor-thinking-phrase">Thinking...</span>
+              </div>
             </div>
           </div>
 
           <!-- Center: Live Chat Timeline -->
           <div class="neg-chat-column">
-            <div class="neg-chat-header">
-              <div class="neg-chat-live-badge">
-                <span class="neg-chat-live-dot"></span>
-                LIVE NEGOTIATION
-              </div>
-            </div>
+            <h3 class="column-header"><span class="live-dot"></span> LIVE NEGOTIATION</h3>
             <div class="neg-chat-timeline" id="neg-chat-timeline">
               <div class="neg-chat-empty" id="neg-chat-empty">
                 <div class="neg-chat-empty-icon">⚡</div>
@@ -295,61 +291,55 @@
                 <div class="neg-chat-empty-sub">Agent messages will appear here in real time.</div>
               </div>
             </div>
-            <div class="neg-orch-log" id="neg-orch-log">
-              <div class="neg-orch-log-header">◈ ORCHESTRATOR LOG</div>
-              <div class="neg-orch-log-entries" id="neg-orch-log-entries">
-                <div class="neg-orch-log-entry neg-log-pending">Session initialized. Awaiting engine start…</div>
-              </div>
-            </div>
           </div>
 
-          <!-- Right: Vendor Agent Card -->
-          <div class="neg-agent-card neg-agent-card-vendor" id="neg-vendor-panel">
-            <div class="neg-agent-card-header">
-              <div class="neg-agent-avatar neg-agent-avatar-vendor" id="neg-vendor-avatar">
-                <span id="neg-vendor-initials">VA</span>
-              </div>
-              <div class="neg-agent-card-meta">
-                <div class="neg-agent-card-name" id="neg-vendor-name">Vendor Agent</div>
-                <div class="neg-agent-card-role" id="neg-vendor-role">Vendor</div>
-              </div>
-            </div>
-            <div class="neg-agent-status-row">
-              <div class="neg-agent-status-chip" id="neg-vendor-badge" data-state="idle">
-                <span class="status-chip-dot"></span>
-                <span class="status-chip-label">IDLE</span>
-              </div>
-              <div class="agent-personality-tag" id="neg-vendor-personality"></div>
-            </div>
-            <div class="neg-agent-offer-block">
-              <div class="neg-agent-offer-label">CURRENT OFFER</div>
-              <div class="neg-agent-offer-value" id="neg-vendor-offer-value">—</div>
-            </div>
-            <div class="neg-agent-info-grid">
-              <div class="neg-agent-info-item">
-                <div class="neg-agent-info-label">GOAL</div>
-                <div class="neg-agent-info-val" id="neg-vendor-goal">—</div>
-              </div>
-              <div class="neg-agent-info-item">
-                <div class="neg-agent-info-label">LAST ACTION</div>
-                <div class="neg-agent-info-val" id="neg-vendor-action">—</div>
-              </div>
-              <div class="neg-agent-info-item">
-                <div class="neg-agent-info-label">REASONING</div>
-                <div class="neg-agent-info-val" id="neg-vendor-reasoning" style="font-size: 11px; font-style: italic;">—</div>
-              </div>
-              <div class="neg-agent-info-item">
-                <div class="neg-agent-info-label">PARAMETERS</div>
-                <div class="neg-agent-info-val" id="neg-vendor-parameters" style="font-size: 11px;">—</div>
+          <!-- Right: AI Reasoning & State -->
+          <div class="neg-reasoning-column">
+            <h3 class="column-header">AI REASONING & STATE</h3>
+
+            <!-- Orchestrator Pipeline -->
+            <div class="neg-reasoning-panel">
+              <h4 class="panel-title">ORCHESTRATOR PIPELINE</h4>
+              <div class="orch-pipeline" id="orch-pipeline">
+                <div class="pipeline-step pending" id="pipe-get-agent"><span class="pipe-icon">○</span> Get Current Agent</div>
+                <div class="pipeline-step pending" id="pipe-load-profile"><span class="pipe-icon">○</span> Load Agent Profile</div>
+                <div class="pipeline-step pending" id="pipe-load-state"><span class="pipe-icon">○</span> Load Negotiation State</div>
+                <div class="pipeline-step pending" id="pipe-pass-history"><span class="pipe-icon">○</span> Pass Conversation History</div>
+                <div class="pipeline-step pending" id="pipe-llm-reason"><span class="pipe-icon">○</span> LLM Reasoning</div>
+                <div class="pipeline-step pending" id="pipe-update-state"><span class="pipe-icon">○</span> Update State</div>
+                <div class="pipeline-step pending" id="pipe-pass-turn"><span class="pipe-icon">○</span> Pass Turn</div>
               </div>
             </div>
-            <div class="neg-agent-thinking" id="neg-vendor-thinking" style="display:none;">
-              <div class="thinking-dots"><span></span><span></span><span></span></div>
-              <span id="neg-vendor-thinking-phrase">Thinking...</span>
+
+            <!-- Negotiation State -->
+            <div class="neg-reasoning-panel">
+              <h4 class="panel-title">NEGOTIATION STATE</h4>
+              <div class="state-grid">
+                <div class="state-item"><strong>Round:</strong> <span id="state-round">—</span></div>
+                <div class="state-item"><strong>Status:</strong> <span id="state-status">—</span></div>
+                <div class="state-item"><strong>Current Agent:</strong> <span id="state-agent">—</span></div>
+                <div class="state-item"><strong>Opponent Offer:</strong> <span id="state-opponent-offer">—</span></div>
+                <div class="state-item"><strong>Prev Offer:</strong> <span id="state-prev-offer">—</span></div>
+                <div class="state-item"><strong>Decision:</strong> <span id="state-decision">—</span></div>
+              </div>
             </div>
+
+            <!-- AI Reasoning -->
+            <div class="neg-reasoning-panel ai-reasoning-highlight">
+              <h4 class="panel-title">AI REASONING</h4>
+              <div class="reasoning-text" id="ai-reasoning-text">Waiting for agent response...</div>
+              
+              <details class="context-details" id="ai-context-details">
+                <summary>Context Used by Agent</summary>
+                <div class="context-content" id="ai-context-content">
+                  <div class="context-placeholder">Context will appear when reasoning begins.</div>
+                </div>
+              </details>
+            </div>
+
           </div>
 
-        </div><!-- end .neg-arena-v2 -->
+        </div><!-- end .neg-arena-v3 -->
 
         <!-- ═══ TERMINAL RESULT CARD (hidden until complete) ═══ -->
         <div class="neg-result-card" id="neg-result-card" style="display:none;">

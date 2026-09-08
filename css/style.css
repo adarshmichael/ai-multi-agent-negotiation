@@ -4829,3 +4829,255 @@ img, svg {
   .neg-control-bar { flex-direction: column; align-items: flex-start; }
   .neg-control-bar-right { align-self: flex-end; }
 }
+
+/* ==========================================================================
+   NEG-ARENA-V3 LAYOUT (Milestone 2 AI Reasoning Dashboard)
+   ========================================================================== */
+
+.neg-arena-v3 {
+  display: grid;
+  grid-template-columns: 280px 1fr 340px;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.column-header {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-danger);
+  border-radius: 50%;
+  animation: pulseOpacity 1.5s infinite alternate;
+}
+
+/* Left Column: Profiles */
+.neg-agent-profiles-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.neg-profile-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.neg-profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.neg-profile-meta {
+  flex: 1;
+}
+
+.neg-profile-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.neg-profile-role {
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.neg-profile-body {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.neg-profile-item {
+  margin-bottom: var(--space-2);
+}
+
+.neg-profile-item strong {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  margin-bottom: 2px;
+}
+
+.constraints-block {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+  margin-top: 2px;
+}
+
+/* Center Column: Chat */
+.neg-chat-column {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  min-height: 500px;
+}
+
+.neg-chat-timeline {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+/* Right Column: Reasoning & State */
+.neg-reasoning-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.neg-reasoning-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--color-orchestrator);
+  margin-bottom: var(--space-3);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-2);
+}
+
+/* Orchestrator Pipeline Styles */
+.orch-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pipeline-step {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+}
+
+.pipeline-step.pending {
+  color: var(--color-text-faint);
+}
+.pipeline-step.pending .pipe-icon {
+  color: var(--color-border-strong);
+}
+
+.pipeline-step.active {
+  background: var(--color-orch-light);
+  color: var(--color-orchestrator);
+  font-weight: 600;
+}
+.pipeline-step.active .pipe-icon {
+  color: var(--color-primary);
+}
+
+.pipeline-step.done {
+  color: var(--color-success-sage);
+}
+.pipeline-step.done .pipe-icon {
+  color: var(--color-success-sage);
+}
+
+/* Negotiation State Grid */
+.state-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.state-item {
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.state-item strong {
+  display: block;
+  font-size: 10px;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+/* AI Reasoning Highlight */
+.ai-reasoning-highlight {
+  border-color: var(--color-primary-light);
+  background: linear-gradient(180deg, rgba(99,102,241,0.03) 0%, transparent 100%);
+}
+
+.reasoning-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text);
+  font-style: italic;
+  margin-bottom: var(--space-3);
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-primary);
+  padding: 8px 12px;
+  border-radius: 0 4px 4px 0;
+}
+
+.context-details {
+  font-size: 12px;
+}
+
+.context-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-primary);
+  outline: none;
+  margin-bottom: var(--space-2);
+}
+
+.context-content {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background: rgba(0,0,0,0.02);
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  white-space: pre-wrap;
+}
+
+/* Responsive V3 */
+@media (max-width: 1100px) {
+  .neg-arena-v3 {
+    grid-template-columns: 240px 1fr 280px;
+  }
+}
+@media (max-width: 900px) {
+  .neg-arena-v3 {
+    grid-template-columns: 1fr;
+  }
+}

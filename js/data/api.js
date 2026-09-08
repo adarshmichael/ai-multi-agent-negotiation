@@ -5,8 +5,8 @@
  */
 
 const ApiService = (function () {
-  const BASE_URL = 'http://localhost:8001/api';
-  const WS_URL   = 'ws://localhost:8001';
+  const BASE_URL = 'https://negosim-backend.onrender.com';
+  const WS_URL = 'wss://negosim-backend.onrender.com';
 
   let activeWs = null;
 
@@ -53,15 +53,15 @@ const ApiService = (function () {
     const agents = Object.entries(personalitiesMap).map(([id, personality]) => ({
       id,
       personality,
-      goals:       window.AppState.getGoals(id),
+      goals: window.AppState.getGoals(id),
       constraints: window.AppState.getConstraints(id),
     }));
 
     return _post('/negotiations', {
-      scenario_id:    scenarioId,
+      scenario_id: scenarioId,
       agents,
       maximum_rounds: options.maxRounds || 10,
-      mode:           options.mode || 'simulation',
+      mode: options.mode || 'simulation',
     });
   }
 
@@ -144,7 +144,7 @@ const ApiService = (function () {
 
   function disconnectWebSocket() {
     if (activeWs) {
-      try { activeWs.close(); } catch (_) {}
+      try { activeWs.close(); } catch (_) { }
       activeWs = null;
     }
   }
