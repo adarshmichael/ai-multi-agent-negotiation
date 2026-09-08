@@ -5,7 +5,7 @@
  */
 
 const ApiService = (function () {
-  const BASE_URL = 'https://negosim-backend.onrender.com';
+  const BASE_URL = 'https://negosim-backend.onrender.com/api';
   const WS_URL = 'wss://negosim-backend.onrender.com';
 
   let activeWs = null;
