@@ -103,44 +103,37 @@ A single `AppState` module (`js/state/appState.js`) tracks:
 
 All UI re-renders reactively whenever state changes, via a simple subscribe/notify pattern.
 
-## 6. Orchestrator Agent & Negotiation Engine (Milestone 2 — Full)
+## 6. LLM-Powered Agent Reasoning Engine (Milestone 2)
 
-This milestone delivers the complete foundational Python backend for NegoSim: a modular negotiation engine powered by **Google Gemini 3.5 Flash**, with deterministic concession logic and full end-to-end multi-round simulation across all three scenario templates.
+This milestone integrates a sophisticated LLM reasoning layer using Google Gemini into the multi-agent negotiation system built with Node.js. The Orchestrator manages turn-taking and invokes the LLM Decision Provider to generate context-aware negotiation responses.
 
 ### What was built
 
-| File | Purpose |
-|------|---------|
-| `negotiation_state.py` | `NegotiationState` data model — tracks rounds, turn order, full history, offers, decisions. JSON-serializable. |
-| `orchestrator.py` | Turn-taking loop with correct round counting, state recording, and end-condition detection. |
-| `agent_input.py` | `AgentProfile` + `AgentInputPayload` — structured prompt payload sent to the LLM. |
-| `concession_engine.py` | Personality-based concession math (Aggressive/Collaborative/Risk-Averse). Deterministic and testable without API. |
-| `llm_interface.py` | `generate_agent_response()` — calls Gemini 3.5 Flash with structured JSON output. Safe fallback on parse errors. |
-| `agents.py` | `Agent` class — wraps profile, concession engine, and LLM interface into a single `take_turn()` call. |
-| `scenarios/vendor_pricing.py` | Buyer vs Vendor scenario |
-| `scenarios/job_offer.py` | Candidate vs Hiring Manager scenario |
-| `scenarios/budget_allocation.py` | Project Manager vs Finance Director scenario |
+| Feature | Description |
+|---------|-------------|
+| **Orchestrator Integration** | The `NegotiationEngine.js` autonomously orchestrates the turn loop, passing the full negotiation history, current state, and opponent offers to the agent. |
+| **Agent Profile Loading** | The LLM receives detailed agent profiles, including their role, personality, goals, and numeric constraints. |
+| **Structured LLM Responses** | The Gemini model is prompted to return strict JSON containing the `decision` (accept/reject/counter), the `offer` value, the actual spoken `message`, an internal `reasoning` thought process, and context-specific `parameters`. |
+| **UI Enhancements** | The live negotiation UI has been updated to seamlessly display the agent's internal `REASONING` and extracted `PARAMETERS` natively inside each agent's stat card. |
+| **Fallback & Mock Support** | Includes a robust rule-based mock engine for deterministic UI testing when an API key is unavailable. |
 
 ### How to Run
 
 ```bash
-# Install dependencies (once)
-pip install -r orchestrator/requirements.txt
+# Navigate to backend
+cd backend
 
-# Add your Gemini API key to orchestrator/.env
-echo "GEMINI_API_KEY=your_key_here" > orchestrator/.env
+# Install dependencies
+npm install
 
-# Run all 3 scenarios with real Gemini AI
-python orchestrator/run_all_scenarios_demo.py
+# Add your Gemini API key to backend/.env
+echo "GEMINI_API_KEY=your_key_here" > .env
 
-# Run in mock mode (no API key needed — deterministic rule-based responses)
-python orchestrator/run_all_scenarios_demo.py --mock
-
-# Single scenario quick-test
-python orchestrator/run_vendor_pricing_demo.py --mock
+# Start the server
+npm start
 ```
 
-See [`orchestrator/README.md`](orchestrator/README.md) for full architecture documentation.
+Then serve the frontend folder (`project/`) via any static HTTP server.
 
 ## Known Limitations
 - The negotiation transcript is not yet visualized round-by-round on the UI.

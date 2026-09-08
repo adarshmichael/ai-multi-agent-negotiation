@@ -1411,6 +1411,10 @@ function clearEquilibriumPanels() {
     if (offerEl) offerEl.textContent = '—';
     const actionEl = document.getElementById(`neg-${prefix}-action`);
     if (actionEl) actionEl.textContent = '—';
+    const reasoningEl = document.getElementById(`neg-${prefix}-reasoning`);
+    if (reasoningEl) reasoningEl.textContent = '—';
+    const paramsEl = document.getElementById(`neg-${prefix}-parameters`);
+    if (paramsEl) paramsEl.textContent = '—';
   });
   // Reset result card
   const resultCard = document.getElementById('neg-result-card');
@@ -1505,6 +1509,18 @@ function handleNegotiationEvent(eventName, data, agents) {
       if (actionEl) {
         const actionMap = { offer: 'Offered', counter_offer: 'Counter-offered', accept: 'Accepted ✓', reject: 'Rejected ✗' };
         actionEl.textContent = actionMap[data.decision] || data.decision || '—';
+      }
+      const reasoningEl = document.getElementById(`neg-${prefix}-reasoning`);
+      if (reasoningEl) {
+        reasoningEl.textContent = data.reason || '—';
+      }
+      const paramsEl = document.getElementById(`neg-${prefix}-parameters`);
+      if (paramsEl) {
+        if (data.parameters && Object.keys(data.parameters).length > 0) {
+          paramsEl.textContent = Object.entries(data.parameters).map(([k, v]) => `${k}: ${v}`).join(', ');
+        } else {
+          paramsEl.textContent = '—';
+        }
       }
       addOrchLogEntry('done', `${data.agentName}: ${data.decision || 'offer'}${data.offer ? ` @ ₹${Number(data.offer).toLocaleString('en-IN')}` : ''}`);
       break;

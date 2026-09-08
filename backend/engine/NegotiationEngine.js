@@ -286,6 +286,8 @@ async function executeTurn(session) {
     round:     message.round,
     timestamp: message.timestamp,
     id:        message.id,
+    reason:    decision.reason,
+    parameters: decision.parameters,
   });
 
   // ---- Broadcast: offer updated ----

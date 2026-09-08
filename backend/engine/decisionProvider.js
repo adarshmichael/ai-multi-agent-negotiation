@@ -381,7 +381,11 @@ Required JSON format:
 {
   "decision": "accept" | "counter_offer" | "reject",
   "offer": <number or null if accepting/rejecting>,
-  "reasoning": "<short internal reasoning for logs>"
+  "message": "<the actual dialogue/message to speak to the opponent>",
+  "reasoning": "<short internal reasoning for your choice>",
+  "parameters": {
+    "<key>": "<value>"
+  }
 }
 
 Rules:
@@ -389,7 +393,9 @@ Rules:
 - If you COUNTER, set decision="counter_offer" with a numeric offer.
 - If you REJECT, set decision="reject", offer=null.
 - Do not exceed your numeric constraints.
-- Keep reasoning concise (1-2 sentences).`;
+- Provide a realistic spoken 'message'.
+- Keep 'reasoning' concise (1-2 sentences).
+- Include any relevant negotiation 'parameters' (e.g. "payment_terms": "Net 30") based on the current context.`;
 
     const offerState = { ...session.offers };
     const response = await generateAgentResponse(prompt, agent.name, agent, round, maxRounds, offerState);
@@ -408,6 +414,7 @@ Rules:
       offer: response.offer,
       decision: response.decision,
       reason: response.reasoning || '',
+      parameters: response.parameters || {},
       action: action,
     };
   }
