@@ -146,15 +146,17 @@ function generateMockResponse(agentName, agentConfig, round, maxRounds, offerSta
   let newOffer = myOffer;
   let decision = 'counter_offer';
   let message = '';
+  let reasoning = '';
 
   const isFinalRound = round >= maxRounds;
+  const baseline = agentConfig.numericConstraint?.value || (isBuyer ? 700000 : 900000);
 
   if (round === 1) {
     // Initial offer
-    const base = isBuyer ? 700000 : 900000; 
-    newOffer = base + (Math.random() * 50000 * (isBuyer ? -1 : 1));
+    newOffer = baseline + (Math.random() * 50000 * (isBuyer ? -1 : 1));
     newOffer = Math.round(newOffer / 1000) * 1000; // Round to nearest 1k
     message = `Hello! Thanks for meeting with me. After reviewing the requirements, I can offer ${newOffer}. Let me know if this works for you.`;
+    reasoning = 'Opening with a starting offer based on my target value.';
   } else if (opponentOffer) {
     // Evaluate opponent's offer
     const gap = Math.abs((myOffer || 0) - opponentOffer);
@@ -163,20 +165,23 @@ function generateMockResponse(agentName, agentConfig, round, maxRounds, offerSta
       decision = 'accept';
       newOffer = opponentOffer;
       message = `You know what, ${opponentOffer} works for me. We have a deal. Looking forward to working together!`;
+      reasoning = 'The gap is small enough to reach an agreement.';
     } else if (isFinalRound) {
       decision = 'reject';
       message = `I appreciate the discussion, but ${opponentOffer} is just too far from what I can accept. I'm going to have to walk away this time.`;
+      reasoning = 'Could not reach agreement within final round constraints.';
     } else {
       // Counter offer (move 15-30% towards opponent)
       const movement = gap * (0.15 + Math.random() * 0.15);
-      newOffer = (myOffer || (isBuyer ? 700000 : 900000)) + (movement * (isBuyer ? 1 : -1));
+      newOffer = (myOffer || baseline) + (movement * (isBuyer ? 1 : -1));
       newOffer = Math.round(newOffer / 1000) * 1000;
       message = `I understand your position, but ${opponentOffer} doesn't quite work for my constraints. How about we meet at ${newOffer}?`;
+      reasoning = 'Moving offer closer to opponent to encourage settlement.';
     }
   }
 
   logger.llm(`[MOCK] ${agentName} -> ${decision} at ${newOffer}`);
-  return { message, offer: newOffer, decision };
+  return { message, offer: newOffer, decision, reasoning };
 }
 
 module.exports = { generateAgentResponse };

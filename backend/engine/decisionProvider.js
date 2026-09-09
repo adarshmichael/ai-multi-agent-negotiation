@@ -334,75 +334,36 @@ class RuleBasedDecisionProvider extends AgentDecisionProvider {
 // ============================================================
 
 const { generateAgentResponse } = require('../services/llm.service');
+const { buildPrompt } = require('../utils/promptBuilder');
 
 class LLMDecisionProvider extends AgentDecisionProvider {
   async decide(agent, session) {
-    const round = session.currentRound;
-    const maxRounds = session.maxRounds;
-    
-    // Build conversation history for prompt
-    let historyText = session.negotiationHistory.map(item => {
-      let line = `Round ${item.round}: ${item.agentName} chose ${item.action}`;
-      if (item.offer !== null) line += ` with offer ${formatINR(item.offer)}`;
-      return line;
-    }).join('\n');
-    
-    if (!historyText) historyText = 'No moves yet. This is the opening offer.';
-
-    const opponent = session.agents.find(a => a.id !== agent.id);
-    const opponentOffer = opponent ? (session.offers[opponent.id] ?? null) : null;
-
-    let oppBlock = '';
-    if (opponentOffer !== null) {
-      oppBlock = `The opponent's CURRENT OFFER for you to respond to: ${formatINR(opponentOffer)}`;
+    // Find the opponent's last message to include in the prompt
+    const opponentMessage = [...session.messages].reverse().find(m => m.agentId !== agent.id) || null;
+    let opponentInfo = null;
+    if (opponentMessage) {
+      opponentInfo = {
+        agentName: opponentMessage.agentName,
+        message: opponentMessage.message,
+        offer: opponentMessage.offer
+      };
     }
 
-    const prompt = `You are an AI negotiating agent in a structured negotiation simulation.
+    const prompt = buildPrompt({
+      agent,
+      scenario: session.scenario,
+      history: session.messages,
+      opponent: opponentInfo,
+      round: session.currentRound,
+      maxRounds: session.maxRounds,
+      offerState: session.offers
+    });
 
-=== YOUR PERSONA ===
-Agent Name : ${agent.name}
-Role       : ${agent.role}
-Goals      : ${agent.goals.join(', ')}
-Constraints: ${agent.constraints.join(', ')}
-Personality: ${agent.personality}
-Scenario   : ${session.scenario.name}
-Current Round: ${round} of ${maxRounds}
-
-=== NEGOTIATION HISTORY (complete log) ===
-${historyText}
-
-${oppBlock}
-
-=== YOUR TASK ===
-Based on your role, personality, goals, and constraints, decide your next move.
-Respond ONLY with a valid JSON object. Do NOT include any explanation outside the JSON.
-
-Required JSON format:
-{
-  "decision": "accept" | "counter_offer" | "reject",
-  "offer": <number or null if accepting/rejecting>,
-  "message": "<the actual dialogue/message to speak to the opponent>",
-  "reasoning": "<short internal reasoning for your choice>",
-  "parameters": {
-    "<key>": "<value>"
-  }
-}
-
-Rules:
-- If you ACCEPT, set decision="accept", offer=null.
-- If you COUNTER, set decision="counter_offer" with a numeric offer.
-- If you REJECT, set decision="reject", offer=null.
-- Do not exceed your numeric constraints.
-- Provide a realistic spoken 'message'.
-- Keep 'reasoning' concise (1-2 sentences).
-- Include any relevant negotiation 'parameters' (e.g. "payment_terms": "Net 30") based on the current context.`;
-
-    const offerState = { ...session.offers };
-    const response = await generateAgentResponse(prompt, agent.name, agent, round, maxRounds, offerState);
+    const response = await generateAgentResponse(prompt, agent.name, agent, session.currentRound, session.maxRounds, session.offers);
     
     let action = 'OFFER';
     if (response.decision === 'counter_offer') {
-      action = (round === 1 || session.negotiationHistory.length === 0) ? 'OFFER' : 'COUNTEROFFER';
+      action = (session.currentRound === 1 || session.negotiationHistory.length === 0) ? 'OFFER' : 'COUNTEROFFER';
     } else if (response.decision === 'accept') {
       action = 'ACCEPT';
     } else {
