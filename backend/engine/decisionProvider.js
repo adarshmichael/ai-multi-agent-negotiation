@@ -18,7 +18,8 @@
  *   action:   'ACCEPT' | 'REJECT' | 'OFFER' | 'COUNTEROFFER'
  */
 
-const logger = require('../utils/logger');
+const logger                                = require('../utils/logger');
+const { generateCounteroffer }              = require('../services/counteroffer.service');
 
 // ============================================================
 // Formatting helpers (backend version of frontend formatINR)
@@ -104,52 +105,7 @@ class AgentDecisionProvider {
  * acceptanceBuffer:  buyer accepts if sellerOffer <= max * buf  (buf < 1)
  * acceptanceFloor:   seller accepts if buyerOffer >= min * flr  (flr > 1)
  */
-const PERSONALITY_PARAMS = {
-  aggressive: {
-    initialFactor:    { max: 0.58, min: 1.42 },
-    concessionRate:   0.06,
-    acceptanceBuffer: 0.98,   // buyer accepts at or below 98% of max
-    acceptanceFloor:  1.02,   // seller accepts at or above 102% of min
-  },
-  collaborative: {
-    initialFactor:    { max: 0.72, min: 1.28 },
-    concessionRate:   0.14,
-    acceptanceBuffer: 0.93,
-    acceptanceFloor:  1.07,
-  },
-  'risk-averse': {
-    initialFactor:    { max: 0.67, min: 1.33 },
-    concessionRate:   0.10,
-    acceptanceBuffer: 0.95,
-    acceptanceFloor:  1.05,
-  },
-  competitive: {
-    initialFactor:    { max: 0.60, min: 1.40 },
-    concessionRate:   0.07,
-    acceptanceBuffer: 0.97,
-    acceptanceFloor:  1.03,
-  },
-  flexible: {
-    initialFactor:    { max: 0.70, min: 1.30 },
-    concessionRate:   0.16,
-    acceptanceBuffer: 0.91,
-    acceptanceFloor:  1.09,
-  },
-  analytical: {
-    initialFactor:    { max: 0.65, min: 1.35 },
-    concessionRate:   0.09,
-    acceptanceBuffer: 0.94,
-    acceptanceFloor:  1.06,
-  },
-  professional: {
-    initialFactor:    { max: 0.68, min: 1.32 },
-    concessionRate:   0.11,
-    acceptanceBuffer: 0.95,
-    acceptanceFloor:  1.05,
-  },
-};
-
-const DEFAULT_PARAMS = PERSONALITY_PARAMS['collaborative'];
+const { PERSONALITY_PARAMS, DEFAULT_PARAMS } = require('../config/personalityParams');
 
 class RuleBasedDecisionProvider extends AgentDecisionProvider {
   constructor() {
@@ -176,6 +132,17 @@ class RuleBasedDecisionProvider extends AgentDecisionProvider {
       return this._initialOffer(agent, params, nc, round);
     }
 
+    // Check deterministic evaluation (Module 2)
+    const evaluation = session._latestEvaluation;
+    if (evaluation && evaluation.recommendation) {
+      if (evaluation.recommendation === 'ACCEPT') {
+        return this._accept(agent, opponentOffer);
+      } else if (evaluation.recommendation === 'REJECT') {
+        return this._reject(agent, opponentOffer);
+      }
+    }
+
+    // If deterministic evaluation didn't catch it, fallback to default behavior
     // Check if opponent's offer satisfies our hard constraint
     const constraintSatisfied = this.evaluateConstraint(nc, opponentOffer);
 
@@ -285,31 +252,15 @@ class RuleBasedDecisionProvider extends AgentDecisionProvider {
   }
 
   _counterOffer(agent, nc, opponentOffer, myLastOffer, params, round, maxRounds) {
-    // Urgency increases in later rounds → bigger moves
-    const urgency         = Math.min(round / maxRounds, 0.8);
-    const effectiveRate   = params.concessionRate * (1 + urgency * 2.5);
+    // ── Module 3: delegate all concession math to generateCounteroffer() ──
+    const counterResult = generateCounteroffer({
+      agent,
+      opponentOffer,
+      currentRound: round,
+      maxRounds,
+    });
 
-    let newOffer;
-    if (nc) {
-      if (nc.type === 'max') {
-        // Buyer: move UP toward opponent
-        const base = myLastOffer ?? (nc.value * params.initialFactor.max);
-        const gap  = opponentOffer - base;
-        newOffer   = base + (gap * effectiveRate);
-        newOffer   = Math.min(newOffer, nc.value);           // never exceed budget
-      } else {
-        // Seller: move DOWN toward opponent
-        const base = myLastOffer ?? (nc.value * params.initialFactor.min);
-        const gap  = base - opponentOffer;
-        newOffer   = base - (gap * effectiveRate);
-        newOffer   = Math.max(newOffer, nc.value);           // never go below minimum
-      }
-    } else {
-      // No numeric constraint — move 20% toward opponent
-      newOffer = (myLastOffer ?? opponentOffer) + (opponentOffer - (myLastOffer ?? opponentOffer)) * 0.20;
-    }
-
-    newOffer = Math.round(newOffer / 1000) * 1000;
+    const newOffer = counterResult.proposed_offer.price;
 
     const message = pick([
       `I understand your position, but I need to stay within my constraints. How about ${formatINR(newOffer)}?`,
@@ -321,10 +272,11 @@ class RuleBasedDecisionProvider extends AgentDecisionProvider {
 
     return {
       message,
-      offer:    newOffer,
-      decision: 'counter_offer',
-      reason:   `Counter offer at ${(effectiveRate * 100).toFixed(1)}% concession (round ${round}/${maxRounds})`,
-      action:   'COUNTEROFFER',
+      offer:        newOffer,
+      decision:     'counter_offer',
+      reason:       counterResult.reason,
+      action:       'COUNTEROFFER',
+      counterResult,   // full Module 3 result — available for UI and LLM context
     };
   }
 }
@@ -349,6 +301,16 @@ class LLMDecisionProvider extends AgentDecisionProvider {
       };
     }
 
+    // Determine the deterministic decision to pass to the LLM for context
+    let deterministicDecision = null;
+    const evaluation = session._latestEvaluation;
+    if (evaluation && evaluation.recommendation) {
+      deterministicDecision = evaluation.recommendation; // 'ACCEPT' | 'COUNTER' | 'REJECT'
+    }
+
+    // Retrieve latest concession snapshot (computed after trackConcession in Engine)
+    const concessionState = session._latestConcessionSnapshot || null;
+
     const prompt = buildPrompt({
       agent,
       scenario: session.scenario,
@@ -356,27 +318,137 @@ class LLMDecisionProvider extends AgentDecisionProvider {
       opponent: opponentInfo,
       round: session.currentRound,
       maxRounds: session.maxRounds,
-      offerState: session.offers
+      offerState: session.offers,
+      // Module 1–4 context
+      evaluation:    evaluation || null,
+      decision:      deterministicDecision,
+      counterResult: null,   // will be generated post-LLM; pre-pass is null on first call
+      concession:    concessionState,
     });
 
-    const response = await generateAgentResponse(prompt, agent.name, agent, session.currentRound, session.maxRounds, session.offers);
-    
+    const response = await generateAgentResponse(
+      prompt,
+      agent.name,
+      agent,
+      session.currentRound,
+      session.maxRounds,
+      session.offers
+    );
+
+    // Normalize decision string (COUNTER -> counter_offer, ACCEPT -> accept, REJECT -> reject)
+    let decision = (response.decision || 'counter_offer').toLowerCase().trim();
+    if (decision.includes('accept')) {
+      decision = 'accept';
+    } else if (decision.includes('reject')) {
+      decision = 'reject';
+    } else {
+      decision = 'counter_offer';
+    }
+
+    // Sanitize and parse numeric offer
+    let offer = null;
+    if (typeof response.offer === 'number' && !isNaN(response.offer)) {
+      offer = Math.round(response.offer);
+    } else if (typeof response.offer === 'string') {
+      const cleaned = response.offer.replace(/[^\d.-]/g, '');
+      const parsed = parseFloat(cleaned);
+      if (!isNaN(parsed)) offer = Math.round(parsed);
+    }
+
+    if (decision === 'accept' && offer === null && opponentInfo?.offer) {
+      offer = opponentInfo.offer;
+    }
+
+    // ---- Phase 7: Strict Backend Constraint Enforcement & Deterministic Logic (Module 2) ----
+    const nc = agent.numericConstraint;
+    let constraintNote = '';
+
+    // Use 'evaluation' already resolved above (session._latestEvaluation)
+    if (evaluation && evaluation.recommendation) {
+      if (evaluation.recommendation === 'REJECT') {
+        logger.warn('Engine', `Module 2 Logic: Forcing REJECT for ${agent.name} due to hard constraint violation.`);
+        decision = 'reject';
+        offer = null;
+        constraintNote = ` [Deterministic Logic: Rejected because offer violated hard constraints]`;
+      } else if (evaluation.recommendation === 'ACCEPT') {
+        logger.warn('Engine', `Module 2 Logic: Forcing ACCEPT for ${agent.name} as constraints and targets are satisfied.`);
+        decision = 'accept';
+        offer = opponentInfo?.offer ?? null;
+        constraintNote = ` [Deterministic Logic: Accepted because offer meets target criteria]`;
+      }
+    }
+
+    if (decision !== 'accept' && decision !== 'reject' && nc && typeof offer === 'number') {
+      if (nc.type === 'max' && offer > nc.value) {
+        logger.warn('Engine', `Constraint violation by ${agent.name}: proposed ₹${offer} > max budget ₹${nc.value}. Clamping.`);
+        offer = nc.value;
+        constraintNote = ` [Constraint Enforced: Clamped to budget ceiling ${formatINR(nc.value)}]`;
+      } else if (nc.type === 'min' && offer < nc.value) {
+        logger.warn('Engine', `Constraint violation by ${agent.name}: proposed ₹${offer} < minimum price ₹${nc.value}. Clamping.`);
+        offer = nc.value;
+        constraintNote = ` [Constraint Enforced: Clamped to floor price ${formatINR(nc.value)}]`;
+      }
+    }
+
+    // Constraint check on acceptance (fallback if deterministic logic didn't catch it)
+    if (decision === 'accept' && nc && opponentInfo?.offer) {
+      if (nc.type === 'max' && opponentInfo.offer > nc.value) {
+        logger.warn('Engine', `Constraint violation by ${agent.name}: cannot accept ₹${opponentInfo.offer} > max budget ₹${nc.value}. Overriding to counter.`);
+        decision = 'counter_offer';
+        offer = nc.value;
+        constraintNote = ` [Constraint Enforced: Cannot accept above budget limit ${formatINR(nc.value)}]`;
+      } else if (nc.type === 'min' && opponentInfo.offer < nc.value) {
+        logger.warn('Engine', `Constraint violation by ${agent.name}: cannot accept ₹${opponentInfo.offer} < min price ₹${nc.value}. Overriding to counter.`);
+        decision = 'counter_offer';
+        offer = nc.value;
+        constraintNote = ` [Constraint Enforced: Cannot accept below minimum price ${formatINR(nc.value)}]`;
+      }
+    }
+
+    // Determine semantic action label
     let action = 'OFFER';
-    if (response.decision === 'counter_offer') {
-      action = (session.currentRound === 1 || session.negotiationHistory.length === 0) ? 'OFFER' : 'COUNTEROFFER';
-    } else if (response.decision === 'accept') {
+    if (decision === 'counter_offer') {
+      const hasPriorOffers = session.messages.some(m => m.offer !== null && m.offer !== undefined);
+      action = (session.currentRound <= 1 && !hasPriorOffers) ? 'OFFER' : 'COUNTEROFFER';
+    } else if (decision === 'accept') {
       action = 'ACCEPT';
     } else {
       action = 'REJECT';
     }
 
+    const reasoning = (response.reasoning || 'Evaluated context, goals, and constraints.') + constraintNote;
+
+    // ── Module 3: generate / validate counteroffer for COUNTER decisions ──
+    let counterResult = null;
+    if (decision === 'counter_offer' && typeof offer === 'number' && opponentInfo?.offer) {
+      try {
+        counterResult = generateCounteroffer({
+          agent,
+          opponentOffer: opponentInfo.offer,
+          session,
+        });
+        // If the LLM offer diverges significantly (> 5 %) from strategy, correct it
+        const strategicPrice = counterResult.proposed_offer.price;
+        const divergencePct  = Math.abs(offer - strategicPrice) / (strategicPrice || 1);
+        if (divergencePct > 0.05) {
+          logger.warn('Engine',
+            `LLM offer ₹${offer} diverges ${(divergencePct * 100).toFixed(1)}% from Module 3 strategic price ₹${strategicPrice}. Correcting.`
+          );
+          offer = strategicPrice;
+        }
+      } catch (cErr) {
+        logger.warn('Engine', `Module 3 counteroffer generation failed: ${cErr.message}`);
+      }
+    }
+
     return {
-      message: response.message || `I have decided to ${response.decision}.`,
-      offer: response.offer,
-      decision: response.decision,
-      reason: response.reasoning || '',
-      parameters: response.parameters || {},
-      action: action,
+      message: response.message || `I have decided to ${decision}.`,
+      offer,
+      decision,
+      reason: reasoning,
+      parameters:   response.parameters || {},
+      action,
+      counterResult,   // full Module 3 result — null when not COUNTER
     };
   }
 

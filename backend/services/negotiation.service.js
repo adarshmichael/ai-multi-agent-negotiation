@@ -237,12 +237,19 @@ function createSession({ scenario_id, agents: agentPersonalities, maximum_rounds
       numericConstraint = { type: 'min', value: Number(userConfig.constraints.numericMin) };
     }
 
+    const targetValue = userConfig?.targetValue || agentDef.targetValue || null;
+    const minAcceptableValue = userConfig?.minAcceptableValue || agentDef.minAcceptableValue || (numericConstraint?.type === 'min' ? numericConstraint.value : null);
+    const maxAcceptableValue = userConfig?.maxAcceptableValue || agentDef.maxAcceptableValue || (numericConstraint?.type === 'max' ? numericConstraint.value : null);
+
     return createAgentConfig({
       ...agentDef,
       goal:             goals.join('; '),
       goals,
       constraints,
       numericConstraint,
+      targetValue,
+      minAcceptableValue,
+      maxAcceptableValue,
       personality:      userConfig?.personality || 'collaborative',
     });
   });

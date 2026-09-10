@@ -257,7 +257,49 @@
                 <div class="thinking-dots"><span></span><span></span><span></span></div>
                 <span id="neg-buyer-thinking-phrase">Thinking...</span>
               </div>
-            </div>
+
+              <!-- Module 4: Concession Tracker (Buyer) -->
+              <div class="neg-concession-tracker" id="neg-buyer-concession-tracker">
+                <div class="nct-header">
+                  <span class="nct-title">CONCESSION TRACKER</span>
+                  <button class="nct-toggle" id="neg-buyer-nct-toggle" aria-expanded="true" title="Collapse">▲</button>
+                </div>
+                <div class="nct-body" id="neg-buyer-nct-body">
+                  <div class="nct-offer-row">
+                    <span class="nct-label">Initial Position</span>
+                    <span class="nct-val" id="neg-buyer-nct-initial">—</span>
+                  </div>
+                  <div class="nct-offer-row">
+                    <span class="nct-label">Previous Offer</span>
+                    <span class="nct-val" id="neg-buyer-nct-prev">—</span>
+                  </div>
+                  <div class="nct-offer-row nct-current-row">
+                    <span class="nct-label">Current Offer</span>
+                    <span class="nct-val nct-current" id="neg-buyer-nct-current">—</span>
+                  </div>
+                  <div class="nct-divider"></div>
+                  <div class="nct-stat-row">
+                    <div class="nct-stat">
+                      <span class="nct-stat-label">This Round</span>
+                      <span class="nct-stat-val" id="neg-buyer-nct-this-round">—</span>
+                    </div>
+                    <div class="nct-stat">
+                      <span class="nct-stat-label">Total Moved</span>
+                      <span class="nct-stat-val" id="neg-buyer-nct-total">—</span>
+                    </div>
+                    <div class="nct-stat">
+                      <span class="nct-stat-label">% Moved</span>
+                      <span class="nct-stat-val" id="neg-buyer-nct-pct">—</span>
+                    </div>
+                  </div>
+                  <div class="nct-progress-wrap" title="Flexibility consumed">
+                    <div class="nct-progress-bar" id="neg-buyer-nct-progress" style="width:0%"></div>
+                  </div>
+                  <div class="nct-meta" id="neg-buyer-nct-meta"></div>
+                  <div class="nct-flags" id="neg-buyer-nct-flags"></div>
+                </div>
+              </div>
+
 
             <!-- Vendor Agent Profile -->
             <div class="neg-profile-card neg-profile-vendor" id="neg-vendor-panel">
@@ -278,7 +320,49 @@
                 <div class="thinking-dots"><span></span><span></span><span></span></div>
                 <span id="neg-vendor-thinking-phrase">Thinking...</span>
               </div>
-            </div>
+
+              <!-- Module 4: Concession Tracker (Vendor) -->
+              <div class="neg-concession-tracker" id="neg-vendor-concession-tracker">
+                <div class="nct-header">
+                  <span class="nct-title">CONCESSION TRACKER</span>
+                  <button class="nct-toggle" id="neg-vendor-nct-toggle" aria-expanded="true" title="Collapse">▲</button>
+                </div>
+                <div class="nct-body" id="neg-vendor-nct-body">
+                  <div class="nct-offer-row">
+                    <span class="nct-label">Initial Position</span>
+                    <span class="nct-val" id="neg-vendor-nct-initial">—</span>
+                  </div>
+                  <div class="nct-offer-row">
+                    <span class="nct-label">Previous Offer</span>
+                    <span class="nct-val" id="neg-vendor-nct-prev">—</span>
+                  </div>
+                  <div class="nct-offer-row nct-current-row">
+                    <span class="nct-label">Current Offer</span>
+                    <span class="nct-val nct-current" id="neg-vendor-nct-current">—</span>
+                  </div>
+                  <div class="nct-divider"></div>
+                  <div class="nct-stat-row">
+                    <div class="nct-stat">
+                      <span class="nct-stat-label">This Round</span>
+                      <span class="nct-stat-val" id="neg-vendor-nct-this-round">—</span>
+                    </div>
+                    <div class="nct-stat">
+                      <span class="nct-stat-label">Total Moved</span>
+                      <span class="nct-stat-val" id="neg-vendor-nct-total">—</span>
+                    </div>
+                    <div class="nct-stat">
+                      <span class="nct-stat-label">% Moved</span>
+                      <span class="nct-stat-val" id="neg-vendor-nct-pct">—</span>
+                    </div>
+                  </div>
+                  <div class="nct-progress-wrap" title="Flexibility consumed">
+                    <div class="nct-progress-bar" id="neg-vendor-nct-progress" style="width:0%"></div>
+                  </div>
+                  <div class="nct-meta" id="neg-vendor-nct-meta"></div>
+                  <div class="nct-flags" id="neg-vendor-nct-flags"></div>
+                </div>
+              </div>
+
           </div>
 
           <!-- Center: Live Chat Timeline -->
@@ -305,7 +389,12 @@
                 <div class="pipeline-step pending" id="pipe-load-profile"><span class="pipe-icon">○</span> Load Agent Profile</div>
                 <div class="pipeline-step pending" id="pipe-load-state"><span class="pipe-icon">○</span> Load Negotiation State</div>
                 <div class="pipeline-step pending" id="pipe-pass-history"><span class="pipe-icon">○</span> Pass Conversation History</div>
-                <div class="pipeline-step pending" id="pipe-llm-reason"><span class="pipe-icon">○</span> LLM Reasoning</div>
+                <div class="pipeline-step pending" id="pipe-eval-offer"><span class="pipe-icon">○</span> Evaluate Opponent Offer <span class="pipe-module-tag">M1</span></div>
+                <div class="pipeline-step pending" id="pipe-decision"><span class="pipe-icon">○</span> Decision Logic <span class="pipe-module-tag">M2</span></div>
+                <div class="pipeline-step pending" id="pipe-counter"><span class="pipe-icon">○</span> Counteroffer Generation <span class="pipe-module-tag">M3</span></div>
+                <div class="pipeline-step pending" id="pipe-concession"><span class="pipe-icon">○</span> Concession Tracking <span class="pipe-module-tag">M4</span></div>
+                <div class="pipeline-step pending" id="pipe-llm-reason"><span class="pipe-icon">○</span> LLM Reasoning <span class="pipe-module-tag">M5</span></div>
+                <div class="pipeline-step pending" id="pipe-validate"><span class="pipe-icon">○</span> Validate &amp; Clamp Response</div>
                 <div class="pipeline-step pending" id="pipe-update-state"><span class="pipe-icon">○</span> Update State</div>
                 <div class="pipeline-step pending" id="pipe-pass-turn"><span class="pipe-icon">○</span> Pass Turn</div>
               </div>
@@ -327,14 +416,29 @@
             <!-- AI Reasoning -->
             <div class="neg-reasoning-panel ai-reasoning-highlight">
               <h4 class="panel-title">AI REASONING</h4>
-              <div class="reasoning-text" id="ai-reasoning-text">Waiting for agent response...</div>
-              
-              <details class="context-details" id="ai-context-details">
-                <summary>Context Used by Agent</summary>
-                <div class="context-content" id="ai-context-content">
-                  <div class="context-placeholder">Context will appear when reasoning begins.</div>
+              <div class="ai-reasoning-card">
+                <div class="ai-reasoning-meta">
+                  <div class="ai-meta-item"><strong>Agent:</strong> <span id="ai-reasoning-agent">—</span></div>
+                  <div class="ai-meta-item"><strong>Decision:</strong> <span id="ai-reasoning-decision" class="decision-chip">—</span></div>
+                  <div class="ai-meta-item"><strong>Offer:</strong> <span id="ai-reasoning-offer">—</span></div>
+                  <div class="ai-meta-item"><strong>Evaluation:</strong> <span id="ai-reasoning-eval" class="eval-chip">—</span></div>
+                  <div class="ai-meta-item"><strong>Concession:</strong> <span id="ai-reasoning-concession">—</span></div>
                 </div>
-              </details>
+                <div class="reasoning-text" id="ai-reasoning-text">Waiting for agent turn...</div>
+                <div class="ai-context-checklist">
+                  <div class="checklist-title">Context Evaluated by LLM:</div>
+                  <div class="checklist-grid">
+                    <div class="checklist-item active"><span class="check-icon">✓</span> Agent Persona</div>
+                    <div class="checklist-item active"><span class="check-icon">✓</span> Goals &amp; Targets</div>
+                    <div class="checklist-item active"><span class="check-icon">✓</span> Hard Constraints</div>
+                    <div class="checklist-item active"><span class="check-icon">✓</span> Negotiation State</div>
+                    <div class="checklist-item active"><span class="check-icon">✓</span> Dialogue History</div>
+                    <div class="checklist-item active"><span class="check-icon">✓</span> Opponent Offer</div>
+                    <div class="checklist-item" id="checklist-eval"><span class="check-icon">○</span> Offer Evaluation (M1)</div>
+                    <div class="checklist-item" id="checklist-concession"><span class="check-icon">○</span> Concession State (M4)</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
           </div>

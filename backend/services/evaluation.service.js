@@ -119,4 +119,13 @@ function checkDeadlock(session) {
   return { deadlocked: false };
 }
 
-module.exports = { checkAgreement, checkRejection, checkMaxRounds, checkDeadlock };
+const { evaluateOffer, resolveAgentThresholds } = require('./offerEvaluation.service');
+
+module.exports = {
+  checkAgreement,
+  checkRejection,
+  checkMaxRounds,
+  checkDeadlock,
+  evaluateOffer,
+  resolveAgentThresholds,
+};

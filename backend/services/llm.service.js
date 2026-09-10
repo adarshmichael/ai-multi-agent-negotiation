@@ -1,4 +1,4 @@
-/**
+﻿/**
  * services/llm.service.js
  * Gemini API integration for generating agent negotiation responses.
  * API key is ONLY accessed server-side via environment variables.
@@ -12,119 +12,134 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { config } = require('../config/env');
 const logger = require('../utils/logger');
 
-// Try multiple models in order of preference
+// Active models supported by Gemini API in order of speed, reliability & reasoning
 const MODEL_CANDIDATES = [
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash-latest',
-  'gemini-pro',
+  'gemini-3.1-flash-lite-preview',
+  'gemini-3.7-flash',
+  'gemini-3.5-flash',
+  'gemini-3.6-flash',
 ];
 
-let genAI = null;
-let model = null;
-let workingModel = null;
+let currentKeyIndex = 0;
+const genAICache = new Map();
 
-async function initModel() {
-  if (model && workingModel) return model;
+function getGenAIInstance() {
+  const keys = (config.geminiApiKeys && config.geminiApiKeys.length > 0)
+    ? config.geminiApiKeys
+    : (config.geminiApiKey ? [config.geminiApiKey] : []);
 
-  genAI = new GoogleGenerativeAI(config.geminiApiKey);
-
-  // Try each model candidate until one works
-  for (const modelName of MODEL_CANDIDATES) {
-    try {
-      const candidate = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          temperature: 0.8,
-          topP: 0.9,
-          maxOutputTokens: 600,
-        },
-      });
-
-      // Quick test call to verify model works
-      const testResult = await candidate.generateContent('Reply with only: ok');
-      const testText = testResult.response.text();
-      if (testText) {
-        model = candidate;
-        workingModel = modelName;
-        logger.llm(`✓ Working model found: ${modelName}`);
-        return model;
-      }
-    } catch (err) {
-      logger.warn('LLM', `Model ${modelName} test failed: ${err.message.slice(0, 80)}`);
-    }
+  if (keys.length === 0) {
+    throw new Error('No GEMINI_API_KEY or GEMINI_API_KEYS configured in backend environment.');
   }
 
-  logger.error('LLM', 'No working Gemini model found. Falling back to Mock responses.');
-  return null; // Signals to use mock
+  const activeKey = keys[currentKeyIndex % keys.length];
+  if (!genAICache.has(activeKey)) {
+    genAICache.set(activeKey, new GoogleGenerativeAI(activeKey));
+  }
+  return { ai: genAICache.get(activeKey), keyIndex: (currentKeyIndex % keys.length) + 1, totalKeys: keys.length };
+}
+
+function rotateToNextKey(reason = '') {
+  const keys = (config.geminiApiKeys && config.geminiApiKeys.length > 0)
+    ? config.geminiApiKeys
+    : (config.geminiApiKey ? [config.geminiApiKey] : []);
+
+  if (keys.length > 1) {
+    currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+    logger.warn('LLM', `Rotated to Gemini API key #${(currentKeyIndex % keys.length) + 1}/${keys.length} (Reason: ${reason})`);
+  }
 }
 
 /**
- * Generate an agent response from a prompt.
- * Retries once on JSON parse failure.
+ * Generate an agent response from a prompt using Gemini LLM.
+ * Automatically fails over across working models and rotates API keys if quota/rate limits are hit.
  *
- * @param {string} prompt    — full prompt from promptBuilder
- * @param {string} agentName — for logging only
- * @returns {object}         — { message, offer, decision } (reasoning stripped by caller)
+ * @param {string} prompt      â€” full prompt from promptBuilder
+ * @param {string} agentName   â€” for logging only
+ * @param {object} agentConfig â€” agent configuration
+ * @param {number} round       â€” current round number
+ * @param {number} maxRounds   â€” max rounds
+ * @param {object} offerState  â€” latest offers
+ * @returns {Promise<object>}  â€” { message, offer, decision, reasoning, parameters }
  */
 async function generateAgentResponse(prompt, agentName, agentConfig, round, maxRounds, offerState) {
-  const llmModel = await initModel();
-
-  if (!llmModel) {
-    // FALLBACK: Realistic Mock Responses for testing UI without API key
-    await sleep(1500); // Simulate network latency
+  const hasKey = config.geminiApiKey || (config.geminiApiKeys && config.geminiApiKeys.length > 0);
+  if (!hasKey) {
+    logger.warn('LLM', 'No GEMINI_API_KEY found, using realistic mock generator.');
+    await sleep(1000);
     return generateMockResponse(agentName, agentConfig, round, maxRounds, offerState);
   }
 
-  logger.llm(`Generating response for ${agentName} (model: ${workingModel})...`);
   let lastError = null;
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (const modelName of MODEL_CANDIDATES) {
     try {
-      const result = await llmModel.generateContent(prompt);
+      const { ai, keyIndex, totalKeys } = getGenAIInstance();
+      logger.llm(`Querying ${modelName} [Key ${keyIndex}/${totalKeys}] for ${agentName} (round ${round})...`);
+
+      const model = ai.getGenerativeModel(
+        {
+          model: modelName,
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.9,
+            maxOutputTokens: 2000,
+          },
+        },
+        { timeout: 15000 }
+      );
+
+      const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
 
-      logger.llm(`${agentName} raw response (attempt ${attempt}): ${text.slice(0, 200)}`);
+      logger.llm(`${agentName} (${modelName}) raw response: ${text.slice(0, 150)}...`);
 
-      // Parse JSON — handle markdown code blocks and plain JSON
-      let parsed;
+      // Parse JSON from model output
+      let parsed = null;
       try {
-        // Remove markdown code blocks if present
         const cleaned = text
           .replace(/```json\s*/gi, '')
           .replace(/```\s*/gi, '')
           .trim();
         parsed = JSON.parse(cleaned);
       } catch (parseErr) {
-        // Try to extract JSON from text
         const jsonMatch = text.match(/\{[\s\S]*?\}/);
         if (jsonMatch) {
           parsed = JSON.parse(jsonMatch[0]);
         } else {
-          throw new Error(`JSON parse failed: ${parseErr.message}. Raw: ${text.slice(0, 100)}`);
+          throw new Error(`JSON parse failed: ${parseErr.message}`);
         }
       }
 
-      // Ensure required fields exist
-      if (!parsed.message) {
-        throw new Error('Response missing required "message" field');
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('LLM returned non-object JSON payload');
       }
 
-      logger.llm(`${agentName} response parsed. Decision: ${parsed.decision}, Offer: ${parsed.offer}`);
+      if (!parsed.message) {
+        throw new Error('LLM response missing "message" string');
+      }
+
+      logger.llm(`âœ“ ${agentName} successfully generated via ${modelName}. Decision: ${parsed.decision}, Offer: ${parsed.offer}`);
       return parsed;
 
     } catch (err) {
       lastError = err;
-      logger.warn('LLM', `${agentName} attempt ${attempt} failed: ${err.message.slice(0, 120)}`);
-      if (attempt < 2) {
-        await sleep(1500);
+      const statusPrefix = err.status ? `[HTTP ${err.status}] ` : '';
+      const safeErrMsg = statusPrefix + (err.message ? err.message.slice(0, 120) : 'Unknown error');
+      
+      // If quota exhausted, rate limit, auth error, or server overloaded (503), rotate to the next key
+      if (err.status === 429 || err.status === 403 || err.status === 503 || (err.message && (err.message.includes('429') || err.message.includes('503')))) {
+        rotateToNextKey(`Status ${err.status || 'transient error'}`);
       }
+
+      logger.warn('LLM', `Model ${modelName} failed for ${agentName}: ${safeErrMsg}. Trying next candidate...`);
+      await sleep(300);
     }
   }
 
-  // Both attempts failed
-  logger.error('LLM', `${agentName} all attempts failed. Last error: ${lastError?.message}`);
-  throw new Error(`LLM generation failed for ${agentName}: ${lastError?.message}`);
+  // If all candidate models failed
+  logger.error('LLM', `All Gemini model candidates failed for ${agentName}: ${lastError?.message?.slice(0, 150)}`);
+  throw new Error(`LLM provider failure for ${agentName}: ${lastError?.message || 'Service unavailable'}`);
 }
 
 function sleep(ms) {
@@ -132,56 +147,118 @@ function sleep(ms) {
 }
 
 // ----------------------------------------------------------------------
-// MOCK GENERATOR FOR UI TESTING WHEN API KEY FAILS
+// VARIED MOCK GENERATOR — used when GEMINI_API_KEY is not configured.
+// Personality-aware, round-aware, never repeats the same phrase.
 // ----------------------------------------------------------------------
 function generateMockResponse(agentName, agentConfig, round, maxRounds, offerState) {
-  const role = agentConfig.role.toLowerCase();
-  const isBuyer = role.includes('buyer') || role.includes('candidate') || role.includes('project manager');
-  
-  // Find current offers
-  const myOffer = offerState[agentConfig.id] || null;
-  const opponentId = Object.keys(offerState).find(id => id !== agentConfig.id);
+  const role        = (agentConfig.role || '').toLowerCase();
+  const personality = (agentConfig.personality || 'collaborative').toLowerCase();
+  const isBuyer     = role.includes('buyer') || role.includes('candidate') || role.includes('project');
+
+  const myOffer       = offerState[agentConfig.id] || null;
+  const opponentId    = Object.keys(offerState).find(id => id !== agentConfig.id);
   const opponentOffer = opponentId ? offerState[opponentId] : null;
 
-  let newOffer = myOffer;
-  let decision = 'counter_offer';
-  let message = '';
-  let reasoning = '';
+  const nc      = agentConfig.numericConstraint;
+  const limit   = nc && nc.value ? nc.value : (isBuyer ? 800000 : 700000);
+  const isFinal = round >= maxRounds;
 
-  const isFinalRound = round >= maxRounds;
-  const baseline = agentConfig.numericConstraint?.value || (isBuyer ? 700000 : 900000);
+  function computeOffer() {
+    if (!opponentOffer) {
+      const anchors = {
+        aggressive: isBuyer ? 0.62 : 1.38, competitive: isBuyer ? 0.65 : 1.32,
+        collaborative: isBuyer ? 0.72 : 1.25, flexible: isBuyer ? 0.75 : 1.20,
+        'risk-averse': isBuyer ? 0.70 : 1.28, analytical: isBuyer ? 0.68 : 1.30,
+        professional: isBuyer ? 0.73 : 1.24,
+      };
+      const factor = anchors[personality] || 0.72;
+      return Math.round((limit * factor) / 500) * 500;
+    }
+    const base = myOffer || limit;
+    const gap  = Math.abs(base - opponentOffer);
+    const moveRates = {
+      aggressive: 0.12, competitive: 0.15, collaborative: 0.22,
+      flexible: 0.28, 'risk-averse': 0.10, analytical: 0.18, professional: 0.16,
+    };
+    const rate   = (moveRates[personality] || 0.20) * (1 + (round / maxRounds) * 0.5);
+    const newVal = isBuyer ? base + gap * rate : base - gap * rate;
+    if (isBuyer && nc && nc.type === 'max') return Math.min(Math.round(newVal / 500) * 500, nc.value);
+    if (!isBuyer && nc && nc.type === 'min') return Math.max(Math.round(newVal / 500) * 500, nc.value);
+    return Math.round(newVal / 500) * 500;
+  }
 
-  if (round === 1) {
-    // Initial offer
-    newOffer = baseline + (Math.random() * 50000 * (isBuyer ? -1 : 1));
-    newOffer = Math.round(newOffer / 1000) * 1000; // Round to nearest 1k
-    message = `Hello! Thanks for meeting with me. After reviewing the requirements, I can offer ${newOffer}. Let me know if this works for you.`;
-    reasoning = 'Opening with a starting offer based on my target value.';
-  } else if (opponentOffer) {
-    // Evaluate opponent's offer
-    const gap = Math.abs((myOffer || 0) - opponentOffer);
-    
-    if (gap < 20000 || isFinalRound && gap < 50000) {
-      decision = 'accept';
-      newOffer = opponentOffer;
-      message = `You know what, ${opponentOffer} works for me. We have a deal. Looking forward to working together!`;
-      reasoning = 'The gap is small enough to reach an agreement.';
-    } else if (isFinalRound) {
-      decision = 'reject';
-      message = `I appreciate the discussion, but ${opponentOffer} is just too far from what I can accept. I'm going to have to walk away this time.`;
-      reasoning = 'Could not reach agreement within final round constraints.';
-    } else {
-      // Counter offer (move 15-30% towards opponent)
-      const movement = gap * (0.15 + Math.random() * 0.15);
-      newOffer = (myOffer || baseline) + (movement * (isBuyer ? 1 : -1));
-      newOffer = Math.round(newOffer / 1000) * 1000;
-      message = `I understand your position, but ${opponentOffer} doesn't quite work for my constraints. How about we meet at ${newOffer}?`;
-      reasoning = 'Moving offer closer to opponent to encourage settlement.';
+  const fmt = v => v ? '\u20b9' + Number(v).toLocaleString('en-IN') : 'the proposed amount';
+
+  if (opponentOffer !== null && opponentOffer !== undefined) {
+    const diff = Math.abs((myOffer || limit) - opponentOffer);
+    const avg  = ((myOffer || limit) + opponentOffer) / 2;
+    if ((diff / avg < 0.04) || (isFinal && diff / avg < 0.08)) {
+      const accepts = {
+        aggressive: `After careful consideration, I will accept ${fmt(opponentOffer)}. Let's close this now.`,
+        competitive: `${fmt(opponentOffer)} is acceptable. I agree — let's move forward.`,
+        collaborative: `I appreciate the movement on your side. ${fmt(opponentOffer)} works for me. We have a deal!`,
+        flexible: `That works. I accept ${fmt(opponentOffer)} — looking forward to working together.`,
+        'risk-averse': `After reviewing all terms, I can accept ${fmt(opponentOffer)}. We have an agreement.`,
+        analytical: `The numbers align. I accept ${fmt(opponentOffer)} as the final price.`,
+        professional: `I am pleased to confirm acceptance of ${fmt(opponentOffer)}. Let us proceed formally.`,
+      };
+      return { message: accepts[personality] || `I accept ${fmt(opponentOffer)}.`, offer: opponentOffer, decision: 'accept', reasoning: 'Gap within tolerance.' };
+    }
+    if (isFinal) {
+      const rejects = {
+        aggressive: `We have reached the end of negotiations. ${fmt(opponentOffer)} is not something I can accept.`,
+        collaborative: `I regret we could not find common ground. ${fmt(opponentOffer)} remains outside what I can agree to.`,
+        'risk-averse': `Given my constraints, ${fmt(opponentOffer)} does not fit. I must decline.`,
+        analytical: `The data does not support accepting ${fmt(opponentOffer)}. I have to pass.`,
+        default: `I appreciate our discussion, but ${fmt(opponentOffer)} does not work for me. I will walk away.`,
+      };
+      return { message: rejects[personality] || rejects.default, offer: null, decision: 'reject', reasoning: 'Final round, unacceptable gap.' };
     }
   }
 
-  logger.llm(`[MOCK] ${agentName} -> ${decision} at ${newOffer}`);
-  return { message, offer: newOffer, decision, reasoning };
+  const newOffer = computeOffer();
+  const rd = round === 1 ? 'opening' : `round ${round}`;
+  const counters = {
+    aggressive: [
+      `My ${rd} position is ${fmt(newOffer)}. I believe this is competitive given current market conditions.`,
+      `I am prepared to offer ${fmt(newOffer)}, and I expect this to be taken seriously.`,
+      `${fmt(newOffer)} is where I stand. I have reviewed your position and this is my best move.`,
+    ],
+    competitive: [
+      `After analyzing your offer, I can move to ${fmt(newOffer)}. I am still protecting critical value here.`,
+      `I will counter at ${fmt(newOffer)}. Let us see if we can close this efficiently.`,
+      `My revised position is ${fmt(newOffer)}. I have moved — I expect reciprocal movement from you.`,
+    ],
+    collaborative: [
+      `I want to find a deal that works for both of us. How about ${fmt(newOffer)}? I am genuinely trying to meet you halfway.`,
+      `I appreciate your offer. Let me propose ${fmt(newOffer)} — I think this gives both of us a fair outcome.`,
+      `In the spirit of reaching agreement, I am offering ${fmt(newOffer)}. I hope we can build on this momentum.`,
+    ],
+    flexible: [
+      `I am adjusting my position to ${fmt(newOffer)}. I want to keep this negotiation moving productively.`,
+      `Here is a revised number: ${fmt(newOffer)}. I am flexible and open to your thoughts.`,
+      `Let us try ${fmt(newOffer)}. I am willing to keep working if you are.`,
+    ],
+    'risk-averse': [
+      `After careful review, I can offer ${fmt(newOffer)}. This is a measured move within my parameters.`,
+      `I have evaluated the risks carefully. ${fmt(newOffer)} is where I can responsibly move to right now.`,
+      `A small but deliberate step: ${fmt(newOffer)}. I need to be sure of each move I make here.`,
+    ],
+    analytical: [
+      `Based on market benchmarks and gap analysis, ${fmt(newOffer)} is the logical next step.`,
+      `The numbers indicate ${fmt(newOffer)} as a reasonable compromise. Let us evaluate this together.`,
+      `I have run the figures — ${fmt(newOffer)} represents a fair concession relative to overall value.`,
+    ],
+    professional: [
+      `In accordance with my guidelines, I am formally proposing ${fmt(newOffer)} for your consideration.`,
+      `Per standard procedures, my revised offer stands at ${fmt(newOffer)}.`,
+      `I have reviewed the terms and submit ${fmt(newOffer)} as my structured counter-proposal.`,
+    ],
+  };
+  const pool    = counters[personality] || counters.collaborative;
+  const message = pool[Math.min(round - 1, pool.length - 1)] || pool[pool.length - 1];
+  logger.llm(`[MOCK] ${agentName} -> counter_offer at ${newOffer} (round ${round}, ${personality})`);
+  return { message, offer: newOffer, decision: 'counter_offer', reasoning: `Round ${round}: moving based on ${personality} strategy.` };
 }
 
 module.exports = { generateAgentResponse };

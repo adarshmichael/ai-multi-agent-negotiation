@@ -1205,10 +1205,268 @@ function removeAgentThinking(agentIndex) {
 }
 
 /**
- * Append a message to the correct agent panel.
- * Replaces appendChatMessage for the new split-panel layout.
+ * Format and build compact Offer Evaluation HTML section (Module 1).
  */
+function buildEvaluationHtml(evaluation, counterResult) {
+  if (!evaluation) return '';
+  const oppPrice = evaluation.opponent_offer?.price ?? null;
+  const oppOfferText = oppPrice !== null ? formatINR(oppPrice) : '—';
+  const targetText = (evaluation.target_value !== null && evaluation.target_value !== undefined)
+    ? formatINR(evaluation.target_value) : '—';
+
+  const distNum = Number(evaluation.distance_from_target || 0);
+  const distSign = distNum < 0 ? '-' : (distNum > 0 ? '+' : '');
+  const distText = `${distSign}${formatINR(Math.abs(distNum))}`;
+  const distCls = distNum >= 0 ? 'dist-pos' : 'dist-neg';
+
+  const constraintPass = evaluation.constraint_status === 'WITHIN_LIMIT';
+  const constraintText = constraintPass ? 'Within Limit' : 'Violated';
+  const constraintCls  = constraintPass ? 'eval-pass' : 'eval-violated';
+
+  const evalMap = {
+    favorable: 'Favorable',
+    partially_acceptable: 'Partially Acceptable',
+    unacceptable: 'Unacceptable',
+  };
+  const evalKey = (evaluation.evaluation || '').toLowerCase();
+  const evalLabel = evalMap[evalKey] || evaluation.evaluation || '—';
+  
+  const recLabel = evaluation.recommendation || '—';
+  const reasonText = evaluation.reason || '—';
+
+  // Build the counteroffer card if Module 3 data is available
+  const counterHtml = buildCounterOfferHtml(evaluation, counterResult);
+
+  return `
+    <div class="neg-offer-eval">
+      <div class="neg-offer-eval-header">
+        <span class="neg-offer-eval-title">Module 2 — Decision Logic</span>
+        <span class="neg-eval-badge eval-${escapeHtml(evalKey)}">${escapeHtml(evalLabel)}</span>
+      </div>
+      <div class="neg-eval-grid">
+        <div class="neg-eval-row">
+          <span class="neg-eval-label">Opponent Offer:</span>
+          <span class="neg-eval-val">${escapeHtml(oppOfferText)}</span>
+        </div>
+        <div class="neg-eval-row">
+          <span class="neg-eval-label">Target:</span>
+          <span class="neg-eval-val">${escapeHtml(targetText)}</span>
+        </div>
+        <div class="neg-eval-row">
+          <span class="neg-eval-label">Distance:</span>
+          <span class="neg-eval-val ${distCls}">${escapeHtml(distText)}</span>
+        </div>
+        <div class="neg-eval-row">
+          <span class="neg-eval-label">Constraint:</span>
+          <span class="neg-eval-val ${constraintCls}">${escapeHtml(constraintText)}</span>
+        </div>
+        <div class="neg-eval-row" style="margin-top: 8px; border-top: 1px solid var(--color-border); padding-top: 8px;">
+          <span class="neg-eval-label">Evaluation:</span>
+          <span class="neg-eval-val ${constraintCls}">${escapeHtml(evalLabel)}</span>
+        </div>
+        <div class="neg-eval-row">
+          <span class="neg-eval-label">Decision:</span>
+          <span class="neg-eval-val" style="font-weight: bold;">${escapeHtml(recLabel.toUpperCase())}</span>
+        </div>
+        <div class="neg-eval-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+          <span class="neg-eval-label">Reason:</span>
+          <span class="neg-eval-val" style="font-size: 11px; text-align: left; line-height: 1.4;">${escapeHtml(reasonText)}</span>
+        </div>
+      </div>
+      ${counterHtml}
+    </div>
+  `;
+}
+
+/**
+ * Module 3 — Counteroffer card HTML builder.
+ * Renders the Opponent Offer → Evaluation → Decision → Counteroffer flow.
+ *
+ * @param {object|null} evaluation  - Module 2 evaluation result
+ * @param {object|null} counterResult - Module 3 counteroffer result
+ * @returns {string} HTML string
+ */
+function buildCounterOfferHtml(evaluation, counterResult) {
+  if (!counterResult || !counterResult.proposed_offer) return '';
+
+  const price     = counterResult.proposed_offer.price;
+  const priceText = formatINR(price);
+
+  // Opponent offer row
+  const oppPrice    = counterResult.opponent_offer ?? evaluation?.opponent_offer?.price ?? null;
+  const oppText     = oppPrice !== null ? formatINR(oppPrice) : '—';
+
+  // Evaluation label
+  const evalMap = {
+    favorable: 'Favorable',
+    partially_acceptable: 'Partially Acceptable',
+    unacceptable: 'Unacceptable',
+  };
+  const evalKey   = (evaluation?.evaluation || '').toLowerCase();
+  const evalLabel = evalMap[evalKey] || evaluation?.evaluation || '—';
+  const decision  = (evaluation?.recommendation || 'COUNTER').toUpperCase();
+
+  // Concession badge
+  const conAmt    = counterResult.concession_amount || 0;
+  let   conCls    = 'concession-none';
+  let   conText   = '—';
+  if (conAmt > 0) {
+    // Buyer moves up (concession-up for buyer), seller moves down (concession-down for seller)
+    const isBuyer = (counterResult.personality && counterResult.min_acceptable === null) ||
+                    (counterResult.max_acceptable !== null);
+    conCls  = isBuyer ? 'concession-up' : 'concession-down';
+    conText = `${isBuyer ? '↑' : '↓'} ${formatINR(conAmt)} concession`;
+  }
+
+  // Constraint status
+  const isClamped    = counterResult.constraint_status === 'CLAMPED';
+  const statusCls    = isClamped ? 'neg-co-status-clamped' : 'neg-co-status-within';
+  const statusText   = isClamped ? 'CLAMPED to limit' : 'Within Limit';
+  const clampedBadge = isClamped
+    ? `<span class="neg-co-clamped-badge">⚠ ${escapeHtml(statusText)}</span>`
+    : `<span class="neg-co-status-within">${escapeHtml(statusText)}</span>`;
+
+  // Urgency & concession rate info
+  const urgPct  = ((counterResult.urgency_factor || 0) * 100).toFixed(0);
+  const ratePct = ((counterResult.concession_rate || 0) * 100).toFixed(1);
+
+  return `
+    <div class="neg-counteroffer-card">
+      <div class="neg-counteroffer-card-header">
+        <span class="neg-counteroffer-card-title">Module 3 — Counteroffer</span>
+        ${clampedBadge}
+      </div>
+      <div class="neg-counteroffer-flow">
+        <div class="neg-co-flow-row">
+          <span class="neg-co-flow-label">Opponent Offer</span>
+          <span class="neg-co-flow-val">${escapeHtml(oppText)}</span>
+        </div>
+        <div class="neg-co-arrow">↓</div>
+        <div class="neg-co-flow-row">
+          <span class="neg-co-flow-label">Evaluation</span>
+          <span class="neg-co-flow-val">${escapeHtml(evalLabel)}</span>
+        </div>
+        <div class="neg-co-arrow">↓</div>
+        <div class="neg-co-flow-row">
+          <span class="neg-co-flow-label">Decision</span>
+          <span class="neg-co-flow-val" style="color:var(--color-primary)">${escapeHtml(decision)}</span>
+        </div>
+        <div class="neg-co-arrow">↓</div>
+      </div>
+      <div class="neg-counteroffer-value">
+        <span class="neg-co-flow-label">Counteroffer</span>
+        <span class="neg-counteroffer-price">${escapeHtml(priceText)}</span>
+        <span class="neg-concession-badge ${conCls}">${escapeHtml(conText)}</span>
+      </div>
+      <div style="margin-top:5px; font-size:10px; color:var(--color-text-faint); font-family:var(--font-mono);">
+        urgency ${urgPct}% · rate ${ratePct}%${counterResult.is_stalling ? ' · stalling detected' : ''}
+      </div>
+    </div>
+  `;
+}
+
+
+// ─── Module 4 — Concession Tracker UI ────────────────────────────────────────
+
+function _nctPrefix(agentId) {
+  return (agentId === 'buyer' || agentId === 'candidate' || agentId === 'project-manager')
+    ? 'buyer' : 'vendor';
+}
+
+function updateConcessionTracker(agentId, snapshot) {
+  const prefix = _nctPrefix(agentId);
+  if (!snapshot) return;
+  const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+
+  setText(`neg-${prefix}-nct-initial`,  snapshot.initial_position !== null ? formatINR(snapshot.initial_position) : '—');
+  setText(`neg-${prefix}-nct-prev`,     snapshot.previous_offer   !== null ? formatINR(snapshot.previous_offer)   : '—');
+  setText(`neg-${prefix}-nct-current`,  snapshot.current_offer    !== null ? formatINR(snapshot.current_offer)    : '—');
+
+  const thisRound = snapshot.concession_amount > 0
+    ? formatINR(snapshot.concession_amount)
+    : (snapshot.previous_offer !== null ? '—' : 'Opening');
+  setText(`neg-${prefix}-nct-this-round`, thisRound);
+  setText(`neg-${prefix}-nct-total`, snapshot.total_concession > 0 ? formatINR(snapshot.total_concession) : '—');
+  setText(`neg-${prefix}-nct-pct`,   snapshot.concession_percentage > 0
+    ? `${snapshot.concession_percentage.toFixed(1)}%` : '0%');
+
+  const pct   = Math.min(snapshot.flexibility_consumed_pct || 0, 100);
+  const barEl = document.getElementById(`neg-${prefix}-nct-progress`);
+  if (barEl) {
+    barEl.style.width = `${pct}%`;
+    if (pct >= 80)      barEl.setAttribute('data-level', 'danger');
+    else if (pct >= 50) barEl.setAttribute('data-level', 'warn');
+    else                barEl.removeAttribute('data-level');
+  }
+
+  const metaEl = document.getElementById(`neg-${prefix}-nct-meta`);
+  if (metaEl) {
+    const flex = snapshot.remaining_flexibility !== null
+      ? `${formatINR(snapshot.remaining_flexibility)} flexibility left` : '';
+    const rounds = snapshot.concessions_count > 0
+      ? ` · ${snapshot.concessions_count} concession${snapshot.concessions_count !== 1 ? 's' : ''}` : '';
+    const warn = !snapshot.is_progressing ? ' · ⚠ wrong direction' : '';
+    metaEl.textContent = [flex, rounds, warn].filter(Boolean).join('') || '';
+  }
+
+  const flagsEl = document.getElementById(`neg-${prefix}-nct-flags`);
+  if (flagsEl) {
+    const flags = snapshot.validation_flags || [];
+    if (flags.length > 0) {
+      const flagMap = {
+        REVERSAL:     { cls: 'flag-reversal',   icon: '⟲', label: 'REVERSAL' },
+        EXCESSIVE:    { cls: 'flag-excessive',  icon: '⚡', label: 'EXCESSIVE' },
+        STAGNATION:   { cls: 'flag-stagnation', icon: '≈',  label: 'STAGNATION' },
+        LIMIT_BREACH: { cls: 'flag-limit',      icon: '🔒', label: 'LIMIT' },
+      };
+      flagsEl.innerHTML = flags.map(f => {
+        const m = flagMap[f] || { cls: 'flag-reversal', icon: '⚠', label: f };
+        return `<span class="nct-flag-chip ${m.cls}">${m.icon} ${m.label}</span>`;
+      }).join('');
+    } else {
+      flagsEl.innerHTML = '';
+    }
+  }
+}
+
+function resetConcessionTracker(prefix) {
+  ['initial','prev','current','this-round','total','pct'].forEach(key => {
+    const el = document.getElementById(`neg-${prefix}-nct-${key}`);
+    if (el) el.textContent = '—';
+  });
+  const barEl = document.getElementById(`neg-${prefix}-nct-progress`);
+  if (barEl) { barEl.style.width = '0%'; barEl.removeAttribute('data-level'); }
+  const metaEl  = document.getElementById(`neg-${prefix}-nct-meta`);
+  const flagsEl = document.getElementById(`neg-${prefix}-nct-flags`);
+  if (metaEl)  metaEl.textContent = '';
+  if (flagsEl) flagsEl.innerHTML  = '';
+}
+
+function initConcessionTrackerToggles() {
+  ['buyer', 'vendor'].forEach(prefix => {
+    const btn  = document.getElementById(`neg-${prefix}-nct-toggle`);
+    const body = document.getElementById(`neg-${prefix}-nct-body`);
+    if (!btn || !body || btn._nctWired) return;
+    btn._nctWired = true;
+    btn.addEventListener('click', () => {
+      const collapsed = body.classList.toggle('nct-collapsed');
+      btn.textContent = collapsed ? '▼' : '▲';
+      btn.title       = collapsed ? 'Expand' : 'Collapse';
+      btn.setAttribute('aria-expanded', String(!collapsed));
+    });
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initConcessionTrackerToggles);
+} else {
+  initConcessionTrackerToggles();
+}
+
+// ─── End Module 4 ─────────────────────────────────────────────────────────────
+
 function appendAgentMessage(data, agentIndex) {
+
   removeAgentThinking(agentIndex);
   const chatId  = agentIndex === 0 ? 'neg-buyer-chat' : 'neg-vendor-chat';
   const emptyId = agentIndex === 0 ? 'neg-buyer-empty' : 'neg-vendor-empty';
@@ -1229,6 +1487,7 @@ function appendAgentMessage(data, agentIndex) {
     offerBadgeHtml = `<div class="neg-offer-badge offer-reject">❌ No Deal</div>`;
   }
 
+  const evalHtml = buildEvaluationHtml(data.evaluation, data.counterResult || null);
   const time = new Date(data.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   const div = document.createElement('div');
@@ -1237,6 +1496,7 @@ function appendAgentMessage(data, agentIndex) {
     <div class="neg-panel-bubble">
       <div class="neg-message-text">${escapeHtml(data.message)}</div>
       ${offerBadgeHtml}
+      ${evalHtml}
       <div class="neg-panel-bubble-footer">
         <span class="neg-round-label">Round ${data.round}</span>
         <span>${time}</span>
@@ -1328,6 +1588,13 @@ function appendChatBubble(data, agentIndex) {
   const actionLabel = actionLabels[data.decision] || data.decision?.toUpperCase() || 'OFFER';
   const actionCls = `action-${(data.decision || 'offer').replace('_', '')}`;
 
+  let reasonHtml = '';
+  if (data.reason) {
+    reasonHtml = `<div class="neg-chat-msg-reason"><span class="neg-reason-prefix">Reasoning:</span>${escapeHtml(data.reason)}</div>`;
+  }
+
+  const evalHtml = buildEvaluationHtml(data.evaluation, data.counterResult || null);
+
   const div = document.createElement('div');
   div.className = `neg-chat-msg ${cls}`;
   div.innerHTML = `
@@ -1343,6 +1610,8 @@ function appendChatBubble(data, agentIndex) {
       ${escapeHtml(data.message || '')}
       ${offerHtml}
       <div class="neg-chat-msg-action ${actionCls}">${actionLabel}</div>
+      ${reasonHtml}
+      ${evalHtml}
     </div>
   `;
   timeline.appendChild(div);
@@ -1443,6 +1712,10 @@ function clearEquilibriumPanels() {
   // Reset result card
   const resultCard = document.getElementById('neg-result-card');
   if (resultCard) resultCard.style.display = 'none';
+  // Module 4: reset concession trackers
+  ['buyer', 'vendor'].forEach(prefix => {
+    resetConcessionTracker(prefix);
+  });
   // Reset status pill
   updateOrchStatusBar(0, 0, '—', 'starting');
   // Reset pause/resume buttons
@@ -1461,7 +1734,11 @@ function clearEquilibriumPanels() {
 let _lastRoundInChat = 0;
 
 function updateOrchPipeline(activeStepId) {
-  const steps = ['pipe-get-agent', 'pipe-load-profile', 'pipe-load-state', 'pipe-pass-history', 'pipe-llm-reason', 'pipe-update-state', 'pipe-pass-turn'];
+  const steps = [
+    'pipe-get-agent', 'pipe-load-profile', 'pipe-load-state', 'pipe-pass-history',
+    'pipe-eval-offer', 'pipe-decision', 'pipe-counter', 'pipe-concession',
+    'pipe-llm-reason', 'pipe-validate', 'pipe-update-state', 'pipe-pass-turn',
+  ];
   let foundActive = false;
   steps.forEach(step => {
     const el = document.getElementById(step);
@@ -1478,23 +1755,101 @@ function updateOrchPipeline(activeStepId) {
 }
 
 function resetOrchPipeline() {
-  const steps = ['pipe-get-agent', 'pipe-load-profile', 'pipe-load-state', 'pipe-pass-history', 'pipe-llm-reason', 'pipe-update-state', 'pipe-pass-turn'];
+  const steps = [
+    'pipe-get-agent', 'pipe-load-profile', 'pipe-load-state', 'pipe-pass-history',
+    'pipe-eval-offer', 'pipe-decision', 'pipe-counter', 'pipe-concession',
+    'pipe-llm-reason', 'pipe-validate', 'pipe-update-state', 'pipe-pass-turn',
+  ];
   steps.forEach(step => {
     const el = document.getElementById(step);
     if (el) el.className = 'pipeline-step pending';
   });
 }
 
-function updateReasoningPanel(reason, context) {
-  const reasonEl = document.getElementById('ai-reasoning-text');
-  const contextEl = document.getElementById('ai-context-content');
-  if (reasonEl) reasonEl.textContent = reason || 'Waiting for agent response...';
-  if (contextEl) {
-    if (context) {
-      contextEl.textContent = typeof context === 'string' ? context : JSON.stringify(context, null, 2);
-    } else {
-      contextEl.innerHTML = '<div class="context-placeholder">No additional context provided.</div>';
+function updateReasoningPanel(data) {
+  const reasonEl      = document.getElementById('ai-reasoning-text');
+  const agentEl       = document.getElementById('ai-reasoning-agent');
+  const decisionEl    = document.getElementById('ai-reasoning-decision');
+  const offerEl       = document.getElementById('ai-reasoning-offer');
+  const evalEl        = document.getElementById('ai-reasoning-eval');
+  const concessionEl  = document.getElementById('ai-reasoning-concession');
+  const chkEval       = document.getElementById('checklist-eval');
+  const chkConcession = document.getElementById('checklist-concession');
+
+  if (typeof data === 'string') {
+    if (reasonEl) reasonEl.textContent = data;
+    return;
+  }
+
+  if (!data) {
+    if (reasonEl)     reasonEl.textContent = 'Waiting for agent turn...';
+    if (agentEl)      agentEl.textContent = '—';
+    if (decisionEl)   decisionEl.textContent = '—';
+    if (offerEl)      offerEl.textContent = '—';
+    if (evalEl)       { evalEl.textContent = '—'; evalEl.className = 'eval-chip'; }
+    if (concessionEl) concessionEl.textContent = '—';
+    return;
+  }
+
+  // Reasoning text — include evaluation prefix when available
+  if (reasonEl) {
+    let text = data.reason || data.message || 'Reasoning complete.';
+    if (data.evaluation && data.evaluation.evaluation) {
+      const ev = data.evaluation;
+      const evalMap = { favorable: 'Favorable', partially_acceptable: 'Partially Acceptable', unacceptable: 'Unacceptable' };
+      const evalText = evalMap[(ev.evaluation || '').toLowerCase()] || ev.evaluation;
+      const constraintText = ev.constraint_status === 'WITHIN_LIMIT' ? 'Within Limit' : 'Violated';
+      text = `[Evaluation: ${evalText} | Constraint: ${constraintText}]\n${text}`;
     }
+    reasonEl.textContent = text;
+  }
+
+  if (agentEl)    agentEl.textContent = data.agentName || '—';
+
+  if (decisionEl) {
+    const actionLabels = {
+      offer: 'OFFER', counter_offer: 'COUNTER', counteroffer: 'COUNTER',
+      accept: 'ACCEPT', reject: 'REJECT', thinking: 'THINKING',
+    };
+    const label = actionLabels[(data.decision || '').toLowerCase()] || (data.decision || '').toUpperCase() || '—';
+    decisionEl.textContent = label;
+    decisionEl.className = 'decision-chip decision-chip--' + (data.decision || 'unknown').replace('_', '-');
+  }
+
+  if (offerEl) {
+    offerEl.textContent = (data.offer !== null && data.offer !== undefined)
+      ? `₹${Number(data.offer).toLocaleString('en-IN')}` : '—';
+  }
+
+  // Evaluation chip (Module 1)
+  if (evalEl && data.evaluation && data.evaluation.evaluation) {
+    const ev = data.evaluation;
+    const evalLabels = {
+      FAVORABLE: 'Favorable ✓', PARTIALLY_ACCEPTABLE: 'Partial ⚠', UNACCEPTABLE: 'Unacceptable ✗',
+    };
+    const evalCssMap = {
+      FAVORABLE: 'eval-chip eval-chip--favorable',
+      PARTIALLY_ACCEPTABLE: 'eval-chip eval-chip--partial',
+      UNACCEPTABLE: 'eval-chip eval-chip--unacceptable',
+    };
+    evalEl.textContent = evalLabels[ev.evaluation] || ev.evaluation;
+    evalEl.className   = evalCssMap[ev.evaluation] || 'eval-chip';
+    if (chkEval) { chkEval.className = 'checklist-item active'; chkEval.querySelector('.check-icon').textContent = '✓'; }
+  } else if (evalEl && !data.evaluation) {
+    evalEl.textContent = '—'; evalEl.className = 'eval-chip';
+  }
+
+  // Concession chip (Module 4)
+  if (concessionEl && data.concessionSnapshot) {
+    const cs = data.concessionSnapshot;
+    const moved = cs.concession_this_round !== undefined && cs.concession_this_round !== null
+      ? `₹${Math.abs(Number(cs.concession_this_round)).toLocaleString('en-IN')}` : null;
+    const pct = cs.concession_percentage > 0
+      ? ` (${cs.concession_percentage.toFixed(1)}% total)` : '';
+    concessionEl.textContent = moved ? `${moved} this round${pct}` : `${pct || '—'}`;
+    if (chkConcession) { chkConcession.className = 'checklist-item active'; chkConcession.querySelector('.check-icon').textContent = '✓'; }
+  } else if (concessionEl) {
+    concessionEl.textContent = '—';
   }
 }
 
@@ -1568,8 +1923,19 @@ function handleNegotiationEvent(eventName, data, agents) {
       updateOrchStatusBar(state.currentRound, state.maxRounds, data.agentName, 'in_progress');
       addOrchLogEntry('active', `${data.agentName} is thinking…`);
 
-      updateOrchPipeline('pipe-llm-reason');
-      updateReasoningPanel('Thinking...', data.context);
+      // Fire pipeline steps: M1 → M2 → M3 → M4 → LLM (with realistic timing)
+      updateOrchPipeline('pipe-eval-offer');
+      setTimeout(() => updateOrchPipeline('pipe-decision'),  400);
+      setTimeout(() => updateOrchPipeline('pipe-counter'),   800);
+      setTimeout(() => updateOrchPipeline('pipe-concession'), 1200);
+      setTimeout(() => updateOrchPipeline('pipe-llm-reason'), 1600);
+
+      updateReasoningPanel({
+        agentName: data.agentName,
+        decision: 'thinking',
+        offer: null,
+        reason: data.thinkingPhrase || `${data.agentName} is analyzing context and opponent moves...`
+      });
       break;
     }
 
@@ -1579,7 +1945,7 @@ function handleNegotiationEvent(eventName, data, agents) {
       // Remove thinking bubble, add real message
       removeChatThinking();
       appendChatBubble(data, idx);
-      AppState.addMessage(data);
+      AppState.addMessage({ ...data, counterResult: data.counterResult || null });
       // Update agent card badges and last action
       setAgentCardThinking(idx, false);
       updateAgentBadge(idx, data.decision === 'accept' ? 'accepted' : 'offer_sent');
@@ -1598,13 +1964,25 @@ function handleNegotiationEvent(eventName, data, agents) {
       }
       addOrchLogEntry('done', `${data.agentName}: ${data.decision || 'offer'}${data.offer ? ` @ ₹${Number(data.offer).toLocaleString('en-IN')}` : ''}`);
 
-      updateOrchPipeline('pipe-update-state');
-      setTimeout(() => updateOrchPipeline('pipe-pass-turn'), 500);
+      updateOrchPipeline('pipe-validate');
+      setTimeout(() => updateOrchPipeline('pipe-update-state'), 300);
+      setTimeout(() => updateOrchPipeline('pipe-pass-turn'), 800);
 
-      updateReasoningPanel(data.reason || data.message, data.context || data.parameters);
+      updateReasoningPanel(data);
 
       const stateDecision = document.getElementById('state-decision');
       if (stateDecision) stateDecision.textContent = data.decision ? data.decision.toUpperCase() : 'OFFER';
+
+      if (data.evaluation && data.evaluation.opponent_offer) {
+        const stateOppOffer = document.getElementById('state-opponent-offer');
+        if (stateOppOffer && data.evaluation.opponent_offer.price !== null && data.evaluation.opponent_offer.price !== undefined) {
+          stateOppOffer.textContent = formatINR(data.evaluation.opponent_offer.price);
+        }
+      }
+      // Module 4: update concession tracker panel
+      if (data.concessionSnapshot) {
+        updateConcessionTracker(data.agentId, data.concessionSnapshot);
+      }
       break;
     }
 
@@ -1658,6 +2036,14 @@ function handleNegotiationEvent(eventName, data, agents) {
       updateOrchStatusBar(state.currentRound, state.maxRounds, '—', 'failed');
       [0, 1].forEach(i => { setAgentCardThinking(i, false); updateAgentBadge(i, 'idle'); });
       addOrchLogEntry('error', `Engine error: ${data.reason || 'Unknown error'}`);
+      const llmPipe = document.getElementById('pipe-llm-reason');
+      if (llmPipe) llmPipe.className = 'pipeline-step error';
+      updateReasoningPanel({
+        agentName: data.agentName || 'System',
+        decision: 'ERROR',
+        offer: null,
+        reason: data.reason || 'AI Reasoning service temporarily unavailable.'
+      });
       showResultCard({ result: 'failed', reason: data.reason || 'An engine error occurred.', finalOffer: null, rounds: state.currentRound });
       window.ApiService.disconnectWebSocket();
       break;

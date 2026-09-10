@@ -4734,7 +4734,402 @@ img, svg {
 .action-accept  { background: rgba(16,185,129,0.12); color: #10b981; }
 .action-reject  { background: rgba(239,68,68,0.1); color: #ef4444; }
 
-/* Round divider */
+.neg-chat-msg-reason {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  background: rgba(0, 0, 0, 0.03);
+  border-left: 2px solid var(--color-border-strong);
+  padding: 5px 9px;
+  border-radius: 0 4px 4px 0;
+}
+.neg-reason-prefix {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  display: inline-block;
+  margin-right: 4px;
+}
+
+/* Compact Offer Evaluation Section inside turn bubble (Module 1) */
+.neg-offer-eval {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.neg-offer-eval-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+.neg-offer-eval-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+.neg-eval-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.neg-eval-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+}
+.neg-eval-label {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+.neg-eval-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: 11px;
+}
+.neg-eval-val.eval-pass {
+  color: #10b981;
+}
+.neg-eval-val.eval-violated {
+  color: #ef4444;
+  font-weight: 800;
+}
+.neg-eval-val.dist-pos {
+  color: #10b981;
+}
+.neg-eval-val.dist-neg {
+  color: #b45309;
+}
+.neg-eval-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  letter-spacing: 0.03em;
+}
+.neg-eval-badge.eval-favorable {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+.neg-eval-badge.eval-partially_acceptable {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+.neg-eval-badge.eval-unacceptable {
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+}
+
+/* ==========================================================================
+   MODULE 3 — COUNTEROFFER CARD (inside chat bubble)
+   ========================================================================== */
+
+/* Container — sits below the Evaluation block */
+.neg-counteroffer-card {
+  margin-top: 8px;
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.07);
+}
+
+.neg-counteroffer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px dashed rgba(99, 102, 241, 0.15);
+}
+
+.neg-counteroffer-card-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+/* Vertical flow: each row is one pipeline step */
+.neg-counteroffer-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.neg-co-flow-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.neg-co-flow-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.neg-co-flow-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Downward arrow connector */
+.neg-co-arrow {
+  margin-left: 45px;
+  font-size: 12px;
+  color: var(--color-text-faint);
+  line-height: 1;
+  user-select: none;
+}
+
+/* The final proposed price — larger, accented */
+.neg-counteroffer-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(99, 102, 241, 0.12);
+}
+
+.neg-counteroffer-price {
+  font-size: 15px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--color-primary);
+}
+
+/* ±concession badge */
+.neg-concession-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+.neg-concession-badge.concession-up   { background: rgba(16,185,129,0.12);  color: #065f46; }
+.neg-concession-badge.concession-down { background: rgba(99,102,241,0.10);  color: var(--color-primary); }
+.neg-concession-badge.concession-none { background: rgba(0,0,0,0.05);       color: var(--color-text-muted); }
+
+/* Clamped warning badge */
+.neg-co-clamped-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(245,158,11,0.14);
+  color: #92400e;
+  font-family: var(--font-mono);
+}
+
+/* Constraint status inline text */
+.neg-co-status-within  { color: #10b981; font-weight: 700; }
+.neg-co-status-clamped { color: #f59e0b; font-weight: 700; }
+
+
+
+/* ==========================================================================
+   MODULE 4 — CONCESSION TRACKER (NCT) inside agent profile cards
+   ========================================================================== */
+
+.neg-concession-tracker {
+  margin: 8px 0 0 0;
+  border-top: 1px dashed var(--color-border-strong);
+  padding-top: 6px;
+}
+
+.nct-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 5px 0;
+}
+
+.nct-title {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+}
+
+.nct-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--color-text-faint);
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.nct-toggle:hover { background: var(--color-border); color: var(--color-text); }
+
+/* Collapsed state */
+.nct-body.nct-collapsed { display: none; }
+
+/* Row: label + value */
+.nct-offer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+  font-size: 11px;
+}
+
+.nct-label {
+  color: var(--color-text-faint);
+  font-size: 10.5px;
+}
+
+.nct-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* Highlighted current-offer row */
+.nct-current-row .nct-label { color: var(--color-text-muted); font-weight: 600; }
+.nct-current-row .nct-val,
+.nct-current             { color: var(--color-primary); font-size: 12px; font-weight: 800; }
+
+.nct-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 5px 0;
+}
+
+/* Three stat boxes in a row */
+.nct-stat-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.nct-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 4px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  min-width: 0;
+}
+
+.nct-stat-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+.nct-stat-val {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 11px;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* Animated progress bar — shows % of flexibility consumed */
+.nct-progress-wrap {
+  height: 5px;
+  background: var(--color-border);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.nct-progress-bar {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--color-success);
+  transition: width 0.5s var(--ease-out), background 0.4s ease;
+}
+
+/* Color thresholds */
+.nct-progress-bar[data-level="warn"]    { background: var(--color-warning); }
+.nct-progress-bar[data-level="danger"]  { background: var(--color-danger); }
+
+/* Meta row (flexibility remaining, rounds) */
+.nct-meta {
+  font-size: 10px;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  margin-bottom: 3px;
+}
+
+/* Warning flag chips */
+.nct-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.nct-flag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  animation: fadeInUp 0.3s var(--ease-out);
+}
+
+.nct-flag-chip.flag-reversal   { background: rgba(239,68,68,0.12);   color: #b91c1c; }
+.nct-flag-chip.flag-excessive  { background: rgba(245,158,11,0.14);  color: #92400e; }
+.nct-flag-chip.flag-stagnation { background: rgba(90,95,104,0.12);   color: var(--color-text-muted); }
+.nct-flag-chip.flag-limit      { background: rgba(239,68,68,0.12);   color: #b91c1c; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .neg-chat-round-divider { display: flex; align-items: center; gap: 10px; margin: 4px 0; }
 .neg-chat-round-divider::before, .neg-chat-round-divider::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
 .neg-chat-round-label {
@@ -5009,6 +5404,15 @@ img, svg {
   color: var(--color-success-sage);
 }
 
+.pipeline-step.error {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-danger);
+  font-weight: 600;
+}
+.pipeline-step.error .pipe-icon {
+  color: var(--color-danger);
+}
+
 /* Negotiation State Grid */
 .state-grid {
   display: grid;
@@ -5047,6 +5451,77 @@ img, svg {
   border-radius: 0 4px 4px 0;
 }
 
+.ai-reasoning-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.ai-meta-item {
+  font-size: 11.5px;
+  color: var(--color-text);
+}
+
+.ai-meta-item strong {
+  display: block;
+  font-size: 9.5px;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.decision-chip {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+}
+
+.ai-context-checklist {
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.checklist-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  margin-bottom: 6px;
+}
+
+.checklist-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.checklist-item {
+  font-size: 10.5px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.checklist-item.active {
+  color: var(--color-text);
+}
+
+.checklist-item .check-icon {
+  color: #10b981;
+  font-weight: bold;
+}
+
 .context-details {
   font-size: 12px;
 }
@@ -5081,3 +5556,53 @@ img, svg {
     grid-template-columns: 1fr;
   }
 }
+
+/* ================================================================
+   Module 5 — Pipeline, Evaluation & Concession UI Styles
+   ================================================================ */
+
+/* Pipeline module tag badges */
+.pipe-module-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(var(--color-buyer-rgb, 65, 130, 230), 0.15);
+  color: var(--color-buyer, #4182e6);
+  margin-left: 4px;
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+
+/* Evaluation chip in reasoning panel */
+.eval-chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(150, 150, 150, 0.12);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+.eval-chip--favorable {
+  background: rgba(46, 160, 106, 0.15);
+  color: #2ea06a;
+}
+.eval-chip--partial {
+  background: rgba(230, 165, 36, 0.15);
+  color: #c89021;
+}
+.eval-chip--unacceptable {
+  background: rgba(218, 55, 66, 0.15);
+  color: #da3742;
+}
+
+/* Decision chip variant colors */
+.decision-chip--accept         { color: #2ea06a; }
+.decision-chip--reject         { color: #da3742; }
+.decision-chip--counter-offer  { color: var(--color-buyer, #4182e6); }
+.decision-chip--thinking       { color: var(--color-text-muted); font-style: italic; }
+.decision-chip--offer          { color: var(--color-vendor, #e67a30); }

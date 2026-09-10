@@ -1,7 +1,11 @@
-/**
+﻿/**
  * utils/promptBuilder.js
  * Dynamically constructs LLM prompts from agent config + negotiation history.
  * Private reasoning is kept server-side; only safe JSON is returned to the client.
+ *
+ * Module 5: Includes structured context from Modules 1-4 (evaluation,
+ * concession state, counteroffer parameters) so the LLM generates responses
+ * consistent with the deterministic decision already made.
  */
 
 const PERSONALITY_MODIFIERS = {
@@ -25,43 +29,136 @@ const PERSONALITY_MODIFIERS = {
 - Avoid large price movements in a single round
 - Prioritize predictability and a dependable agreement over maximum gain
 - Flag any uncertainty before committing`,
+
+  competitive: `
+- Push hard for maximum advantage in every exchange
+- Use time pressure and alternatives as leverage
+- Anchor high (seller) or low (buyer) and move reluctantly
+- Treat every concession as a strategic investment`,
+
+  flexible: `
+- Adapt your approach based on opponent moves
+- Be willing to make larger concessions when the situation calls for it
+- Look for creative trade-offs and package deals
+- Show goodwill to build momentum toward agreement`,
+
+  analytical: `
+- Ground every argument in data, costs, or comparable benchmarks
+- Question assumptions and ask for justification
+- Make offers that are logically defensible
+- Move only when the numbers support it`,
+
+  professional: `
+- Maintain formal, structured tone throughout
+- Refer to policies, standards, and procedures when relevant
+- Make well-documented proposals with clear rationale
+- Keep personal reactions out of the negotiation`,
 };
 
 /**
- * Build the full system prompt for an agent's turn.
+ * Build the full system prompt for an agent turn.
  *
- * @param {object} agent       — agent config (name, role, personality, goal, constraints)
- * @param {object} scenario    — scenario config (name, description)
- * @param {Array}  history     — array of prior messages { agentName, role, message, offer, round }
- * @param {object} opponent    — opponent's last message { message, offer, agentName }
- * @param {number} round       — current round number
- * @param {number} maxRounds   — maximum allowed rounds
- * @param {object} offerState  — { [agentId]: latestOffer } for context
+ * @param {object} agent           - agent config
+ * @param {object} scenario        - scenario config
+ * @param {Array}  history         - prior messages
+ * @param {object} opponent        - opponent last message
+ * @param {number} round           - current round
+ * @param {number} maxRounds       - maximum rounds
+ * @param {object} offerState      - { [agentId]: latestOffer }
+ * @param {object} [evaluation]    - Module 1 result (optional)
+ * @param {object} [concession]    - Module 4 snapshot (optional)
+ * @param {object} [counterResult] - Module 3 result (optional)
+ * @param {string} [decision]      - deterministic decision (optional)
  */
-function buildPrompt({ agent, scenario, history, opponent, round, maxRounds, offerState }) {
-  const personalityGuide = PERSONALITY_MODIFIERS[agent.personality] || PERSONALITY_MODIFIERS['collaborative'];
+function buildPrompt({ agent, scenario, history, opponent, round, maxRounds, offerState,
+  evaluation, concession, counterResult, decision }) {
+  const personalityGuide = PERSONALITY_MODIFIERS[(agent.personality || '').toLowerCase()] ||
+    PERSONALITY_MODIFIERS['collaborative'];
 
-  // Format history for the prompt (last 8 messages to keep context manageable)
   const recentHistory = history.slice(-8);
   const historyText = recentHistory.length === 0
-    ? 'No messages yet — you will make the opening offer.'
+    ? 'No messages yet - you will make the opening offer.'
     : recentHistory.map(m =>
-        `Round ${m.round} — ${m.agentName} (${m.role}):\n"${m.message}"${m.offer ? `\nOffer: ${formatCurrency(m.offer)}` : ''}`
+        `Round ${m.round} - ${m.agentName} (${m.role}):\n"${m.message}"${m.offer ? `\nOffer: ${formatCurrency(m.offer)}` : ''}`
       ).join('\n\n');
 
   const opponentText = opponent
-    ? `${opponent.agentName}'s last message:\n"${opponent.message}"${opponent.offer ? `\nOffer: ${formatCurrency(opponent.offer)}` : ''}`
-    : 'No opponent message yet — make your opening offer.';
+    ? `${opponent.agentName} last message:\n"${opponent.message}"${opponent.offer ? `\nOffer: ${formatCurrency(opponent.offer)}` : ''}`
+    : 'No opponent message yet - make your opening offer.';
 
-  // Build hard constraint summary
   const constraintText = (agent.constraints || []).join('\n- ');
-
-  // Current offer gap awareness
   const myCurrentOffer = offerState[agent.id];
   const opponentId = Object.keys(offerState).find(k => k !== agent.id);
   const opponentCurrentOffer = opponentId ? offerState[opponentId] : null;
-
   const roundsRemaining = maxRounds - round + 1;
+
+  // Module 1-4 structured context
+  let m14Context = '';
+
+  if (evaluation && evaluation.evaluation) {
+    const evalMap = {
+      FAVORABLE:            'FAVORABLE - good progress toward your target',
+      PARTIALLY_ACCEPTABLE: 'PARTIALLY ACCEPTABLE - within limits but not ideal',
+      UNACCEPTABLE:         'UNACCEPTABLE - violates your hard constraint',
+    };
+    const evalLabel  = evalMap[evaluation.evaluation] || evaluation.evaluation;
+    const distSign   = (evaluation.distance_from_target || 0) > 0 ? '+' : '';
+    const distText   = evaluation.distance_from_target != null
+      ? `${distSign}${formatCurrency(evaluation.distance_from_target)}` : 'N/A';
+    const cLabel     = evaluation.constraint_status === 'WITHIN_LIMIT' ? 'WITHIN LIMIT' : 'VIOLATED';
+
+    m14Context += `
+OFFER EVALUATION (deterministic - respect this):
+- Result: ${evalLabel}
+- Distance from target: ${distText}
+- Constraint status: ${cLabel}
+- Recommendation: ${evaluation.recommendation || 'N/A'}
+`;
+  }
+
+  if (decision) {
+    const decMap = {
+      ACCEPT:  "ACCEPT the offer - generate a conclusive acceptance message",
+      COUNTER: 'COUNTER with a new offer - generate a persuasive counter-proposal',
+      REJECT:  'REJECT - explain clearly why this price does not work',
+    };
+    m14Context += `
+DETERMINISTIC DECISION (your response MUST match this):
+- Decision: ${decision}
+- Action: ${decMap[decision] || decision}
+`;
+  }
+
+  if (counterResult && counterResult.proposed_offer) {
+    const co   = counterResult.proposed_offer;
+    const rate = counterResult.effective_concession_rate != null
+      ? ` (${(counterResult.effective_concession_rate * 100).toFixed(1)}% rate)` : '';
+    const cAmt = co.concession_amount != null ? formatCurrency(co.concession_amount) : 'N/A';
+    m14Context += `
+COUNTEROFFER (Module 3 - use this exact offer number):
+- Proposed offer: ${formatCurrency(co.price)}
+- Concession this round: ${cAmt}${rate}
+- Status: ${counterResult.constraint_status || 'N/A'}
+${counterResult.is_clamped ? '- CLAMPED to hard constraint - stay firm at this number.' : ''}
+`;
+  }
+
+  if (concession && concession.initial_position != null) {
+    const totalMoved  = concession.total_concession > 0 ? formatCurrency(concession.total_concession) : 'N/A';
+    const pct         = concession.concession_percentage > 0 ? `${concession.concession_percentage.toFixed(1)}%` : '0%';
+    const flexLeft    = concession.remaining_flexibility != null ? formatCurrency(concession.remaining_flexibility) : 'N/A';
+    const consumedPct = Math.round(concession.flexibility_consumed_pct || 0);
+
+    m14Context += `
+CONCESSION STATE (Module 4 - calibrate your tone):
+- Initial position: ${formatCurrency(concession.initial_position)}
+- Previous offer: ${concession.previous_offer ? formatCurrency(concession.previous_offer) : 'Opening'}
+- Total concession: ${totalMoved} (${pct})
+- Remaining flexibility: ${flexLeft}
+- Consumed: ${consumedPct}%
+${consumedPct >= 80 ? '- WARNING: Near your limit. Communicate firmness without revealing exact limit.' : ''}
+`;
+  }
 
   return `You are ${agent.name} in a professional negotiation simulation.
 
@@ -71,64 +168,51 @@ ${scenario.description}
 YOUR ROLE: ${agent.role}
 YOUR GOAL: ${agent.goal}
 
-YOUR PERSONALITY AND STRATEGY:
+YOUR PERSONALITY:
 ${personalityGuide}
 
-YOUR HARD CONSTRAINTS (you MUST NOT violate these):
+YOUR HARD CONSTRAINTS:
 - ${constraintText}
-${agent.numericConstraint ? `- Hard limit: ${formatCurrency(agent.numericConstraint.value)} (${agent.numericConstraint.type === 'max' ? 'maximum you will pay' : 'minimum you will accept'})` : ''}
+${agent.numericConstraint ? `- Hard limit: ${formatCurrency(agent.numericConstraint.value)} (${agent.numericConstraint.type === 'max' ? 'max you will pay' : 'min you will accept'})` : ''}
 
 NEGOTIATION CONTEXT:
-- Scenario: ${scenario.name}
-- Current Round: ${round} of ${maxRounds}
-- Rounds remaining: ${roundsRemaining}
+- Round: ${round} of ${maxRounds} (${roundsRemaining} remaining)
 ${myCurrentOffer ? `- Your current position: ${formatCurrency(myCurrentOffer)}` : ''}
-${opponentCurrentOffer ? `- Opponent's current offer: ${formatCurrency(opponentCurrentOffer)}` : ''}
+${opponentCurrentOffer ? `- Opponent current offer: ${formatCurrency(opponentCurrentOffer)}` : ''}
 ${myCurrentOffer && opponentCurrentOffer ? `- Gap: ${formatCurrency(Math.abs(myCurrentOffer - opponentCurrentOffer))}` : ''}
-
+${m14Context}
 OPPONENT: ${opponent ? opponent.agentName : 'Unknown'}
 
 NEGOTIATION HISTORY:
 ${historyText}
 
-OPPONENT'S LATEST MESSAGE:
+OPPONENT LATEST MESSAGE:
 ${opponentText}
 
-NEGOTIATION RULES:
-1. NEVER violate your hard constraints (e.g., never offer above your maximum budget, never accept below your minimum price)
-2. Do NOT reveal your hard numeric limits explicitly
-3. Make realistic, incremental concessions — not wild jumps
-4. Reference the opponent's previous message in your response
+RULES:
+1. Never violate your hard constraints
+2. Do not reveal your exact limit
+3. Make realistic incremental concessions
+4. Reference the opponent message in your response
 5. Stay consistent with your personality
-6. As rounds diminish, you may need to be more flexible to reach an agreement
-7. If the gap is very small (< 2% of the total value), consider accepting
-8. If you decide to ACCEPT, state clearly you are accepting the opponent's offer
-9. If you decide to REJECT (no deal possible), explain why concisely
-${roundsRemaining <= 2 ? '\n⚠ WARNING: Very few rounds remaining. Make your best final offer or accept now.' : ''}
+6. If DETERMINISTIC DECISION given above, your decision MUST match it
+7. If COUNTEROFFER given above, your offer MUST match that exact number
+8. Never repeat the same opening phrase as a previous round
+${roundsRemaining <= 2 ? '9. WARNING: Few rounds left - make your best offer or accept now.' : ''}
 
-Generate your negotiation response now.
-
-You MUST respond with ONLY a valid JSON object in this exact format (no markdown, no explanation outside the JSON):
+Respond with ONLY this JSON (no markdown, no extra text):
 {
-  "message": "Your negotiation message here — natural, professional, in-character",
-  "offer": <number or null if no specific offer>,
+  "message": "Your negotiation message - natural, professional, varied from prior rounds",
+  "offer": <number or null>,
   "decision": "counter_offer" | "accept" | "reject",
-  "reasoning": "Brief private reasoning (1-2 sentences) — NOT shown to opponent"
-}
-
-Rules for the JSON:
-- "message": Natural conversational text the opponent will see
-- "offer": A number (e.g., 750000) or null if the message doesn't make a specific offer
-- "decision": "counter_offer" if you are continuing negotiation, "accept" if you are accepting their last offer, "reject" if you cannot agree
-- "reasoning": Your private reasoning (kept server-side, not sent to frontend)`;
+  "reasoning": "Brief private reasoning - not shown to opponent"
+}`;
 }
 
 function formatCurrency(amount) {
-  if (!amount) return 'N/A';
+  if (amount == null) return 'N/A';
   return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
+    style: 'currency', currency: 'INR', maximumFractionDigits: 0,
   }).format(amount);
 }
 

@@ -20,6 +20,9 @@ class BaseAgent {
     this.constraints = config.constraints || [];
     this.personality = config.personality || 'collaborative';
     this.numericConstraint = config.numericConstraint || null;
+    this.targetValue = config.targetValue || null;
+    this.minAcceptableValue = config.minAcceptableValue || null;
+    this.maxAcceptableValue = config.maxAcceptableValue || null;
     this.scenario = scenario;
     this.currentOffer = null;
     this.initialOffer = null;
@@ -108,6 +111,9 @@ class BaseAgent {
       constraints: this.constraints,
       personality: this.personality,
       numericConstraint: this.numericConstraint,
+      targetValue: this.targetValue,
+      minAcceptableValue: this.minAcceptableValue,
+      maxAcceptableValue: this.maxAcceptableValue,
       currentOffer: this.currentOffer,
       initialOffer: this.initialOffer,
       decision: this.decision,

@@ -3,7 +3,7 @@
  * Factory for creating agent configuration objects used by the negotiation engine.
  */
 
-function createAgentConfig({ id, name, role, goal, goals, constraints, personality, numericConstraint, agentType }) {
+function createAgentConfig({ id, name, role, goal, goals, constraints, personality, numericConstraint, agentType, targetValue, minAcceptableValue, maxAcceptableValue }) {
   return {
     id,
     name,
@@ -14,6 +14,9 @@ function createAgentConfig({ id, name, role, goal, goals, constraints, personali
     personality:        personality || 'collaborative',  // aggressive | collaborative | risk-averse | etc.
     numericConstraint:  numericConstraint || null,        // { type: 'max'|'min', value: number }
     agentType:          agentType || 'custom',            // buyer | seller | custom
+    targetValue:        targetValue || null,
+    minAcceptableValue: minAcceptableValue || null,
+    maxAcceptableValue: maxAcceptableValue || null,
     currentOffer:       null,
     initialOffer:       null,
     decision:           null,

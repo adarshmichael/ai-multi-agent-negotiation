@@ -19,8 +19,8 @@
  */
 
 const { initializeAgents }                       = require('../services/agent.service');
-const { trackConcession, getConcessionSummary }  = require('../services/concession.service');
-const { checkAgreement, checkRejection, checkMaxRounds, checkDeadlock } = require('../services/evaluation.service');
+const { trackConcession, getConcessionSummary, getConcessionSnapshot } = require('../services/concession.service');
+const { checkAgreement, checkRejection, checkMaxRounds, checkDeadlock, evaluateOffer } = require('../services/evaluation.service');
 const { updateSession }                          = require('../services/negotiation.service');
 const { createMessage }                          = require('../models/message.model');
 const { STATUS, RESULT, appendNegotiationHistory } = require('../models/negotiation.model');
@@ -34,10 +34,11 @@ const logger                                     = require('../utils/logger');
 // ============================================================
 
 function getDecisionProvider(mode) {
-  if (mode === 'gemini') {
-    return new LLMDecisionProvider();
+  if (mode === 'rule' || mode === 'rule-based') {
+    return new RuleBasedDecisionProvider();
   }
-  return new RuleBasedDecisionProvider();
+  // Default: gemini LLM (falls back to rule-based mock if no API key is configured)
+  return new LLMDecisionProvider();
 }
 
 // ============================================================
@@ -218,6 +219,26 @@ async function executeTurn(session) {
     return session.status !== STATUS.IN_PROGRESS ? 'terminate' : 'continue';
   }
 
+  // ---- Deterministic Offer Evaluation (Module 1) ----
+  const opponent = agents[opponentIndex];
+  const opponentOffer = opponent ? (session.offers[opponent.id] ?? null) : null;
+  let evaluation = null;
+
+  if (opponentOffer !== null && opponentOffer !== undefined) {
+    try {
+      evaluation = evaluateOffer({
+        agent: currentAgent,
+        opponentOffer,
+        session,
+        currentRound: round,
+        maxRounds: session.maxRounds,
+      });
+      session._latestEvaluation = evaluation;
+    } catch (evalErr) {
+      logger.warn('Engine', `Offer evaluation error for ${currentAgent.name}: ${evalErr.message}`);
+    }
+  }
+
   // ---- Generate decision via AgentDecisionProvider ----
   const decisionProvider = getDecisionProvider(session.mode);
   let decision;
@@ -225,17 +246,22 @@ async function executeTurn(session) {
     decision = await decisionProvider.decide(currentAgent, session);
   } catch (err) {
     logger.error('Engine', `DecisionProvider error for ${currentAgent.name}: ${err.message}`);
-    // Graceful fallback — hold position with a realistic message
-    decision = {
-      message:  'I need a moment to reconsider. Please bear with me.',
-      offer:    session.offers[currentAgent.id] ?? null,
-      decision: 'counter_offer',
-      reason:   'Provider error — holding position',
-      action:   ACTION.COUNTEROFFER,
-    };
+    updateSession(negotiationId, {
+      status: STATUS.FAILED,
+      result: RESULT.ERROR,
+      resultReason: `LLM reasoning failed for ${currentAgent.name}: ${err.message}`,
+    });
+    broadcast(negotiationId, 'negotiation_failed', {
+      reason: `AI reasoning service temporarily unavailable: ${err.message}`,
+      agentId: currentAgent.id,
+      agentName: currentAgent.name,
+      round,
+    });
+    return 'terminate';
   }
 
   // ---- Track concession and update offers BEFORE termination checks ----
+  let concessionSnapshot = null;
   if (decision.offer !== null && decision.offer !== undefined) {
     trackConcession(session, currentAgent.id, decision.offer);
 
@@ -248,6 +274,21 @@ async function executeTurn(session) {
     // Update current offer in both session and agent instance
     session.offers[currentAgent.id]   = decision.offer;
     currentAgent.currentOffer         = decision.offer;
+
+    // Module 4: compute full concession snapshot (AFTER all updates)
+    try {
+      concessionSnapshot = getConcessionSnapshot(session, currentAgent.id, currentAgent);
+      // Merge validation flags from Module 3 counterResult (if present)
+      if (concessionSnapshot && decision.counterResult?.validation_flags) {
+        concessionSnapshot.validation_flags = decision.counterResult.validation_flags;
+      } else if (concessionSnapshot) {
+        concessionSnapshot.validation_flags = [];
+      }
+      // Persist on session so LLMDecisionProvider can read it next turn
+      session._latestConcessionSnapshot = concessionSnapshot;
+    } catch (snapErr) {
+      logger.warn('Engine', `Concession snapshot error: ${snapErr.message}`);
+    }
   }
 
   // ---- Create and store message ----
@@ -258,6 +299,7 @@ async function executeTurn(session) {
     message:   decision.message,
     offer:     decision.offer,
     decision:  decision.decision,
+    evaluation,
     round,
   });
 
@@ -277,17 +319,20 @@ async function executeTurn(session) {
 
   // ---- Broadcast: agent message (the core conversation event) ----
   broadcast(negotiationId, 'agent_message', {
-    message:   message.message,
-    offer:     message.offer,
-    decision:  message.decision,
-    agentId:   message.agentId,
-    agentName: message.agentName,
-    role:      message.role,
-    round:     message.round,
-    timestamp: message.timestamp,
-    id:        message.id,
-    reason:    decision.reason,
-    parameters: decision.parameters,
+    message:         message.message,
+    offer:           message.offer,
+    decision:        message.decision,
+    agentId:         message.agentId,
+    agentName:       message.agentName,
+    role:            message.role,
+    round:           message.round,
+    timestamp:       message.timestamp,
+    id:              message.id,
+    reason:          decision.reason,
+    parameters:      decision.parameters,
+    evaluation,
+    counterResult:      decision.counterResult || null,   // Module 3
+    concessionSnapshot: concessionSnapshot || null,       // Module 4
   });
 
   // ---- Broadcast: offer updated ----

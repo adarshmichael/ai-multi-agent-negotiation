@@ -5,8 +5,19 @@
  */
 
 const ApiService = (function () {
-  const BASE_URL = 'https://negosim-backend.onrender.com/api';
-  const WS_URL = 'wss://negosim-backend.onrender.com';
+  const hostname = window.location.hostname || 'localhost';
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+  // If running locally (VS Code Live Server :5500/:5501, Vite, or direct), point to backend on port 8001
+  let backendHost = window.location.host;
+  if (isLocal || !backendHost || window.location.origin.startsWith('file:')) {
+    backendHost = `${hostname === '127.0.0.1' ? '127.0.0.1' : 'localhost'}:8001`;
+  }
+
+  const BASE_URL = `${protocol}//${backendHost}/api`;
+  const WS_URL = `${wsProtocol}//${backendHost}`;
 
   let activeWs = null;
 

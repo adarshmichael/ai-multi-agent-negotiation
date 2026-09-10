@@ -4,6 +4,7 @@
  *
  * HTTP endpoints: /api/health, /api/scenarios, /api/negotiations/*
  * WebSocket:      ws://localhost:8001  (same port, upgraded connection)
+ * Updated:        Ready for multi-key LLM reasoning
  */
 
 const { validateConfig, config } = require('./config/env');
@@ -37,11 +38,15 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ======== Routes ========
+const path = require('path');
 app.use('/api/health', healthRoutes);
 app.use('/api', negotiationRoutes);
 
-// 404 handler for unrecognized routes
-app.use((req, res) => {
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '..')));
+
+// 404 handler for unrecognized API routes
+app.use('/api/*', (req, res) => {
   res.status(404).json({ error: { message: `Route not found: ${req.method} ${req.path}`, code: 'NOT_FOUND' } });
 });
 

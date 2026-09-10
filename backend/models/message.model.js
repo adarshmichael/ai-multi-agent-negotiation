@@ -10,7 +10,7 @@ const { generateMessageId } = require('../utils/idGenerator');
  * @param {object} params
  * @returns {object} message
  */
-function createMessage({ agentId, agentName, role, message, offer, round, decision }) {
+function createMessage({ agentId, agentName, role, message, offer, round, decision, evaluation }) {
   return {
     id: generateMessageId(round, agentId),
     agentId,
@@ -19,6 +19,7 @@ function createMessage({ agentId, agentName, role, message, offer, round, decisi
     message,
     offer: offer ?? null,
     decision: decision || 'counter_offer',
+    evaluation: evaluation || null,
     round,
     timestamp: new Date().toISOString(),
   };
