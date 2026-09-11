@@ -5,19 +5,40 @@
  */
 
 const ApiService = (function () {
+  const RENDER_HOST = 'negosim-backend.onrender.com';
+
   const hostname = window.location.hostname || 'localhost';
   const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 
-  // If running locally (VS Code Live Server :5500/:5501, Vite, or direct), point to backend on port 8001
-  let backendHost = window.location.host;
-  if (isLocal || !backendHost || window.location.origin.startsWith('file:')) {
+  // Allow switching via ?backend=local or ?backend=render, or localStorage
+  const urlParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
+  const forced = urlParams ? urlParams.get('backend') : null;
+  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('negosim_backend') : null;
+  const useLocal = (forced === 'local' || saved === 'local');
+
+  let backendHost;
+  let protocol;
+  let wsProtocol;
+
+  if (useLocal && isLocal) {
     backendHost = `${hostname === '127.0.0.1' ? '127.0.0.1' : 'localhost'}:8001`;
+    protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  } else if (!isLocal && window.location.host && !window.location.origin.startsWith('file:')) {
+    backendHost = window.location.host;
+    protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  } else {
+    // Default for local development (Live Server, file://, etc.): connect directly to live Render cloud backend!
+    backendHost = RENDER_HOST;
+    protocol = 'https:';
+    wsProtocol = 'wss:';
   }
 
   const BASE_URL = `${protocol}//${backendHost}/api`;
   const WS_URL = `${wsProtocol}//${backendHost}`;
+
+  console.log(`[ApiService] Connected to Backend: ${BASE_URL} (WS: ${WS_URL})`);
 
   let activeWs = null;
 
@@ -162,6 +183,19 @@ const ApiService = (function () {
 
   function getWebSocket() { return activeWs; }
 
+  function setBackend(target) {
+    if (target === 'local') {
+      localStorage.setItem('negosim_backend', 'local');
+    } else {
+      localStorage.setItem('negosim_backend', 'render');
+    }
+    window.location.reload();
+  }
+
+  function getBackendInfo() {
+    return { baseUrl: BASE_URL, wsUrl: WS_URL, isLocal, useLocal };
+  }
+
   return {
     getScenarios,
     getScenarioById,
@@ -178,6 +212,8 @@ const ApiService = (function () {
     connectWebSocket,
     disconnectWebSocket,
     getWebSocket,
+    setBackend,
+    getBackendInfo,
   };
 })();
 
