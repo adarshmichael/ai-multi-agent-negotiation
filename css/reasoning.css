@@ -1,0 +1,258 @@
+/* ==========================================================================
+   NegoSim — 7. AI Reasoning, Negotiation State & Context Tracking
+   ========================================================================== */
+
+/* --- 9. State metrics strip: more visual weight, consistent heights --- */
+.neg-state-strip {
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px dashed var(--color-state-border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(90,95,104,0.03) 0%, var(--color-surface) 100%);
+}
+
+.neg-state-block {
+  padding: 8px var(--space-3);
+  min-width: 90px;
+}
+
+.neg-state-label {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  margin-bottom: 5px;
+}
+
+.neg-state-value {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-family: var(--font-sans);
+}
+
+/* Agreement value override */
+.neg-state-value.agreement-value {
+  color: var(--color-success-sage);
+}
+
+/* --- 10. Round progress bar: taller segments, better spacing --- */
+.neg-round-progress-wrap {
+  padding: var(--space-3) 0;
+}
+
+.neg-round-progress-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+}
+
+.neg-round-track {
+  height: 10px;
+  gap: 4px;
+}
+
+.neg-round-segment {
+  border-radius: 4px;
+  background: rgba(0,0,0,0.06);
+}
+
+.neg-round-segment.seg-done {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 2px 6px -2px rgba(99,102,241,0.4);
+}
+
+.neg-round-segment.seg-current {
+  background: var(--color-accent);
+  box-shadow: 0 2px 6px -2px rgba(14,165,233,0.5);
+}
+
+
+/* Right Column: Reasoning & State */
+.neg-reasoning-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.neg-reasoning-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--color-orchestrator);
+  margin-bottom: var(--space-3);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-2);
+}
+
+/* Negotiation State Grid */
+.state-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.state-item {
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.state-item strong {
+  display: block;
+  font-size: 10px;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+/* AI Reasoning Highlight */
+.ai-reasoning-highlight {
+  border-color: var(--color-primary-light);
+  background: linear-gradient(180deg, rgba(99,102,241,0.03) 0%, transparent 100%);
+}
+
+.reasoning-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text);
+  font-style: italic;
+  margin-bottom: var(--space-3);
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-primary);
+  padding: 8px 12px;
+  border-radius: 0 4px 4px 0;
+}
+
+.ai-reasoning-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.ai-meta-item {
+  font-size: 11.5px;
+  color: var(--color-text);
+}
+
+.ai-meta-item strong {
+  display: block;
+  font-size: 9.5px;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.decision-chip {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+}
+
+.ai-context-checklist {
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.checklist-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  margin-bottom: 6px;
+}
+
+.checklist-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.checklist-item {
+  font-size: 10.5px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.checklist-item.active {
+  color: var(--color-text);
+}
+
+.checklist-item .check-icon {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.context-details {
+  font-size: 12px;
+}
+
+.context-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-primary);
+  outline: none;
+  margin-bottom: var(--space-2);
+}
+
+.context-content {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background: rgba(0,0,0,0.02);
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  white-space: pre-wrap;
+}
+
+/* Evaluation chip in reasoning panel */
+.eval-chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(150, 150, 150, 0.12);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+.eval-chip--favorable {
+  background: rgba(46, 160, 106, 0.15);
+  color: #2ea06a;
+}
+.eval-chip--partial {
+  background: rgba(230, 165, 36, 0.15);
+  color: #c89021;
+}
+.eval-chip--unacceptable {
+  background: rgba(218, 55, 66, 0.15);
+  color: #da3742;
+}
+
+/* Decision chip variant colors */
+.decision-chip--accept         { color: #2ea06a; }
+.decision-chip--reject         { color: #da3742; }
+.decision-chip--counter-offer  { color: var(--color-buyer, #4182e6); }
+.decision-chip--thinking       { color: var(--color-text-muted); font-style: italic; }
+.decision-chip--offer          { color: var(--color-vendor, #e67a30); }

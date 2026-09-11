@@ -1,0 +1,316 @@
+/* ==========================================================================
+   NegoSim — 6. Orchestrator Pipeline, Activity Indicators & Controls
+   ========================================================================== */
+
+/* --- 3. Orchestrator status bar: tighten layout, fix hexagon rendering --- */
+.neg-orch-status-bar {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  gap: var(--space-3);
+}
+
+/* Refined hexagon that looks like an actual hexagon on-screen */
+.neg-orch-node {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.1);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: visible;
+}
+
+/* Override the SVG-based hexagon with a cleaner CSS hex shape */
+.neg-orch-hexagon {
+  display: none; /* Hide SVG, use CSS clip-path instead */
+}
+
+/* Gear / hub icon inside the hexagon via ::after */
+.neg-orch-node::after {
+  content: '⬡';
+  font-size: 20px;
+  color: rgba(255,255,255,0.9);
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(255,255,255,0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.neg-orch-node-pulse {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.neg-orch-node-pulse.active {
+  opacity: 1;
+  animation: orch-pulse 2.4s infinite;
+}
+
+.neg-orch-node.pulsing {
+  animation: hex-node-glow 2.4s infinite;
+}
+
+@keyframes hex-node-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); }
+  50%       { box-shadow: 0 0 12px 4px rgba(255,255,255,0.08); }
+}
+
+.neg-orch-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  font-weight: 800;
+}
+
+.neg-orch-stat-label {
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+}
+
+.neg-orch-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.neg-orch-divider {
+  height: 24px;
+}
+
+/* Status pill refinement */
+.neg-orch-status-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 6px 14px;
+}
+
+
+/* --- 8. Orchestrator spine refinements --- */
+.neg-orch-spine {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+.neg-orch-spine-header {
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(27,42,65,0.05) 0%, var(--color-bg-alt) 100%);
+  color: var(--color-orchestrator);
+  font-weight: 800;
+  border-bottom: 1px solid rgba(27,42,65,0.1);
+}
+
+.neg-orch-timeline {
+  padding: 12px 12px;
+  min-height: 200px;
+}
+
+.neg-timeline-step {
+  padding-bottom: 10px;
+}
+
+.neg-timeline-dot {
+  width: 18px;
+  height: 18px;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.neg-timeline-step-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.neg-timeline-step.step-done .neg-timeline-step-label {
+  color: var(--color-text-muted);
+}
+
+.neg-timeline-step.step-active .neg-timeline-step-label {
+  color: var(--color-orchestrator);
+  font-weight: 700;
+}
+
+.neg-timeline-step-time {
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+/* Log toggle button */
+.neg-log-toggle {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  padding: 8px 14px;
+  text-transform: uppercase;
+  color: var(--color-orchestrator);
+  background: rgba(27,42,65,0.04);
+  border-top: 1px solid rgba(27,42,65,0.1);
+  opacity: 0.75;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.neg-log-toggle:hover {
+  opacity: 1;
+  background: rgba(27,42,65,0.08);
+  color: var(--color-orchestrator);
+}
+
+/* Log drawer refinement */
+.neg-orch-log {
+  padding: 10px 12px;
+  gap: 3px;
+  border-top: none;
+}
+
+.neg-log-entry {
+  font-size: 10px;
+  line-height: 1.6;
+  gap: 8px;
+}
+
+.neg-log-time {
+  min-width: 60px;
+  font-size: 10px;
+}
+
+.neg-log-msg {
+  font-size: 10px;
+}
+
+
+.neg-status-pill[data-status="paused"]      { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.3); }
+.neg-status-pill[data-status="completed"]   { background: rgba(99,102,241,0.2);  border-color: rgba(99,102,241,0.35); }
+.neg-status-pill[data-status="failed"],
+.neg-status-pill[data-status="stopped"]    { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); }
+.neg-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  flex-shrink: 0;
+}
+.neg-status-pill[data-status="in_progress"] .neg-status-dot {
+  background: #10b981;
+  animation: statusPulse 1.6s ease-in-out infinite;
+}
+.neg-status-pill[data-status="paused"] .neg-status-dot { background: #f59e0b; }
+.neg-status-pill[data-status="completed"] .neg-status-dot { background: #6366f1; }
+.neg-status-pill[data-status="failed"] .neg-status-dot,
+.neg-status-pill[data-status="stopped"] .neg-status-dot { background: #ef4444; }
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
+.btn-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.85);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  letter-spacing: 0.03em;
+}
+.btn-control:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.3);
+  color: #fff;
+}
+
+/* ---- Orchestrator Log ---- */
+.neg-orch-log { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; }
+.neg-orch-log-header { padding: 8px 14px; background: var(--color-bg-alt); border-bottom: 1px solid var(--color-border); font-size: 10px; font-weight: 800; letter-spacing: 0.12em; color: var(--color-text-faint); font-family: var(--font-mono); }
+.neg-orch-log-entries { max-height: 140px; overflow-y: auto; padding: 6px 0; display: flex; flex-direction: column; }
+.neg-orch-log-entry { padding: 4px 14px; font-size: 11.5px; color: var(--color-text-muted); font-family: var(--font-mono); line-height: 1.5; border-left: 2px solid transparent; }
+.neg-orch-log-entry.neg-log-done    { border-left-color: #10b981; color: var(--color-text); }
+.neg-orch-log-entry.neg-log-active  { border-left-color: var(--color-primary); color: var(--color-text); background: rgba(99,102,241,0.04); }
+.neg-orch-log-entry.neg-log-pending { border-left-color: var(--color-border-strong); color: var(--color-text-faint); font-style: italic; }
+.neg-orch-log-entry.neg-log-error   { border-left-color: #ef4444; color: #ef4444; }
+
+
+/* Orchestrator Pipeline Styles */
+.orch-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pipeline-step {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+}
+
+.pipeline-step.pending {
+  color: var(--color-text-faint);
+}
+.pipeline-step.pending .pipe-icon {
+  color: var(--color-border-strong);
+}
+
+.pipeline-step.active {
+  background: var(--color-orch-light);
+  color: var(--color-orchestrator);
+  font-weight: 600;
+}
+.pipeline-step.active .pipe-icon {
+  color: var(--color-primary);
+}
+
+.pipeline-step.done {
+  color: var(--color-success-sage);
+}
+.pipeline-step.done .pipe-icon {
+  color: var(--color-success-sage);
+}
+
+.pipeline-step.error {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-danger);
+  font-weight: 600;
+}
+.pipeline-step.error .pipe-icon {
+  color: var(--color-danger);
+}
+
+/* Pipeline module tag badges */
+.pipe-module-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(var(--color-buyer-rgb, 65, 130, 230), 0.15);
+  color: var(--color-buyer, #4182e6);
+  margin-left: 4px;
+  vertical-align: middle;
+  text-transform: uppercase;
+}

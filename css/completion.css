@@ -1,0 +1,174 @@
+/* ==========================================================================
+   NegoSim — 8. Negotiation Completion & Agreement Terminal Result
+   ========================================================================== */
+
+/* ==========================================================================
+   Negotiation Completion Panel
+   ========================================================================== */
+.neg-complete-panel {
+  background: var(--gradient-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6) var(--space-6);
+  margin-top: var(--space-5);
+  text-align: center;
+  box-shadow: var(--shadow-glow);
+  animation: screenIn var(--transition-med);
+}
+
+.neg-complete-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-4);
+  font-size: 32px;
+}
+
+.neg-complete-icon.icon-agreement {
+  background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05));
+  border: 2px solid rgba(16, 185, 129, 0.4);
+}
+
+.neg-complete-icon.icon-failed {
+  background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
+  border: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+.neg-complete-icon.icon-timeout {
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+  border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.neg-complete-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.neg-complete-subtitle {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-5);
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.neg-complete-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+  text-align: left;
+}
+
+.neg-stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  margin-bottom: 4px;
+}
+
+.neg-stat-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.neg-stat-value.success { color: var(--color-success); }
+.neg-stat-value.danger  { color: var(--color-danger); }
+.neg-stat-value.warning { color: var(--color-warning); }
+.neg-stat-value.primary { color: var(--color-primary); }
+
+.neg-agent-decisions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: var(--space-4) 0;
+}
+
+.neg-agent-decision {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: 13px;
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-decision-icon {
+  font-size: 16px;
+}
+
+.neg-agent-decision .agent-name {
+  font-size: 13px;
+}
+
+
+/* --- 11. Completion panel: match existing card shadow/radius --- */
+.neg-complete-panel {
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+/* --- 12. Nav row at bottom of live panel --- */
+#neg-live-panel .nav-row {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+#btn-negotiation-restart {
+  max-width: 320px;
+  margin: 0 auto;
+  width: 100%;
+  justify-content: center;
+}
+
+
+/* ---- Terminal Result Card ---- */
+.neg-result-card {
+  text-align: center;
+  padding: 32px 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-top: 16px;
+  animation: msgSlideIn 0.35s var(--ease-out);
+}
+.neg-result-icon    { font-size: 44px; margin-bottom: 10px; line-height: 1; }
+.neg-result-title   { font-size: 22px; font-weight: 800; color: var(--color-text); margin-bottom: 6px; }
+.neg-result-subtitle { font-size: 13.5px; color: var(--color-text-muted); margin-bottom: 16px; max-width: 480px; margin-left: auto; margin-right: auto; }
+.neg-result-stats   { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; padding: 16px; background: var(--color-bg-alt); border-radius: var(--radius-md); border: 1px solid var(--color-border); }
+.neg-result-stat    { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.neg-result-stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--color-text-faint); font-family: var(--font-mono); }
+.neg-result-stat-val   { font-size: 18px; font-weight: 800; font-family: var(--font-mono); color: var(--color-text); }
+.neg-result-card.result-agreement  { border-top: 4px solid #10b981; }
+.neg-result-card.result-agreement .neg-result-title { color: #10b981; }
+.neg-result-card.result-rejection  { border-top: 4px solid #ef4444; }
+.neg-result-card.result-rejection .neg-result-title { color: #ef4444; }
+.neg-result-card.result-max_rounds,
+.neg-result-card.result-stopped    { border-top: 4px solid #f59e0b; }
+.neg-result-card.result-max_rounds .neg-result-title,
+.neg-result-card.result-stopped .neg-result-title { color: #f59e0b; }

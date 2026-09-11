@@ -1,0 +1,116 @@
+/* ==========================================================================
+   NegoSim — 1. Design Tokens, CSS Reset & Base Typography
+   ========================================================================== */
+
+/* ==========================================================================
+   Design tokens
+   ========================================================================== */
+:root {
+  --color-bg: #f8fafc;
+  --color-bg-alt: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
+
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-faint: #64748b;
+
+  --color-primary: #6366f1;
+  --color-primary-light: #818cf8;
+  --color-primary-dark: #4338ca;
+  --color-accent: #0ea5e9;
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+
+  /* ---- Equilibrium brand palette ---- */
+  --color-buyer:          #B8623F;  /* Copper — Buyer Agent */
+  --color-buyer-light:    rgba(184, 98, 63, 0.12);
+  --color-buyer-glow:     rgba(184, 98, 63, 0.3);
+  --color-vendor:         #3A5A45;  /* Forest Green — Vendor Agent */
+  --color-vendor-light:   rgba(58, 90, 69, 0.12);
+  --color-vendor-glow:    rgba(58, 90, 69, 0.3);
+  --color-orchestrator:   #1B2A41;  /* Ink Navy — Orchestrator (structural) */
+  --color-orch-light:     rgba(27, 42, 65, 0.08);
+  --color-orch-glow:      rgba(27, 42, 65, 0.4);
+  --color-state:          #5A5F68;  /* Slate Gray — State records */
+  --color-state-border:   rgba(90, 95, 104, 0.3);
+  --color-success-sage:   #6B8F71;  /* Sage Green — Agreement */
+  --color-warning-amber:  #C79A3D;  /* Muted Amber — Deadlock / timeout */
+
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #0ea5e9 100%);
+  --gradient-surface: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.15), 0 12px 36px rgba(99, 102, 241, 0.15);
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", "Courier New", monospace;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 180ms var(--ease-out);
+  --transition-med: 320ms var(--ease-out);
+}
+
+/* ==========================================================================
+   Reset / base
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(99, 102, 241, 0.16), transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(34, 211, 238, 0.12), transparent 40%),
+    var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  perspective: 1600px;
+  user-select: none;
+}
+
+input, textarea, [contenteditable] {
+  user-select: auto;
+}
+
+h1, h2, h3, h4, p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+img, svg {
+  display: block;
+}
+

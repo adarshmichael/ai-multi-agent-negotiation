@@ -1,0 +1,2004 @@
+/* ==========================================================================
+   NegoSim — 5. Live Negotiation Chat, Messages, Bubbles & Evaluation
+   ========================================================================== */
+
+/* ==========================================================================
+   Negotiation Screen — Live Panel Header
+   ========================================================================== */
+.neg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.neg-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.neg-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.neg-status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-text-faint);
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.neg-status-indicator.live {
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  animation: pulse-dot 2s infinite;
+}
+
+.neg-status-indicator.completed {
+  background: var(--color-primary);
+}
+
+.neg-status-indicator.failed {
+  background: var(--color-danger);
+}
+
+@keyframes pulse-dot {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.1);
+  }
+}
+
+.neg-scenario-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.neg-status-text {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  margin-top: 1px;
+}
+
+.neg-round-badge {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  white-space: nowrap;
+}
+
+.btn-sm {
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+/* ==========================================================================
+   Negotiation Chat
+   ========================================================================== */
+.neg-chat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  min-height: 380px;
+  max-height: 520px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  scroll-behavior: smooth;
+}
+
+.neg-chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  flex: 1;
+  color: var(--color-text-faint);
+  font-size: 14px;
+  padding: var(--space-7) 0;
+}
+
+/* --- Message bubbles --- */
+.neg-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+  animation: messageIn 350ms var(--ease-out);
+}
+
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.neg-message.agent-left {
+  align-self: flex-start;
+}
+
+.neg-message.agent-right {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.neg-message-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+}
+
+.neg-agent-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.neg-agent-avatar.avatar-alt {
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+}
+
+.neg-message-bubble {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.55;
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+
+.agent-left .neg-message-bubble {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  border-top-left-radius: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.agent-right .neg-message-bubble {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(14, 165, 233, 0.08) 100%);
+  border-color: rgba(99, 102, 241, 0.2);
+  border-top-right-radius: 4px;
+}
+
+.neg-message-text {
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.neg-offer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-top: var(--space-2);
+}
+
+.neg-offer-badge.offer-accept {
+  color: var(--color-success);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.neg-offer-badge.offer-reject {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.neg-message-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.neg-round-label {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* --- Thinking indicator --- */
+.neg-thinking {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  align-self: flex-start;
+  animation: messageIn 300ms var(--ease-out);
+}
+
+.neg-thinking.agent-right {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.neg-thinking-bubble {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-thinking-text {
+  font-size: 13px;
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+
+.thinking-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.thinking-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: dotPulse 1.4s infinite ease-in-out;
+}
+
+.thinking-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   Negotiation Status Bar (offer tracker + progress)
+   ========================================================================== */
+.neg-status-bar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  margin-top: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-offers {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.neg-offer-stat {
+  flex: 1;
+  min-width: 140px;
+}
+
+.neg-offer-stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  margin-bottom: 4px;
+}
+
+.neg-offer-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.neg-offer-stat-value.gap-value {
+  color: var(--color-warning);
+}
+
+.neg-offer-stat-value.agreement-value {
+  color: var(--color-success);
+}
+
+.neg-progress-wrap {
+  margin-top: var(--space-3);
+}
+
+.neg-progress-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  margin-bottom: 6px;
+}
+
+.neg-progress-track {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.neg-progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 999px;
+  transition: width 600ms var(--ease-out);
+}
+
+
+/* ==========================================================================
+   EQUILIBRIUM — Scenario Info Bar
+   ========================================================================== */
+.neg-scenario-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-scenario-bar-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.neg-scenario-bar-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--color-text-faint);
+}
+
+.neg-scenario-bar-text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.neg-scenario-bar-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.neg-scenario-bar-desc {
+  font-size: 12.5px;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.neg-scenario-bar-desc::before {
+  content: '·';
+  margin-right: var(--space-2);
+  opacity: 0.5;
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Orchestrator Status Bar
+   The orchestrator uses: hexagon shape, Ink Navy color, ALL-CAPS labels.
+   It NEVER shows dialogue — only operational facts.
+   ========================================================================== */
+.neg-orch-status-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-orchestrator);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  box-shadow: 0 4px 20px -4px var(--color-orch-glow);
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle scanline texture to reinforce "system/machine" quality */
+.neg-orch-status-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.015) 2px,
+      rgba(255, 255, 255, 0.015) 4px);
+  pointer-events: none;
+}
+
+/* Hexagon node icon */
+.neg-orch-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.neg-orch-hexagon {
+  width: 36px;
+  height: 40px;
+  color: rgba(255, 255, 255, 0.85);
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.15));
+}
+
+.neg-orch-node-pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.neg-orch-node-pulse.active {
+  opacity: 1;
+  animation: orch-pulse 2.4s infinite;
+}
+
+@keyframes orch-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.15);
+  }
+
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+}
+
+.neg-orch-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+}
+
+.neg-orch-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.neg-orch-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.neg-orch-stat-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.neg-orch-stat-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+}
+
+.neg-orch-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+/* Override status indicator colors for the dark bar */
+.neg-orch-status-bar .neg-status-indicator {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.neg-orch-status-bar .neg-status-indicator.live {
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.25);
+}
+
+.neg-orch-status-bar .neg-status-indicator.completed {
+  background: #818cf8;
+}
+
+.neg-orch-status-bar .neg-status-indicator.failed {
+  background: #f87171;
+}
+
+/* Override stop button for the dark bar */
+.neg-orch-status-bar .btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.neg-orch-status-bar .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Negotiation Arena (3-column grid)
+   Left: Buyer Agent · Center: Orchestrator Spine · Right: Vendor Agent
+   ========================================================================== */
+.neg-arena {
+  display: grid;
+  grid-template-columns: 1fr 220px 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  align-items: start;
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Agent Panels (Buyer + Vendor)
+   Solid colored left-border = reads as "someone" not "something"
+   ========================================================================== */
+.neg-agent-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow var(--transition-fast);
+}
+
+.neg-agent-panel:focus-within {
+  box-shadow: var(--shadow-lg);
+}
+
+/* The iconic colored left-border — Buyer: Copper, Vendor: Forest Green */
+.neg-buyer-panel {
+  border-left: 3px solid var(--color-buyer);
+}
+
+.neg-vendor-panel {
+  border-left: 3px solid var(--color-vendor);
+}
+
+/* Active panel glow */
+.neg-buyer-panel.panel-active {
+  box-shadow: var(--shadow-md), -2px 0 12px -2px var(--color-buyer-glow);
+  animation: buyer-border-pulse 2s infinite;
+}
+
+.neg-vendor-panel.panel-active {
+  box-shadow: var(--shadow-md), -2px 0 12px -2px var(--color-vendor-glow);
+  animation: vendor-border-pulse 2s infinite;
+}
+
+@keyframes buyer-border-pulse {
+
+  0%,
+  100% {
+    border-left-color: var(--color-buyer);
+  }
+
+  50% {
+    border-left-color: rgba(184, 98, 63, 0.5);
+  }
+}
+
+@keyframes vendor-border-pulse {
+
+  0%,
+  100% {
+    border-left-color: var(--color-vendor);
+  }
+
+  50% {
+    border-left-color: rgba(58, 90, 69, 0.5);
+  }
+}
+
+/* Panel header */
+.neg-agent-panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+}
+
+.neg-agent-panel-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.buyer-avatar {
+  background: linear-gradient(135deg, #C4714A, #9B4F2D);
+  box-shadow: 0 4px 12px -4px var(--color-buyer-glow);
+}
+
+.vendor-avatar {
+  background: linear-gradient(135deg, #4A7A5A, #2D5A3A);
+  box-shadow: 0 4px 12px -4px var(--color-vendor-glow);
+}
+
+.neg-agent-panel-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.neg-agent-panel-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.neg-agent-panel-role {
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+  margin-top: 1px;
+}
+
+/* Agent status badge — Waiting / Active / Responded */
+.neg-agent-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--color-text-faint);
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.neg-agent-badge[data-state="waiting"] {
+  color: var(--color-text-faint);
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--color-border-strong);
+}
+
+.neg-buyer-panel .neg-agent-badge[data-state="active"] {
+  background: var(--color-buyer-light);
+  border-color: var(--color-buyer);
+  color: var(--color-buyer);
+}
+
+.neg-vendor-panel .neg-agent-badge[data-state="active"] {
+  background: var(--color-vendor-light);
+  border-color: var(--color-vendor);
+  color: var(--color-vendor);
+}
+
+.neg-agent-badge[data-state="responded"] {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--color-success);
+}
+
+/* Scrollable message area within the panel */
+.neg-agent-chat {
+  padding: var(--space-4) var(--space-5);
+  min-height: 340px;
+  max-height: 460px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  scroll-behavior: smooth;
+}
+
+.neg-agent-chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  flex: 1;
+  color: var(--color-text-faint);
+  font-size: 12.5px;
+  padding: var(--space-6) 0;
+  min-height: 200px;
+}
+
+/* Message bubbles within panels */
+.neg-panel-message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: messageIn 350ms var(--ease-out);
+}
+
+.neg-panel-bubble {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  border-top-left-radius: 4px;
+  padding: var(--space-3) var(--space-4);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.neg-buyer-panel .neg-panel-bubble {
+  border-top-left-radius: 4px;
+  background: linear-gradient(135deg, rgba(184, 98, 63, 0.06) 0%, rgba(184, 98, 63, 0.02) 100%);
+  border-color: rgba(184, 98, 63, 0.15);
+}
+
+.neg-vendor-panel .neg-panel-bubble {
+  border-top-left-radius: 4px;
+  background: linear-gradient(135deg, rgba(58, 90, 69, 0.07) 0%, rgba(58, 90, 69, 0.02) 100%);
+  border-color: rgba(58, 90, 69, 0.15);
+}
+
+.neg-panel-bubble-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  flex-wrap: wrap;
+}
+
+/* Typing indicator within panel (reuses .neg-thinking-bubble styling) */
+.neg-panel-thinking {
+  animation: messageIn 300ms var(--ease-out);
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Orchestrator Spine (center column)
+   Uses vertical icon timeline. Narrow (220px). All-caps labels.
+   ========================================================================== */
+.neg-orch-spine {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.neg-orch-spine-header {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-text-faint);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+}
+
+/* Vertical timeline */
+.neg-orch-timeline {
+  padding: var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  min-height: 180px;
+}
+
+.neg-timeline-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  position: relative;
+  padding-bottom: var(--space-3);
+}
+
+/* Vertical connector line */
+.neg-timeline-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 18px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.neg-timeline-step.step-done:not(:last-child)::after {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+/* Step dot */
+.neg-timeline-dot {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 9px;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.neg-timeline-step.step-done .neg-timeline-dot {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1.5px solid var(--color-success);
+  color: var(--color-success);
+}
+
+.neg-timeline-step.step-active .neg-timeline-dot {
+  background: rgba(27, 42, 65, 0.08);
+  border: 2px solid var(--color-orchestrator);
+  animation: step-dot-blink 1.4s infinite;
+}
+
+.neg-timeline-step.step-pending .neg-timeline-dot {
+  background: var(--color-bg-alt);
+  border: 1.5px dashed var(--color-border-strong);
+}
+
+@keyframes step-dot-blink {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(27, 42, 65, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px rgba(27, 42, 65, 0.08);
+  }
+}
+
+.neg-timeline-step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.neg-timeline-step-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.neg-timeline-step.step-pending .neg-timeline-step-label {
+  color: var(--color-text-faint);
+}
+
+.neg-timeline-step-time {
+  font-size: 10px;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  margin-top: 1px;
+}
+
+/* Active step — pulsing dot decoration */
+.neg-timeline-step.step-active .neg-timeline-step-label {
+  color: var(--color-orchestrator);
+}
+
+/* Log drawer toggle */
+.neg-log-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-alt);
+  border: none;
+  border-top: 1px solid var(--color-border);
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  letter-spacing: 0.04em;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  font-family: var(--font-sans);
+}
+
+.neg-log-toggle:hover {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.neg-log-toggle-caret {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  transition: transform var(--transition-fast);
+}
+
+.neg-log-toggle[aria-expanded="true"] .neg-log-toggle-caret {
+  transform: rotate(180deg);
+}
+
+/* Collapsible log drawer */
+.neg-orch-log-drawer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 380ms var(--ease-out);
+}
+
+.neg-orch-log-drawer.open {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.neg-orch-log {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #0d1117;
+  /* GitHub dark log background */
+}
+
+.neg-log-entry {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.neg-log-entry.log-done {
+  color: #8b949e;
+}
+
+.neg-log-entry.log-done .neg-log-icon {
+  color: #3fb950;
+}
+
+.neg-log-entry.log-active {
+  color: #c9d1d9;
+}
+
+.neg-log-entry.log-active .neg-log-icon {
+  color: #e3b341;
+  animation: dot-blink-log 1.2s infinite;
+}
+
+@keyframes dot-blink-log {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.neg-log-entry.log-error .neg-log-icon {
+  color: #f85149;
+}
+
+.neg-log-icon {
+  font-size: 11px;
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.neg-log-time {
+  color: #484f58;
+  flex-shrink: 0;
+  min-width: 65px;
+}
+
+.neg-log-msg {
+  flex: 1;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Negotiation State Metrics Strip
+   Dashed border = reads as "data record", NOT a speaker or participant.
+   Values flash-highlight when they update.
+   ========================================================================== */
+.neg-state-strip {
+  display: flex;
+  align-items: stretch;
+  background: var(--color-surface);
+  border: 1.5px dashed var(--color-state-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-3);
+  gap: 0;
+  overflow-x: auto;
+}
+
+.neg-state-block {
+  flex: 1;
+  min-width: 100px;
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.neg-state-sep {
+  width: 1px;
+  background: var(--color-border);
+  flex-shrink: 0;
+  margin: var(--space-2) 0;
+}
+
+.neg-state-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-state);
+  text-transform: uppercase;
+}
+
+.neg-state-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.neg-state-value.gap-value {
+  color: var(--color-warning-amber);
+}
+
+.neg-state-value.agreement-value {
+  color: var(--color-success-sage);
+}
+
+/* Flash animation when a state value updates */
+@keyframes stat-flash {
+  0% {
+    background: rgba(99, 102, 241, 0.15);
+    border-radius: 4px;
+  }
+
+  100% {
+    background: transparent;
+  }
+}
+
+.neg-state-value.flashing {
+  animation: stat-flash 600ms var(--ease-out) forwards;
+}
+
+/* ==========================================================================
+   EQUILIBRIUM — Round Progress Bar (segmented)
+   ========================================================================== */
+.neg-round-progress-wrap {
+  margin-bottom: var(--space-4);
+}
+
+.neg-round-progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.neg-round-track {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+}
+
+.neg-round-segment {
+  flex: 1;
+  height: 100%;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.07);
+  transition: background 500ms var(--ease-out);
+}
+
+.neg-round-segment.seg-done {
+  background: var(--gradient-primary);
+}
+
+.neg-round-segment.seg-current {
+  background: var(--color-accent);
+  animation: seg-pulse 1.5s infinite;
+}
+
+@keyframes seg-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+
+/* --- 2. Scenario info bar: icon accent, badge-style scenario chip --- */
+.neg-scenario-bar {
+  padding: var(--space-4) var(--space-5);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, rgba(255, 255, 255, 1) 60%);
+  border-color: rgba(99, 102, 241, 0.15);
+}
+
+.neg-scenario-bar-icon {
+  width: 32px;
+  height: 32px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+}
+
+.neg-scenario-bar-icon svg {
+  stroke: var(--color-primary);
+}
+
+.neg-scenario-bar-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.neg-scenario-bar-desc {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+
+/* --- 5. Custom thin scrollbars for agent chat areas --- */
+.neg-agent-chat::-webkit-scrollbar {
+  width: 4px;
+}
+
+.neg-agent-chat::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.neg-agent-chat::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 999px;
+}
+
+.neg-buyer-panel .neg-agent-chat::-webkit-scrollbar-thumb {
+  background: rgba(184, 98, 63, 0.25);
+}
+
+.neg-vendor-panel .neg-agent-chat::-webkit-scrollbar-thumb {
+  background: rgba(58, 90, 69, 0.25);
+}
+
+/* --- 6. Agent panel header refinements --- */
+.neg-agent-panel-header {
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.neg-buyer-panel .neg-agent-panel-header {
+  background: linear-gradient(135deg, rgba(184, 98, 63, 0.05) 0%, var(--color-surface) 60%);
+}
+
+.neg-vendor-panel .neg-agent-panel-header {
+  background: linear-gradient(135deg, rgba(58, 90, 69, 0.05) 0%, var(--color-surface) 60%);
+}
+
+.neg-agent-panel-name {
+  font-size: 15px;
+  letter-spacing: -0.015em;
+}
+
+.neg-agent-panel-role {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Avatar size and shadow refinement */
+.neg-agent-panel-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Badge label uppercase */
+.neg-agent-badge {
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+}
+
+/* --- 7. Message bubbles inside panels --- */
+.neg-agent-chat {
+  padding: 14px 14px;
+  gap: var(--space-3);
+}
+
+.neg-panel-bubble {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  line-height: 1.6;
+  box-shadow: none;
+  border-width: 1px;
+}
+
+.neg-panel-bubble-footer {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Buyer footer separator matches brand */
+.neg-buyer-panel .neg-panel-bubble-footer {
+  border-top-color: rgba(184, 98, 63, 0.1);
+}
+
+.neg-vendor-panel .neg-panel-bubble-footer {
+  border-top-color: rgba(58, 90, 69, 0.1);
+}
+
+.neg-round-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.neg-panel-bubble-footer>span:last-child {
+  font-size: 10.5px;
+  color: var(--color-text-faint);
+}
+
+/* Offer badges within panel bubbles */
+.neg-panel-bubble .neg-offer-badge {
+  margin-top: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 5px 12px;
+}
+
+/* Empty state placeholder */
+.neg-agent-chat-empty {
+  gap: var(--space-3);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+
+/* --- 13. Thinking bubble inside panels: match panel brand color --- */
+.neg-buyer-panel .neg-thinking-bubble {
+  border-color: rgba(184, 98, 63, 0.2);
+  background: rgba(184, 98, 63, 0.04);
+}
+
+.neg-vendor-panel .neg-thinking-bubble {
+  border-color: rgba(58, 90, 69, 0.2);
+  background: rgba(58, 90, 69, 0.04);
+}
+
+/* Thinking dots in buyer panel use copper color */
+.neg-buyer-panel .thinking-dots span {
+  background: var(--color-buyer);
+}
+
+.neg-vendor-panel .thinking-dots span {
+  background: var(--color-vendor);
+}
+
+/* --- 14. General: prevent text selection on badges/labels --- */
+.neg-agent-badge,
+.neg-round-segment.seg-done {
+  background: var(--gradient-primary);
+}
+
+.neg-round-segment.seg-current {
+  background: var(--color-accent);
+  animation: seg-pulse 1.5s infinite;
+}
+
+@keyframes seg-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+
+/* --- 2. Scenario info bar: icon accent, badge-style scenario chip --- */
+.neg-scenario-bar {
+  padding: var(--space-4) var(--space-5);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, rgba(255, 255, 255, 1) 60%);
+  border-color: rgba(99, 102, 241, 0.15);
+}
+
+.neg-scenario-bar-icon {
+  width: 32px;
+  height: 32px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+}
+
+.neg-scenario-bar-icon svg {
+  stroke: var(--color-primary);
+}
+
+.neg-scenario-bar-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.neg-scenario-bar-desc {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+
+/* --- 5. Custom thin scrollbars for agent chat areas --- */
+.neg-agent-chat::-webkit-scrollbar {
+  width: 4px;
+}
+
+.neg-agent-chat::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.neg-agent-chat::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 999px;
+}
+
+.neg-buyer-panel .neg-agent-chat::-webkit-scrollbar-thumb {
+  background: rgba(184, 98, 63, 0.25);
+}
+
+.neg-vendor-panel .neg-agent-chat::-webkit-scrollbar-thumb {
+  background: rgba(58, 90, 69, 0.25);
+}
+
+/* --- 6. Agent panel header refinements --- */
+.neg-agent-panel-header {
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.neg-buyer-panel .neg-agent-panel-header {
+  background: linear-gradient(135deg, rgba(184, 98, 63, 0.05) 0%, var(--color-surface) 60%);
+}
+
+.neg-vendor-panel .neg-agent-panel-header {
+  background: linear-gradient(135deg, rgba(58, 90, 69, 0.05) 0%, var(--color-surface) 60%);
+}
+
+.neg-agent-panel-name {
+  font-size: 15px;
+  letter-spacing: -0.015em;
+}
+
+.neg-agent-panel-role {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Avatar size and shadow refinement */
+.neg-agent-panel-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Badge label uppercase */
+.neg-agent-badge {
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+}
+
+/* --- 7. Message bubbles inside panels --- */
+.neg-agent-chat {
+  padding: 14px 14px;
+  gap: var(--space-3);
+}
+
+.neg-panel-bubble {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  line-height: 1.6;
+  box-shadow: none;
+  border-width: 1px;
+}
+
+.neg-panel-bubble-footer {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Buyer footer separator matches brand */
+.neg-buyer-panel .neg-panel-bubble-footer {
+  border-top-color: rgba(184, 98, 63, 0.1);
+}
+
+.neg-vendor-panel .neg-panel-bubble-footer {
+  border-top-color: rgba(58, 90, 69, 0.1);
+}
+
+.neg-round-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.neg-panel-bubble-footer>span:last-child {
+  font-size: 10.5px;
+  color: var(--color-text-faint);
+}
+
+/* Offer badges within panel bubbles */
+.neg-panel-bubble .neg-offer-badge {
+  margin-top: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 5px 12px;
+}
+
+/* Empty state placeholder */
+.neg-agent-chat-empty {
+  gap: var(--space-3);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+
+/* --- 13. Thinking bubble inside panels: match panel brand color --- */
+.neg-buyer-panel .neg-thinking-bubble {
+  border-color: rgba(184, 98, 63, 0.2);
+  background: rgba(184, 98, 63, 0.04);
+}
+
+.neg-vendor-panel .neg-thinking-bubble {
+  border-color: rgba(58, 90, 69, 0.2);
+  background: rgba(58, 90, 69, 0.04);
+}
+
+/* Thinking dots in buyer panel use copper color */
+.neg-buyer-panel .thinking-dots span {
+  background: var(--color-buyer);
+}
+
+.neg-vendor-panel .thinking-dots span {
+  background: var(--color-vendor);
+}
+
+/* --- 14. General: prevent text selection on badges/labels --- */
+.neg-agent-badge,
+.neg-orch-label,
+.neg-orch-stat-label,
+.neg-state-label,
+.neg-orch-spine-header,
+.neg-round-progress-label {
+  user-select: none;
+}
+
+
+/* ---- Central Chat Column & Timeline ---- */
+.neg-chat-column {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+  height: 100%;
+}
+
+.neg-chat-timeline {
+  flex: 1;
+  overflow-y: auto;
+  max-height: none;
+  padding-right: 4px;
+  scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.neg-chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--color-text-faint);
+}
+
+.neg-chat-empty-icon {
+  font-size: 32px;
+  opacity: 0.4;
+}
+
+.neg-chat-empty-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.neg-chat-empty-sub {
+  font-size: 13px;
+  color: var(--color-text-faint);
+}
+
+/* Chat message bubbles */
+@keyframes msgSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.neg-chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: msgSlideIn 0.32s var(--ease-out);
+  max-width: 85%;
+}
+
+.neg-chat-msg.msg-buyer {
+  align-self: flex-start;
+}
+
+.neg-chat-msg.msg-vendor {
+  align-self: flex-end;
+}
+
+.neg-chat-msg.msg-system {
+  align-self: center;
+  max-width: 100%;
+}
+
+.neg-chat-msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  padding: 0 4px;
+}
+
+.msg-vendor .neg-chat-msg-meta {
+  flex-direction: row-reverse;
+}
+
+.neg-chat-msg-meta-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.msg-buyer .neg-chat-msg-meta-dot {
+  background: var(--color-buyer);
+}
+
+.msg-vendor .neg-chat-msg-meta-dot {
+  background: var(--color-vendor);
+}
+
+.neg-chat-msg-bubble {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+.msg-buyer .neg-chat-msg-bubble {
+  background: var(--color-buyer-light);
+  border: 1px solid rgba(184, 98, 63, 0.2);
+  border-top-left-radius: 4px;
+}
+
+.msg-vendor .neg-chat-msg-bubble {
+  background: var(--color-vendor-light);
+  border: 1px solid rgba(58, 90, 69, 0.2);
+  border-top-right-radius: 4px;
+}
+
+.msg-system .neg-chat-msg-bubble {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+  border-radius: var(--radius-sm);
+}
+
+.neg-chat-msg-offer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.msg-buyer .neg-chat-msg-offer {
+  background: var(--color-buyer);
+  color: #fff;
+}
+
+.msg-vendor .neg-chat-msg-offer {
+  background: var(--color-vendor);
+  color: #fff;
+}
+
+.neg-chat-msg-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+.action-offer,
+.action-counter_offer {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+}
+
+.action-accept {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.action-reject {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.neg-chat-msg-reason {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  background: rgba(0, 0, 0, 0.03);
+  border-left: 2px solid var(--color-border-strong);
+  padding: 5px 9px;
+  border-radius: 0 4px 4px 0;
+}
+
+.neg-reason-prefix {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  display: inline-block;
+  margin-right: 4px;
+}
+
+/* Compact Offer Evaluation Section inside turn bubble (Module 1) */
+.neg-offer-eval {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-sm);
+
+  font-size: 10.5px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  letter-spacing: 0.03em;
+}
+
+.neg-eval-badge.eval-favorable {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.neg-eval-badge.eval-partially_acceptable {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+.neg-eval-badge.eval-unacceptable {
+
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+}
+
+/* ==========================================================================
+   MODULE 3 — COUNTEROFFER CARD (inside chat bubble)
+   ========================================================================== */
+
+/* Container — sits below the Evaluation block */
+.neg-counteroffer-card {
+  margin-top: 8px;
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.07);
+}
+
+.neg-counteroffer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px dashed rgba(99, 102, 241, 0.15);
+}
+
+.neg-counteroffer-card-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+/* Vertical flow: each row is one pipeline step */
+.neg-counteroffer-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.neg-co-flow-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.neg-co-flow-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.neg-co-flow-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Downward arrow connector */
+.neg-co-arrow {
+  margin-left: 45px;
+  font-size: 12px;
+  color: var(--color-text-faint);
+  line-height: 1;
+  user-select: none;
+}
+
+/* The final proposed price — larger, accented */
+.neg-counteroffer-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(99, 102, 241, 0.12);
+}
+
+.neg-counteroffer-price {
+  font-size: 15px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--color-primary);
+}
+
+/* ±concession badge */
+.neg-concession-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.neg-concession-badge.concession-up {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+}
+
+.neg-concession-badge.concession-down {
+  background: rgba(99, 102, 241, 0.10);
+  color: var(--color-primary);
+}
+
+.neg-concession-badge.concession-none {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--color-text-muted);
+}
+
+/* Clamped warning badge */
+.neg-co-clamped-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  font-family: var(--font-mono);
+}
+
+/* Constraint status inline text */
+.neg-co-status-within {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.neg-co-status-clamped {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+
+
+
+.neg-chat-msg-bubble {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
