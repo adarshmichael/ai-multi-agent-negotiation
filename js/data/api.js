@@ -9,27 +9,31 @@ const ApiService = (function () {
 
   const hostname = window.location.hostname || 'localhost';
   const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+  const isRenderHost = hostname.includes('onrender.com');
 
   // Allow switching via ?backend=local or ?backend=render, or localStorage
   const urlParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
   const forced = urlParams ? urlParams.get('backend') : null;
   const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('negosim_backend') : null;
-  const useLocal = (forced === 'local' || saved === 'local');
+  const useLocal = (forced === 'local' || saved === 'local') && isLocal;
 
   let backendHost;
   let protocol;
   let wsProtocol;
 
-  if (useLocal && isLocal) {
+  if (useLocal) {
+    // Explicit local server on port 8001
     backendHost = `${hostname === '127.0.0.1' ? '127.0.0.1' : 'localhost'}:8001`;
     protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  } else if (!isLocal && window.location.host && !window.location.origin.startsWith('file:')) {
+  } else if (isRenderHost) {
+    // Hosted directly on the Render backend
     backendHost = window.location.host;
-    protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-    wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    protocol = 'https:';
+    wsProtocol = 'wss:';
   } else {
-    // Default for local development (Live Server, file://, etc.): connect directly to live Render cloud backend!
+    // Running on GitHub Pages (*.github.io), VS Code Live Server, or other static hosts:
+    // Route all API and WebSocket requests to the live Render cloud backend!
     backendHost = RENDER_HOST;
     protocol = 'https:';
     wsProtocol = 'wss:';
@@ -69,14 +73,29 @@ const ApiService = (function () {
   // ==================== Scenarios ====================
 
   async function getScenarios() {
-    return _get('/scenarios');
+    try {
+      return await _get('/scenarios');
+    } catch (err) {
+      console.warn('[ApiService] Backend /scenarios call failed, using fallback data:', err);
+      if (typeof window !== 'undefined' && Array.isArray(window.SCENARIOS) && window.SCENARIOS.length > 0) {
+        return window.SCENARIOS;
+      }
+      throw err;
+    }
   }
 
   async function getScenarioById(scenarioId) {
-    const scenarios = await getScenarios();
-    const scenario = scenarios.find(s => s.id === scenarioId);
-    if (!scenario) throw new Error('Scenario not found');
-    return scenario;
+    try {
+      const scenarios = await getScenarios();
+      const scenario = scenarios.find(s => s.id === scenarioId);
+      if (scenario) return scenario;
+    } catch (_) { }
+
+    if (typeof window !== 'undefined' && Array.isArray(window.SCENARIOS)) {
+      const fallback = window.SCENARIOS.find(s => s.id === scenarioId);
+      if (fallback) return fallback;
+    }
+    throw new Error('Scenario not found');
   }
 
   // ==================== Negotiation ====================
