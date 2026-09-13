@@ -93,27 +93,81 @@ function checkMaxRounds(session) {
 }
 
 /**
- * Detect deadlock: same offer repeated multiple times
+ * Detect deadlock: dual-agent offer stagnation across the last N rounds.
+ *
+ * Returns:
+ *   { deadlocked: false }                                          — no deadlock
+ *   { deadlocked: false, warning: true, reason: '...' }           — warning at 2 rounds
+ *   { deadlocked: true,  finalOfferSignal: false, reason: '...' } — hard deadlock at 3 rounds
+ *   { deadlocked: true,  finalOfferSignal: true,  reason: '...' } — extended deadlock (4+)
+ *
+ * @param {object} session
+ * @param {number} [stagnationThreshold=3] — rounds with no change to trigger deadlock
  */
-function checkDeadlock(session) {
+function checkDeadlock(session, stagnationThreshold = 3) {
   const msgs = session.messages;
-  if (msgs.length < 6) return { deadlocked: false };
+  // Need at least (threshold * 2) messages (both agents × threshold rounds)
+  const minMsgs = stagnationThreshold * 2;
+  if (msgs.length < minMsgs) return { deadlocked: false };
 
-  // Check last 4 offers from same agent — if unchanged, it's a deadlock
   const agents = session.agents;
+  const agentStagnantRounds = {};
+
   for (const agent of agents) {
     const agentOffers = msgs
-      .filter(m => m.agentId === agent.id && m.offer !== null)
-      .slice(-3)
+      .filter(m => m.agentId === agent.id && m.offer !== null && m.offer !== undefined)
       .map(m => m.offer);
 
-    if (agentOffers.length >= 3 && agentOffers.every(o => o === agentOffers[0])) {
-      logger.warn('Evaluation', `Deadlock detected: ${agent.name} repeated offer ${agentOffers[0]} 3 times`);
-      return {
-        deadlocked: true,
-        reason: `${agent.name} has not moved from their position. Deadlock declared.`,
-      };
+    if (agentOffers.length < stagnationThreshold) {
+      agentStagnantRounds[agent.id] = 0;
+      continue;
     }
+
+    // Count how many consecutive identical offers at the tail
+    const tail = agentOffers.slice(-(stagnationThreshold + 1));
+    let count = 1;
+    for (let i = tail.length - 1; i > 0; i--) {
+      if (tail[i] === tail[i - 1]) count++;
+      else break;
+    }
+    agentStagnantRounds[agent.id] = count;
+  }
+
+  const stagnantAgents = agents.filter(a => agentStagnantRounds[a.id] >= stagnationThreshold);
+  const warnAgents     = agents.filter(a => agentStagnantRounds[a.id] >= stagnationThreshold - 1);
+
+  // Hard deadlock — ALL agents stagnant for threshold rounds
+  if (stagnantAgents.length === agents.length) {
+    const extended = stagnantAgents.some(a => agentStagnantRounds[a.id] > stagnationThreshold);
+    const names = stagnantAgents.map(a => a.name).join(' & ');
+    logger.warn('Evaluation', `Deadlock confirmed: ${names} stagnant for ≥${stagnationThreshold} rounds.`);
+    return {
+      deadlocked: true,
+      finalOfferSignal: extended,
+      reason: `${names} failed to move their positions for ${stagnationThreshold} consecutive rounds. Deadlock declared.`,
+    };
+  }
+
+  // Single agent stagnant at threshold — hard single-agent deadlock
+  if (stagnantAgents.length >= 1) {
+    const agent = stagnantAgents[0];
+    logger.warn('Evaluation', `Deadlock: ${agent.name} stagnant for ${stagnantAgents[0].id ? agentStagnantRounds[stagnantAgents[0].id] : '?'} rounds.`);
+    return {
+      deadlocked: true,
+      finalOfferSignal: false,
+      reason: `${agent.name} has not moved from their position for ${stagnationThreshold} consecutive rounds. Deadlock declared.`,
+    };
+  }
+
+  // Warning — approaching deadlock (1 round before threshold)
+  if (warnAgents.length === agents.length) {
+    const names = warnAgents.map(a => a.name).join(' & ');
+    logger.negotiation(`Deadlock warning: ${names} approaching stagnation.`);
+    return {
+      deadlocked: false,
+      warning: true,
+      reason: `${names} have not moved in ${stagnationThreshold - 1} consecutive rounds. One more round of stagnation will result in a deadlock.`,
+    };
   }
 
   return { deadlocked: false };

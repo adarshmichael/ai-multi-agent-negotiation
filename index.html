@@ -114,6 +114,15 @@
             <p class="form-hint" style="margin-top: 8px; font-size: 13px; color: var(--color-text-faint);">Select
               whether to use the local mock engine or real Gemini AI.</p>
           </div>
+          <div class="form-group" style="flex:1;">
+            <label for="input-practice-mode" class="form-label">Mode</label>
+            <select id="input-practice-mode" class="form-control"
+              style="width: 100%; padding: 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 15px;">
+              <option value="ai-vs-ai">AI vs AI (Watch Only)</option>
+              <option value="human-vs-ai">Practice Mode (You vs AI)</option>
+            </select>
+            <p class="form-hint" style="margin-top: 8px; font-size: 13px; color: var(--color-text-faint);">In Practice Mode, you play as the first agent and negotiate directly against the AI.</p>
+          </div>
         </div>
       </div>
 
@@ -377,6 +386,8 @@
                 <div class="neg-chat-empty-sub">Agent messages will appear here in real time.</div>
               </div>
             </div>
+            <!-- Practice Mode Human Input Panel mounts here -->
+            <div id="human-input-mount"></div>
           </div>
 
           <!-- Right: AI Reasoning & State -->
@@ -475,6 +486,7 @@
   <script src="js/components/negotiation-timeline.js"></script>
   <script src="js/components/orchestrator-indicator.js"></script>
   <script src="js/components/conversation-log.js"></script>
+  <script src="js/components/human-input.js"></script>
   <script src="js/screens/live-negotiation.js"></script>
   <script src="js/app.js"></script>
 </body>

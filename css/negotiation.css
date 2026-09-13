@@ -2002,3 +2002,360 @@
   overflow-wrap: break-word;
   word-break: break-word;
 }
+
+/* ==========================================================================
+   Practice Mode — Human Input Panel
+   ========================================================================== */
+
+.human-input-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.06) 100%);
+  border: 1.5px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-lg);
+  margin: 12px 0 4px;
+  animation: humanPanelSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  position: relative;
+}
+
+@keyframes humanPanelSlideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.human-input-badge {
+  display: inline-block;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  animation: humanBadgePulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes humanBadgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+}
+
+.human-input-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.human-input-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.human-input-title {
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+
+.human-input-title strong {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.human-input-round {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* ── Info bar (purpose + context) ── */
+.human-input-info-bar {
+  display: flex;
+  gap: 16px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(99,102,241,0.15);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+
+.human-input-info-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.human-input-info-label {
+  font-weight: 700;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+.human-input-info-value {
+  color: var(--color-text-faint);
+  line-height: 1.5;
+}
+
+.human-input-info-value em {
+  font-style: normal;
+  font-weight: 600;
+  color: #a78bfa;
+}
+
+/* ── Field group ── */
+.human-input-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Char counter ── */
+.human-input-char-hint {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  text-align: right;
+  opacity: 0.7;
+  transition: color 0.2s;
+}
+
+/* ── Tip bar ── */
+.human-input-tip {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border-left: 2px solid rgba(99,102,241,0.3);
+  border-radius: 0 4px 4px 0;
+  line-height: 1.5;
+}
+
+/* ── Inline field error ── */
+.human-input-field-error {
+  font-size: 12px;
+  color: #ef4444;
+  font-weight: 600;
+  margin-top: 4px;
+  animation: humanPanelSlideIn 0.2s ease both;
+}
+
+
+.human-input-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+
+.human-input-context-label { font-weight: 600; }
+.human-input-context-offer {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-surface-elevated);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+.human-input-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: var(--font-base, 'Inter', sans-serif);
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 70px;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.human-input-textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.human-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.human-input-offer-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.human-input-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.human-input-offer {
+  padding: 10px 12px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 15px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.human-input-offer:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.human-input-offer.input-error-flash {
+  border-color: #ef4444;
+  animation: inputErrorShake 0.35s ease;
+}
+
+@keyframes inputErrorShake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-5px); }
+  60%       { transform: translateX(5px); }
+}
+
+.human-input-constraint {
+  font-size: 11px;
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.human-input-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.human-input-btn {
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.human-input-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.human-input-btn-accept {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  color: #10b981;
+}
+
+.human-input-btn-accept:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #10b981;
+}
+
+.human-input-btn-reject {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1.5px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+.human-input-btn-reject:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+}
+
+.human-input-submitted {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.human-input-submitted::after {
+  content: 'Submitting…';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  background: rgba(0,0,0,0.25);
+  border-radius: var(--radius-lg);
+}
+
+/* ==========================================================================
+   Deadlock Warning Alert Banner
+   ========================================================================== */
+
+.deadlock-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 8px 0;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.08) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.45);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 13px;
+  animation: deadlockAlertIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes deadlockAlertIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.deadlock-alert-icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.deadlock-alert strong {
+  display: block;
+  font-weight: 700;
+  color: #f59e0b;
+  margin-bottom: 4px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.deadlock-alert-reason {
+  color: var(--color-text-faint);
+  font-size: 12px;
+  line-height: 1.5;
+}

@@ -113,6 +113,7 @@ const ApiService = (function () {
       agents,
       maximum_rounds: options.maxRounds || 10,
       mode: options.mode || 'simulation',
+      practice_mode: options.practiceMode || false,
     });
   }
 
@@ -202,6 +203,20 @@ const ApiService = (function () {
 
   function getWebSocket() { return activeWs; }
 
+  /**
+   * Send a human participant's turn over the active WebSocket.
+   * Used by Practice Mode human input panel.
+   * @param {object} turnData — { message, offer, decision, reason }
+   */
+  function sendHumanTurn(turnData) {
+    if (!activeWs || activeWs.readyState !== 1) {
+      console.warn('[ApiService] sendHumanTurn: No active WebSocket connection.');
+      return;
+    }
+    activeWs.send(JSON.stringify({ event: 'human_input', data: turnData }));
+    console.log('[ApiService] Human turn sent:', turnData);
+  }
+
   function setBackend(target) {
     if (target === 'local') {
       localStorage.setItem('negosim_backend', 'local');
@@ -231,6 +246,7 @@ const ApiService = (function () {
     connectWebSocket,
     disconnectWebSocket,
     getWebSocket,
+    sendHumanTurn,
     setBackend,
     getBackendInfo,
   };

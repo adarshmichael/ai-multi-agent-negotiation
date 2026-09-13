@@ -47,6 +47,9 @@ function getDecisionProvider(mode) {
 
 const wsClients = new Map();
 
+// Per-session human turn resume callbacks (Practice Mode)
+const humanTurnCallbacks = new Map();
+
 function registerClient(negotiationId, ws) {
   if (!wsClients.has(negotiationId)) wsClients.set(negotiationId, new Set());
   wsClients.get(negotiationId).add(ws);
@@ -183,6 +186,7 @@ async function executeTurn(session) {
   const currentAgentIndex = session.currentAgentIndex || 0;
   const currentAgent      = agents[currentAgentIndex];
   const opponentIndex     = (currentAgentIndex + 1) % agents.length;
+  const opponent          = agents[opponentIndex];
   const round             = session.currentRound + 1;
 
   // Update session with new round and current agent
@@ -208,90 +212,130 @@ async function executeTurn(session) {
     agentName:      currentAgent.name,
     role:           currentAgent.role,
     round,
-    thinkingPhrase: getThinkingPhrase(currentAgent.personality),
+    thinkingPhrase: currentAgent.type === 'human'
+      ? 'Waiting for your input...'
+      : getThinkingPhrase(currentAgent.personality),
   });
 
-  // ---- Thinking delay (makes the UI feel alive) ----
-  await sleep(config.thinkDelayMs);
+  // ========================================================
+  // DECISION: human vs AI path
+  // ========================================================
 
-  // Check if session was paused or stopped during thinking delay
-  if (session._paused || session.status !== STATUS.IN_PROGRESS) {
-    return session.status !== STATUS.IN_PROGRESS ? 'terminate' : 'continue';
-  }
-
-  // ---- Deterministic Offer Evaluation (Module 1) ----
-  const opponent = agents[opponentIndex];
-  const opponentOffer = opponent ? (session.offers[opponent.id] ?? null) : null;
+  let decision;
   let evaluation = null;
 
-  if (opponentOffer !== null && opponentOffer !== undefined) {
+  if (currentAgent.type === 'human') {
+    // ---- PRACTICE MODE: pause engine and await human WS input ----
+    const opponentOffer = opponent ? (session.offers[opponent.id] ?? null) : null;
+
+    broadcast(negotiationId, 'human_turn_required', {
+      agentId:           currentAgent.id,
+      agentName:         currentAgent.name,
+      role:              currentAgent.role,
+      round,
+      maxRounds:         session.maxRounds,
+      opponentOffer,
+      numericConstraint: currentAgent.numericConstraint || null,
+    });
+    logger.negotiation(`${negotiationId}: Waiting for human input (Round ${round}, ${currentAgent.name})...`);
+
+    // Block until submitHumanTurn() resolves this Promise
+    const humanDecision = await new Promise((resolve) => {
+      humanTurnCallbacks.set(negotiationId, resolve);
+    });
+
+    decision = {
+      message:    humanDecision.message || '(No message provided)',
+      offer:      humanDecision.offer !== undefined ? humanDecision.offer : null,
+      decision:   humanDecision.decision || (humanDecision.offer != null ? 'counter_offer' : 'reject'),
+      reason:     humanDecision.reason || humanDecision.message || null,
+      parameters: { source: 'human' },
+    };
+
+    // Validate against hard constraints (same as AI)
+    try { decision = currentAgent.validateResponse(decision); } catch (_) {}
+
+  } else {
+    // ---- AI AGENT PATH ----
+
+    // Thinking delay (makes UI feel alive)
+    await sleep(config.thinkDelayMs);
+
+    // Check if session was paused or stopped during thinking delay
+    if (session._paused || session.status !== STATUS.IN_PROGRESS) {
+      return session.status !== STATUS.IN_PROGRESS ? 'terminate' : 'continue';
+    }
+
+    // Deterministic Offer Evaluation (Module 1)
+    const opponentOffer = opponent ? (session.offers[opponent.id] ?? null) : null;
+    if (opponentOffer !== null && opponentOffer !== undefined) {
+      try {
+        evaluation = evaluateOffer({
+          agent: currentAgent,
+          opponentOffer,
+          session,
+          currentRound: round,
+          maxRounds: session.maxRounds,
+        });
+        session._latestEvaluation = evaluation;
+      } catch (evalErr) {
+        logger.warn('Engine', `Offer evaluation error for ${currentAgent.name}: ${evalErr.message}`);
+      }
+    }
+
+    // Generate decision via AgentDecisionProvider
+    const decisionProvider = getDecisionProvider(session.mode);
     try {
-      evaluation = evaluateOffer({
-        agent: currentAgent,
-        opponentOffer,
-        session,
-        currentRound: round,
-        maxRounds: session.maxRounds,
+      decision = await decisionProvider.decide(currentAgent, session);
+    } catch (err) {
+      logger.error('Engine', `DecisionProvider error for ${currentAgent.name}: ${err.message}`);
+      updateSession(negotiationId, {
+        status: STATUS.FAILED,
+        result: RESULT.ERROR,
+        resultReason: `LLM reasoning failed for ${currentAgent.name}: ${err.message}`,
       });
-      session._latestEvaluation = evaluation;
-    } catch (evalErr) {
-      logger.warn('Engine', `Offer evaluation error for ${currentAgent.name}: ${evalErr.message}`);
+      broadcast(negotiationId, 'negotiation_failed', {
+        reason: `AI reasoning service temporarily unavailable: ${err.message}`,
+        agentId: currentAgent.id,
+        agentName: currentAgent.name,
+        round,
+      });
+      return 'terminate';
     }
   }
 
-  // ---- Generate decision via AgentDecisionProvider ----
-  const decisionProvider = getDecisionProvider(session.mode);
-  let decision;
-  try {
-    decision = await decisionProvider.decide(currentAgent, session);
-  } catch (err) {
-    logger.error('Engine', `DecisionProvider error for ${currentAgent.name}: ${err.message}`);
-    updateSession(negotiationId, {
-      status: STATUS.FAILED,
-      result: RESULT.ERROR,
-      resultReason: `LLM reasoning failed for ${currentAgent.name}: ${err.message}`,
-    });
-    broadcast(negotiationId, 'negotiation_failed', {
-      reason: `AI reasoning service temporarily unavailable: ${err.message}`,
-      agentId: currentAgent.id,
-      agentName: currentAgent.name,
-      round,
-    });
-    return 'terminate';
-  }
+  // ========================================================
+  // POST-DECISION: track, broadcast, check termination
+  // ========================================================
 
-  // ---- Track concession and update offers BEFORE termination checks ----
+  // Track concession and update offers
   let concessionSnapshot = null;
   if (decision.offer !== null && decision.offer !== undefined) {
     trackConcession(session, currentAgent.id, decision.offer);
 
-    // Track initial offer
     if (!session.initialOffers[currentAgent.id]) {
       session.initialOffers[currentAgent.id] = decision.offer;
       currentAgent.initialOffer = decision.offer;
     }
 
-    // Update current offer in both session and agent instance
-    session.offers[currentAgent.id]   = decision.offer;
-    currentAgent.currentOffer         = decision.offer;
+    session.offers[currentAgent.id] = decision.offer;
+    currentAgent.currentOffer       = decision.offer;
 
     // Module 4: compute full concession snapshot (AFTER all updates)
     try {
       concessionSnapshot = getConcessionSnapshot(session, currentAgent.id, currentAgent);
-      // Merge validation flags from Module 3 counterResult (if present)
       if (concessionSnapshot && decision.counterResult?.validation_flags) {
         concessionSnapshot.validation_flags = decision.counterResult.validation_flags;
       } else if (concessionSnapshot) {
         concessionSnapshot.validation_flags = [];
       }
-      // Persist on session so LLMDecisionProvider can read it next turn
       session._latestConcessionSnapshot = concessionSnapshot;
     } catch (snapErr) {
       logger.warn('Engine', `Concession snapshot error: ${snapErr.message}`);
     }
   }
 
-  // ---- Create and store message ----
+  // Create and store message
   const message = createMessage({
     agentId:   currentAgent.id,
     agentName: currentAgent.name,
@@ -305,7 +349,7 @@ async function executeTurn(session) {
 
   session.messages.push(message);
 
-  // ---- Append to structured negotiation history ----
+  // Append to structured negotiation history
   const action = decision.action || decisionToAction(decision.decision);
   appendNegotiationHistory(session, {
     round,
@@ -317,7 +361,7 @@ async function executeTurn(session) {
     timestamp: message.timestamp,
   });
 
-  // ---- Broadcast: agent message (the core conversation event) ----
+  // Broadcast: agent message (the core conversation event)
   broadcast(negotiationId, 'agent_message', {
     message:         message.message,
     offer:           message.offer,
@@ -335,7 +379,7 @@ async function executeTurn(session) {
     concessionSnapshot: concessionSnapshot || null,       // Module 4
   });
 
-  // ---- Broadcast: offer updated ----
+  // Broadcast: offer updated
   if (message.offer !== null && message.offer !== undefined) {
     broadcast(negotiationId, 'offer_updated', {
       agentId:   currentAgent.id,
@@ -379,14 +423,21 @@ async function executeTurn(session) {
     return 'terminate';
   }
 
-  // 4. Deadlock
+  // 4. Deadlock — broadcast warning if approaching, terminate if confirmed
   const deadlockCheck = checkDeadlock(session);
+  if (deadlockCheck.warning) {
+    broadcast(negotiationId, 'deadlock_warning', {
+      round,
+      reason: deadlockCheck.reason,
+    });
+    logger.negotiation(`${negotiationId}: Deadlock warning emitted at round ${round}.`);
+  }
   if (deadlockCheck.deadlocked) {
     await finalize(session, RESULT.REJECTION, null, deadlockCheck.reason, agents, negotiationId);
     return 'terminate';
   }
 
-  // ---- Advance to next agent ----
+  // Advance to next agent
   updateSession(negotiationId, { currentAgentIndex: opponentIndex });
 
   return 'continue';
@@ -513,6 +564,24 @@ function getThinkingPhrase(personality) {
   return options[Math.floor(Math.random() * options.length)];
 }
 
+/**
+ * Submit a human participant's turn during Practice Mode.
+ * Called from server.js WebSocket message handler.
+ *
+ * @param {string} negotiationId
+ * @param {object} turnData — { message, offer, decision }
+ */
+function submitHumanTurn(negotiationId, turnData) {
+  const callback = humanTurnCallbacks.get(negotiationId);
+  if (callback) {
+    humanTurnCallbacks.delete(negotiationId);
+    callback(turnData);
+    logger.negotiation(`${negotiationId}: Human turn submitted — offer: ${turnData.offer}`);
+  } else {
+    logger.warn('Engine', `${negotiationId}: submitHumanTurn called but no pending callback found.`);
+  }
+}
+
 module.exports = {
   run,
   pauseNegotiation,
@@ -520,4 +589,5 @@ module.exports = {
   registerClient,
   unregisterClient,
   broadcast,
+  submitHumanTurn,
 };

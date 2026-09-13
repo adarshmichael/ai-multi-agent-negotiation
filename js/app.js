@@ -849,15 +849,19 @@ async function handleStartNegotiation() {
     const maxRoundsEl = document.getElementById('input-max-rounds');
     const maxRounds   = maxRoundsEl ? parseInt(maxRoundsEl.value, 10) || 10 : 10;
 
-    const aiProviderEl = document.getElementById('input-ai-provider');
-    const mode = aiProviderEl ? aiProviderEl.value : 'simulation';
+    const aiProviderEl   = document.getElementById('input-ai-provider');
+    const mode           = aiProviderEl ? aiProviderEl.value : 'simulation';
+
+    // Read Practice Mode toggle (human-vs-ai or ai-vs-ai)
+    const practiceModeEl = document.getElementById('input-practice-mode');
+    const isPracticeMode = practiceModeEl ? practiceModeEl.value === 'human-vs-ai' : false;
 
     // 1. Create negotiation session (sends goals + constraints per agent)
-    AppState.setNegotiationState({ negotiationStatus: 'starting' });
+    AppState.setNegotiationState({ negotiationStatus: 'starting', isPracticeMode });
     const session = await window.ApiService.createNegotiation(
       state.selectedScenarioId,
       state.personalities,
-      { maxRounds, mode }
+      { maxRounds, mode, practiceMode: isPracticeMode }
     );
 
     const negotiationId = session.id;
@@ -881,7 +885,8 @@ async function handleStartNegotiation() {
     const modeBadgeEl    = document.getElementById('neg-mode-badge');
     if (scenarioNameEl) scenarioNameEl.textContent = scenario.name;
     if (scenarioDescEl) scenarioDescEl.textContent = scenario.description || '';
-    if (modeBadgeEl)    modeBadgeEl.textContent     = (mode === 'gemini') ? 'GEMINI AI' : 'MOCK';
+    if (modeBadgeEl)    modeBadgeEl.textContent     = isPracticeMode ? 'PRACTICE' : (mode === 'gemini') ? 'GEMINI AI' : 'MOCK';
+    if (modeBadgeEl && isPracticeMode) modeBadgeEl.classList.add('practice-mode-badge');
     initAgentPanels(agents);
     updateOrchStatusBar(0, session.maxRounds || maxRounds, '—', 'starting');
 
@@ -1610,8 +1615,6 @@ function appendChatBubble(data, agentIndex) {
       ${escapeHtml(data.message || '')}
       ${offerHtml}
       <div class="neg-chat-msg-action ${actionCls}">${actionLabel}</div>
-      ${reasonHtml}
-      ${evalHtml}
     </div>
   `;
   timeline.appendChild(div);
@@ -2009,6 +2012,8 @@ function handleNegotiationEvent(eventName, data, agents) {
 
     case 'negotiation_completed': {
       removeChatThinking();
+      // Hide human input panel
+      if (window.HumanInput) HumanInput.hide('human-input-mount');
       AppState.setNegotiationState({
         negotiationStatus: 'completed',
         negotiationResult: data.result,
@@ -2032,6 +2037,8 @@ function handleNegotiationEvent(eventName, data, agents) {
 
     case 'negotiation_failed': {
       removeChatThinking();
+      // Hide human input panel
+      if (window.HumanInput) HumanInput.hide('human-input-mount');
       AppState.setNegotiationState({ negotiationStatus: 'failed' });
       updateOrchStatusBar(state.currentRound, state.maxRounds, '—', 'failed');
       [0, 1].forEach(i => { setAgentCardThinking(i, false); updateAgentBadge(i, 'idle'); });
@@ -2074,6 +2081,46 @@ function handleNegotiationEvent(eventName, data, agents) {
     case 'negotiation_reset': {
       clearEquilibriumPanels();
       _lastRoundInChat = 0;
+      break;
+    }
+
+    case 'human_turn_required': {
+      // Practice Mode: it's the human's turn — show input panel
+      removeChatThinking();
+      addOrchLogEntry('active', `YOUR TURN — Round ${data.round}. Submit your offer or decision.`);
+      updateOrchStatusBar(data.round, data.maxRounds || state.maxRounds, 'YOU (Human)', 'in_progress');
+      if (window.HumanInput) {
+        const currentScenario = AppState.getSelectedScenario();
+        HumanInput.show('human-input-mount', {
+          agentName:         data.agentName,
+          opponentName:      agents.find(a => a.id !== data.agentId)?.name || 'AI Agent',
+          opponentOffer:     data.opponentOffer,
+          round:             data.round,
+          maxRounds:         data.maxRounds || state.maxRounds,
+          numericConstraint: data.numericConstraint,
+          scenarioId:        currentScenario?.id || 'default',
+        });
+      }
+      break;
+    }
+
+    case 'deadlock_warning': {
+      // Deadlock approaching — show in-chat warning banner
+      const dlTimeline = document.getElementById('neg-chat-timeline');
+      if (dlTimeline) {
+        const dlBanner = document.createElement('div');
+        dlBanner.className = 'deadlock-alert';
+        dlBanner.innerHTML = `
+          <span class="deadlock-alert-icon">⚠️</span>
+          <div>
+            <strong>Deadlock Warning</strong>
+            <div class="deadlock-alert-reason">${escapeHtml(data.reason || 'Positions are not moving. Make a concession to avoid deadlock.')}</div>
+          </div>
+        `;
+        dlTimeline.appendChild(dlBanner);
+        dlTimeline.scrollTop = dlTimeline.scrollHeight;
+      }
+      addOrchLogEntry('error', `Deadlock warning at round ${data.round}: ${data.reason || 'Stagnation detected.'}`);
       break;
     }
   }

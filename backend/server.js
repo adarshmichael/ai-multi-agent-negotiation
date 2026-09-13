@@ -107,12 +107,16 @@ wss.on('connection', (ws, request, negotiationId) => {
     }
   }
 
-  // Handle client messages (for future human-in-the-loop)
+  // Handle client messages — Practice Mode human turn submissions
   ws.on('message', (data) => {
     try {
       const msg = JSON.parse(data.toString());
       logger.info('WebSocket', `Received from client: ${JSON.stringify(msg).slice(0, 100)}`);
-      // Future: handle human turn submissions here
+
+      // Practice Mode: human participant submits their turn
+      if (msg.event === 'human_input' && msg.data) {
+        engine.submitHumanTurn(negotiationId, msg.data);
+      }
     } catch (err) {
       logger.warn('WebSocket', `Invalid message from client: ${err.message}`);
     }

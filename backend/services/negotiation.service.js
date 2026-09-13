@@ -206,17 +206,18 @@ function getScenarioById(id) {
  *   scenario_id      string
  *   agents           [{ id, personality, goals?, constraints?: { selected?, numericMax?, numericMin? } }]
  *   maximum_rounds   number
- *   mode             string
+ *   mode             string  ('simulation' | 'gemini')
+ *   practice_mode    boolean  If true, first agent is marked type='human' for Practice Mode.
  * @returns {object} serialized session
  */
-function createSession({ scenario_id, agents: agentPersonalities, maximum_rounds, mode }) {
+function createSession({ scenario_id, agents: agentPersonalities, maximum_rounds, mode, practice_mode }) {
   const scenarioDef = getScenarioById(scenario_id);
   if (!scenarioDef) {
     throw new Error(`Scenario not found: ${scenario_id}`);
   }
 
   // Build agent configs by merging scenario defaults with user selections
-  const agentConfigs = scenarioDef.agents.map(agentDef => {
+  const agentConfigs = scenarioDef.agents.map((agentDef, index) => {
     const userConfig = agentPersonalities?.find(a => a.id === agentDef.id);
 
     // Goals: use user-supplied array if non-empty, else scenario default
@@ -241,6 +242,8 @@ function createSession({ scenario_id, agents: agentPersonalities, maximum_rounds
     const minAcceptableValue = userConfig?.minAcceptableValue || agentDef.minAcceptableValue || (numericConstraint?.type === 'min' ? numericConstraint.value : null);
     const maxAcceptableValue = userConfig?.maxAcceptableValue || agentDef.maxAcceptableValue || (numericConstraint?.type === 'max' ? numericConstraint.value : null);
 
+    const agentTypeOverride = (practice_mode && index === 0) ? 'human' : agentDef.agentType;
+
     return createAgentConfig({
       ...agentDef,
       goal:             goals.join('; '),
@@ -251,6 +254,7 @@ function createSession({ scenario_id, agents: agentPersonalities, maximum_rounds
       minAcceptableValue,
       maxAcceptableValue,
       personality:      userConfig?.personality || 'collaborative',
+      agentType:        agentTypeOverride,
     });
   });
 

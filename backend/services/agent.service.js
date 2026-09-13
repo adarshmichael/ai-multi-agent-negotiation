@@ -3,10 +3,11 @@
  * Initializes agent instances from session configs using the correct class.
  */
 
-const BuyerAgent = require('../agents/BuyerAgent');
+const BuyerAgent  = require('../agents/BuyerAgent');
 const SellerAgent = require('../agents/SellerAgent');
 const CustomAgent = require('../agents/CustomAgent');
-const logger = require('../utils/logger');
+const HumanAgent  = require('../agents/HumanAgent');
+const logger      = require('../utils/logger');
 
 /**
  * Create an agent instance from a config object.
@@ -23,6 +24,9 @@ function createAgentInstance(agentConfig, scenario) {
       break;
     case 'seller':
       agent = new SellerAgent(agentConfig, scenario);
+      break;
+    case 'human':
+      agent = new HumanAgent(agentConfig, scenario);
       break;
     default:
       agent = new CustomAgent(agentConfig, scenario);

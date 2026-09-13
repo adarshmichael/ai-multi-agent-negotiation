@@ -53,7 +53,7 @@ function createNegotiation(req, res, next) {
       }
     }
 
-    const session = negotiationService.createSession({ scenario_id, agents, maximum_rounds, mode });
+    const session = negotiationService.createSession({ scenario_id, agents, maximum_rounds, mode, practice_mode });
     logger.negotiation(`Created: ${session.id}`);
     res.status(201).json(session);
   } catch (err) {

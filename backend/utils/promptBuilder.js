@@ -1,4 +1,4 @@
-﻿/**
+/**
  * utils/promptBuilder.js
  * Dynamically constructs LLM prompts from agent config + negotiation history.
  * Private reasoning is kept server-side; only safe JSON is returned to the client.
@@ -198,11 +198,13 @@ RULES:
 6. If DETERMINISTIC DECISION given above, your decision MUST match it
 7. If COUNTEROFFER given above, your offer MUST match that exact number
 8. Never repeat the same opening phrase as a previous round
-${roundsRemaining <= 2 ? '9. WARNING: Few rounds left - make your best offer or accept now.' : ''}
+9. Keep your message short, natural, and professional (1-2 sentences maximum).
+10. Do NOT include your internal reasoning, evaluation details, or constraint logic in the "message".
+${roundsRemaining <= 2 ? '11. WARNING: Few rounds left - make your best offer or accept now.' : ''}
 
 Respond with ONLY this JSON (no markdown, no extra text):
 {
-  "message": "Your negotiation message - natural, professional, varied from prior rounds",
+  "message": "A short, natural, professional response directed at the opponent (1-2 sentences max). Do NOT explain your reasoning here.",
   "offer": <number or null>,
   "decision": "counter_offer" | "accept" | "reject",
   "reasoning": "Brief private reasoning - not shown to opponent"
