@@ -2691,23 +2691,26 @@ async function init() {
     });
   }
 
-  // Restart button
-  document.getElementById('btn-negotiation-restart').addEventListener('click', () => {
-    window.ApiService.disconnectWebSocket();
-    AppState.reset();
-    AppState.resetNegotiation();
-    clearEquilibriumPanels();
-    const chat = document.getElementById('neg-chat');
-    if (chat) chat.innerHTML = '';
-    const offersEl = document.getElementById('neg-offers');
-    if (offersEl) offersEl.innerHTML = '';
-    const progressFill = document.getElementById('neg-progress-fill');
-    if (progressFill) progressFill.style.width = '0%';
-    const statusBar = document.getElementById('neg-status-bar');
-    if (statusBar) statusBar.style.display = 'none';
-    const completePanel = document.getElementById('neg-complete-panel');
-    if (completePanel) completePanel.style.display = 'none';
-    window.history.replaceState({}, document.title, window.location.pathname);
+  // Restart button — uses event delegation because the button is now rendered
+  // dynamically inside showResultCard() and does not exist in the static HTML.
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.closest('#btn-negotiation-restart')) {
+      window.ApiService.disconnectWebSocket();
+      AppState.reset();
+      AppState.resetNegotiation();
+      clearEquilibriumPanels();
+      const chat = document.getElementById('neg-chat');
+      if (chat) chat.innerHTML = '';
+      const offersEl = document.getElementById('neg-offers');
+      if (offersEl) offersEl.innerHTML = '';
+      const progressFill = document.getElementById('neg-progress-fill');
+      if (progressFill) progressFill.style.width = '0%';
+      const statusBar = document.getElementById('neg-status-bar');
+      if (statusBar) statusBar.style.display = 'none';
+      const completePanel = document.getElementById('neg-complete-panel');
+      if (completePanel) completePanel.style.display = 'none';
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   });
 
   if (!isSpecialBoot) {
