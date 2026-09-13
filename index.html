@@ -454,20 +454,18 @@
               </div>
             </div>
 
+            <!-- Round Metrics Panel (M3.4) — populated by updateRoundMetrics() -->
+            <div class="neg-reasoning-panel" id="neg-metrics-panel">
+              <div class="neg-metrics-empty">📊 Metrics will appear after the first offer.</div>
+            </div>
+
           </div>
 
         </div><!-- end .neg-arena-v3 -->
 
         <!-- ═══ TERMINAL RESULT CARD (hidden until complete) ═══ -->
-        <div class="neg-result-card" id="neg-result-card" style="display:none;">
-          <div class="neg-result-icon" id="neg-result-icon">✓</div>
-          <div class="neg-result-title" id="neg-result-title">Agreement Reached</div>
-          <div class="neg-result-subtitle" id="neg-result-subtitle"></div>
-          <div class="neg-result-stats" id="neg-result-stats"></div>
-          <button class="btn btn-primary" id="btn-negotiation-restart" style="margin-top:24px;">
-            ↺ Start a New Negotiation
-          </button>
-        </div>
+        <!-- Content is fully dynamically rendered by showResultCard() -->
+        <div class="neg-result-card" id="neg-result-card" style="display:none;"></div>
 
       </div><!-- end #neg-live-panel -->
 

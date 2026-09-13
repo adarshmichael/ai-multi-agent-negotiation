@@ -1856,6 +1856,138 @@ function updateReasoningPanel(data) {
   }
 }
 
+/**
+ * Compute stance label from live session data.
+ * @param {object} data — agent_message event data
+ * @param {number} agentIndex — 0 or 1
+ * @returns {{ label: string, cls: string, reason: string }}
+ */
+function computeStance(data, agentIndex) {
+  const decision   = (data.decision || '').toLowerCase();
+  if (decision === 'accept') return { label: 'Accepted', cls: 'stance-accepted', reason: 'Agent accepted the offer.' };
+  if (decision === 'reject') return { label: 'Rejected', cls: 'stance-rejected', reason: 'Agent rejected and walked away.' };
+
+  const snap       = data.concessionSnapshot || {};
+  const eval_      = data.evaluation         || {};
+  const flexibility = snap.flexibility_consumed_pct  || 0;
+  const thisCon    = snap.concession_this_round       || 0;
+  const distTarget = eval_.distance_from_target;
+  const evalResult = (eval_.evaluation || '').toUpperCase();
+
+  // Near agreement — gap almost closed
+  if (evalResult === 'FAVORABLE' && distTarget != null && Math.abs(distTarget) < 50000) {
+    return { label: 'Near Agreement', cls: 'stance-near-agreement', reason: 'Offer is very close to target — agreement is likely.' };
+  }
+
+  // Flexibility nearly exhausted
+  if (flexibility >= 80) {
+    return { label: 'Near Limit', cls: 'stance-firm', reason: 'Concession flexibility almost exhausted — very little room to move.' };
+  }
+
+  // No movement this round → firm
+  if (thisCon === 0 && (snap.previous_offer !== null && snap.previous_offer !== undefined)) {
+    return { label: 'Firm', cls: 'stance-firm', reason: 'No concession made this round — holding position.' };
+  }
+
+  // Large concession → flexible
+  const prevOffer = snap.previous_offer;
+  if (prevOffer && thisCon > 0 && prevOffer !== 0 && (thisCon / Math.abs(prevOffer)) > 0.04) {
+    return { label: 'Flexible', cls: 'stance-flexible', reason: 'Significant concession made — showing willingness to move.' };
+  }
+
+  // Unacceptable but still offering → aggressive
+  if (evalResult === 'UNACCEPTABLE' && decision === 'counter_offer') {
+    return { label: 'Aggressive', cls: 'stance-aggressive', reason: 'Opponent offer is unacceptable — pushing back firmly.' };
+  }
+
+  // Partially acceptable + making small concession → cooperative
+  if (evalResult === 'PARTIALLY_ACCEPTABLE' && thisCon > 0) {
+    return { label: 'Cooperative', cls: 'stance-cooperative', reason: 'Making progress — incrementally closing the gap.' };
+  }
+
+  // Default from personality
+  const personalityStance = {
+    aggressive:    { label: 'Aggressive',   cls: 'stance-aggressive',   reason: 'Personality: pushing for maximum advantage.' },
+    collaborative: { label: 'Cooperative',  cls: 'stance-cooperative',  reason: 'Personality: seeking mutual benefit.' },
+    'risk-averse': { label: 'Cautious',     cls: 'stance-cautious',     reason: 'Personality: making measured, careful moves.' },
+    competitive:   { label: 'Competitive',  cls: 'stance-aggressive',   reason: 'Personality: maximizing every exchange.' },
+    flexible:      { label: 'Flexible',     cls: 'stance-flexible',     reason: 'Personality: adapting to opponent moves.' },
+    analytical:    { label: 'Analytical',   cls: 'stance-cooperative',  reason: 'Personality: driven by data and logic.' },
+    professional:  { label: 'Professional', cls: 'stance-cooperative',  reason: 'Personality: structured and policy-driven.' },
+  };
+  const personality = (data.personality || '').toLowerCase();
+  return personalityStance[personality] || { label: 'Negotiating', cls: 'stance-cooperative', reason: 'Active negotiation in progress.' };
+}
+
+/**
+ * Update the Round Metrics panel.
+ */
+function updateRoundMetrics(data, agents) {
+  const state = AppState.getState();
+  const panel = document.getElementById('neg-metrics-panel');
+  if (!panel) return;
+
+  const round    = data.round    || state.currentRound || 0;
+  const maxRound = data.maxRounds || state.maxRounds || 10;
+  const agentName = data.agentName || '—';
+  const offer    = data.offer;
+  const decision = (data.decision || 'offer').replace('_', ' ').toUpperCase();
+  const eval_    = data.evaluation || {};
+  const snap     = data.concessionSnapshot || {};
+
+  const offerFmt     = offer != null ? formatINR(offer) : '—';
+  const distFmt      = eval_.distance_from_target != null ? formatINR(Math.abs(eval_.distance_from_target)) : '—';
+  const evalLabel    = { FAVORABLE: '✅ Favorable', PARTIALLY_ACCEPTABLE: '⚠️ Partial', UNACCEPTABLE: '❌ Unacceptable' }[eval_.evaluation] || '—';
+  const totalCon     = snap.total_concession != null ? formatINR(snap.total_concession) : '—';
+  const conPct       = snap.concession_percentage != null ? `${snap.concession_percentage.toFixed(1)}%` : '—';
+  const consuPct     = snap.flexibility_consumed_pct != null ? Math.round(snap.flexibility_consumed_pct) : null;
+  const deadlockRisk = snap.flexibility_consumed_pct >= 80 ? 'High' : snap.flexibility_consumed_pct >= 50 ? 'Medium' : 'Low';
+  const dlCls        = snap.flexibility_consumed_pct >= 80 ? 'risk-high' : snap.flexibility_consumed_pct >= 50 ? 'risk-medium' : 'risk-low';
+  const progressPct  = maxRound > 0 ? Math.round((round / maxRound) * 100) : 0;
+
+  panel.innerHTML = `
+    <div class="neg-metrics-header">📊 Round Metrics</div>
+    <div class="neg-metrics-grid">
+      <div class="neg-metric-item">
+        <div class="neg-metric-label">ROUND</div>
+        <div class="neg-metric-val">${round} <span class="neg-metric-dim">/ ${maxRound}</span></div>
+      </div>
+      <div class="neg-metric-item">
+        <div class="neg-metric-label">CURRENT AGENT</div>
+        <div class="neg-metric-val" style="font-size:12px;">${escapeHtml(agentName)}</div>
+      </div>
+      <div class="neg-metric-item">
+        <div class="neg-metric-label">DECISION</div>
+        <div class="neg-metric-val" style="font-size:12px;">${decision}</div>
+      </div>
+      <div class="neg-metric-item">
+        <div class="neg-metric-label">CURRENT OFFER</div>
+        <div class="neg-metric-val">${offerFmt}</div>
+      </div>
+      <div class="neg-metric-item">
+        <div class="neg-metric-label">OFFER EVALUATION</div>
+        <div class="neg-metric-val" style="font-size:11px;">${evalLabel}</div>
+      </div>
+      <div class="neg-metric-item">
+        <div class="neg-metric-label">DISTANCE FROM TARGET</div>
+        <div class="neg-metric-val">${distFmt}</div>
+      </div>
+      <div class="neg-metric-item">
+        <div class="neg-metric-label">TOTAL CONCESSION</div>
+        <div class="neg-metric-val">${totalCon} <span class="neg-metric-dim">${conPct}</span></div>
+      </div>
+      <div class="neg-metric-item">
+        <div class="neg-metric-label">DEADLOCK RISK</div>
+        <div class="neg-metric-val neg-metric-risk ${dlCls}">${deadlockRisk}</div>
+      </div>
+    </div>
+    <div class="neg-metrics-progress">
+      <div class="neg-metrics-progress-label">Round Progress</div>
+      <div class="neg-metrics-progress-bar"><div class="neg-metrics-progress-fill" style="width:${progressPct}%"></div></div>
+      <div class="neg-metrics-progress-val">${progressPct}%</div>
+    </div>
+  `;
+}
 function handleNegotiationEvent(eventName, data, agents) {
   const state = AppState.getState();
 
@@ -1972,6 +2104,18 @@ function handleNegotiationEvent(eventName, data, agents) {
       setTimeout(() => updateOrchPipeline('pipe-pass-turn'), 800);
 
       updateReasoningPanel(data);
+
+      // Update stance badge on agent card
+      const stanceData = computeStance(data, idx);
+      const stanceBadgeEl = document.getElementById(`neg-${prefix}-stance`);
+      if (stanceBadgeEl) {
+        stanceBadgeEl.textContent = stanceData.label;
+        stanceBadgeEl.className = `agent-stance-badge ${stanceData.cls}`;
+        stanceBadgeEl.title = stanceData.reason;
+      }
+
+      // Update round metrics panel
+      updateRoundMetrics(data, agents);
 
       const stateDecision = document.getElementById('state-decision');
       if (stateDecision) stateDecision.textContent = data.decision ? data.decision.toUpperCase() : 'OFFER';
@@ -2127,42 +2271,45 @@ function handleNegotiationEvent(eventName, data, agents) {
 }
 
 /**
- * Show the terminal result card.
+ * Show the terminal result card — full M4 outcome screen.
+ * Fetches the /outcome report from backend for rich data.
  */
-function showResultCard(data) {
+async function showResultCard(data) {
   const card = document.getElementById('neg-result-card');
   if (!card) return;
 
-  const resultTitleEl    = document.getElementById('neg-result-title');
-  const resultSubtitleEl = document.getElementById('neg-result-subtitle');
-  const resultIconEl     = document.getElementById('neg-result-icon');
-  const resultStatsEl    = document.getElementById('neg-result-stats');
-
-  // Clear previous classes
-  card.className = 'neg-result-card';
-
   const resultConfig = {
-    agreement:  { cls: 'result-agreement', icon: '🤝', title: 'Agreement Reached!' },
-    rejection:  { cls: 'result-rejection', icon: '❌', title: 'No Agreement' },
-    max_rounds: { cls: 'result-max_rounds', icon: '⏱', title: 'Max Rounds Reached' },
-    stopped:    { cls: 'result-stopped', icon: '⏹', title: 'Negotiation Stopped' },
-    failed:     { cls: 'result-rejection', icon: '⚠', title: 'Negotiation Failed' },
+    agreement:  { cls: 'result-agreement',  icon: '🤝', title: 'Agreement Reached!',     subtitle: data.reason || 'Both parties reached a deal.' },
+    rejection:  { cls: 'result-rejection',  icon: '❌', title: 'No Agreement Reached',   subtitle: data.reason || 'Parties could not reach an agreement.' },
+    max_rounds: { cls: 'result-max_rounds', icon: '⏱',  title: 'Max Rounds Reached',     subtitle: data.reason || 'Negotiation ended without agreement after all rounds.' },
+    stopped:    { cls: 'result-stopped',    icon: '⏹',  title: 'Negotiation Stopped',    subtitle: data.reason || 'Stopped by user.' },
+    failed:     { cls: 'result-rejection',  icon: '⚠',  title: 'Negotiation Failed',     subtitle: data.reason || 'An error occurred.' },
   };
 
-  const cfg = resultConfig[data.result] || { cls: 'result-stopped', icon: '●', title: 'Negotiation Ended' };
-  card.classList.add(cfg.cls);
-  if (resultIconEl)     resultIconEl.textContent = cfg.icon;
-  if (resultTitleEl)    resultTitleEl.textContent = cfg.title;
-  if (resultSubtitleEl) resultSubtitleEl.textContent = data.reason || '';
+  const cfg = resultConfig[data.result] || { cls: 'result-stopped', icon: '●', title: 'Negotiation Ended', subtitle: '' };
+  card.className = `neg-result-card ${cfg.cls}`;
 
-  if (resultStatsEl) {
-    const finalOfferStr = data.finalOffer
-      ? `₹${Number(data.finalOffer).toLocaleString('en-IN')}`
-      : '—';
-    resultStatsEl.innerHTML = `
+  const state = AppState.getState();
+  const negotiationId = data.negotiationId || state.negotiationId;
+  const finalOfferStr = data.finalOffer ? formatINR(data.finalOffer) : '—';
+  const rounds = data.rounds || state.currentRound;
+
+  // Render skeleton immediately so there's no blank gap
+  card.innerHTML = `
+    <div class="neg-result-header">
+      <div class="neg-result-icon-wrap">
+        <span class="neg-result-icon-lg">${cfg.icon}</span>
+      </div>
+      <div>
+        <div class="neg-result-title">${cfg.title}</div>
+        <div class="neg-result-subtitle">${escapeHtml(cfg.subtitle)}</div>
+      </div>
+    </div>
+
+    <div class="neg-result-quick-stats">
       <div class="neg-result-stat">
         <div class="neg-result-stat-label">TOTAL ROUNDS</div>
-        <div class="neg-result-stat-val">${data.rounds || AppState.getState().currentRound}</div>
+        <div class="neg-result-stat-val">${rounds}</div>
       </div>
       <div class="neg-result-stat">
         <div class="neg-result-stat-label">FINAL OFFER</div>
@@ -2170,13 +2317,164 @@ function showResultCard(data) {
       </div>
       <div class="neg-result-stat">
         <div class="neg-result-stat-label">OUTCOME</div>
-        <div class="neg-result-stat-val" style="font-size:14px;">${(data.result || '—').toUpperCase()}</div>
+        <div class="neg-result-stat-val" style="font-size:13px;">${(data.result || '—').toUpperCase().replace('_', ' ')}</div>
+      </div>
+    </div>
+
+    <div class="neg-result-body" id="neg-result-body">
+      <div class="neg-result-loading">⏳ Loading full outcome report…</div>
+    </div>
+
+    <div class="neg-result-actions">
+      <button class="btn btn-primary" id="btn-negotiation-restart" style="margin-top:8px;">
+        ↺ Start a New Negotiation
+      </button>
+      ${negotiationId ? `
+        <button class="btn neg-download-btn" id="btn-download-txt" title="Download TXT Transcript">
+          ⬇ Download TXT
+        </button>
+        <button class="btn neg-download-btn" id="btn-download-json" title="Download JSON Transcript">
+          ⬇ Download JSON
+        </button>
+      ` : ''}
+    </div>
+  `;
+
+  card.style.display = 'block';
+
+  // Wire download buttons
+  if (negotiationId) {
+    const btnTxt  = document.getElementById('btn-download-txt');
+    const btnJson = document.getElementById('btn-download-json');
+    if (btnTxt) btnTxt.addEventListener('click', () => {
+      const url = window.ApiService.getTranscriptUrl(negotiationId, 'txt');
+      const a = document.createElement('a'); a.href = url; a.download = ''; a.click();
+    });
+    if (btnJson) btnJson.addEventListener('click', () => {
+      const url = window.ApiService.getTranscriptUrl(negotiationId, 'json');
+      const a = document.createElement('a'); a.href = url; a.download = ''; a.click();
+    });
+  }
+
+  // Fetch full report and render rich outcome
+  if (negotiationId && window.ApiService.getReport) {
+    try {
+      const report = await window.ApiService.getReport(negotiationId);
+      _renderOutcomeReport(report, data.result);
+    } catch (err) {
+      const bodyEl = document.getElementById('neg-result-body');
+      if (bodyEl) bodyEl.innerHTML = `<div class="neg-result-loading" style="color:#ef4444;">Could not load outcome report. Session data may have expired.</div>`;
+    }
+  }
+}
+
+/**
+ * Render the rich outcome body once the report is fetched.
+ */
+function _renderOutcomeReport(report, result) {
+  const bodyEl = document.getElementById('neg-result-body');
+  if (!bodyEl || !report) return;
+
+  const meta = report.meta || {};
+  const satisfactionScores = report.satisfactionScores || [];
+  const concessionTimeline = report.concessionTimeline || [];
+  const concessionSummary  = report.concessionSummary  || [];
+  const insights           = report.insights           || [];
+
+  // ── Satisfaction Scores ──────────────────────────────────────────
+  let satisfactionHtml = '';
+  if (satisfactionScores.length > 0) {
+    satisfactionHtml = `
+      <div class="neg-outcome-section">
+        <div class="neg-outcome-section-title">🎯 Objective Satisfaction</div>
+        <div class="neg-satisfaction-grid">
+          ${satisfactionScores.map(s => {
+            const score = s.score;
+            const scoreDisplay = score != null ? `${score}%` : '—';
+            const barWidth = score != null ? score : 0;
+            const cls = score >= 70 ? 'sat-good' : score >= 40 ? 'sat-mid' : 'sat-low';
+            return `
+              <div class="neg-satisfaction-item">
+                <div class="neg-sat-agent">${escapeHtml(s.agentName)}</div>
+                <div class="neg-sat-role">${escapeHtml(s.role)}</div>
+                <div class="neg-sat-bar-wrap">
+                  <div class="neg-sat-bar"><div class="neg-sat-fill ${cls}" style="width:${barWidth}%"></div></div>
+                  <span class="neg-sat-pct">${scoreDisplay}</span>
+                </div>
+                <div class="neg-sat-detail">
+                  Target: ${s.targetFmt || '—'} | Final: ${s.finalOfferFmt || '—'}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
       </div>
     `;
   }
 
-  card.style.display = 'block';
+  // ── Concession Summary ───────────────────────────────────────────
+  let concessionSumHtml = '';
+  if (concessionSummary.length > 0) {
+    concessionSumHtml = `
+      <div class="neg-outcome-section">
+        <div class="neg-outcome-section-title">📉 Concession Summary</div>
+        <div class="neg-concession-summary-grid">
+          ${concessionSummary.map(cs => `
+            <div class="neg-con-sum-item">
+              <div class="neg-con-sum-agent">${escapeHtml(cs.agentName)}</div>
+              <div class="neg-con-sum-row"><span>Opening:</span><strong>${cs.initialFmt}</strong></div>
+              <div class="neg-con-sum-row"><span>Closing:</span><strong>${cs.finalFmt}</strong></div>
+              <div class="neg-con-sum-row"><span>Total moved:</span><strong>${cs.totalFmt} (${cs.concessionPct}%)</strong></div>
+              <div class="neg-con-sum-row"><span>Concessions:</span><strong>${cs.concessionCount}</strong></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // ── Concession Timeline ──────────────────────────────────────────
+  let timelineHtml = '';
+  if (concessionTimeline.length > 0) {
+    timelineHtml = `
+      <div class="neg-outcome-section">
+        <div class="neg-outcome-section-title">📋 Concession Timeline</div>
+        <div class="neg-timeline">
+          ${concessionTimeline.map(t => `
+            <div class="neg-timeline-round">
+              <div class="neg-timeline-round-label">Round ${t.round}</div>
+              <div class="neg-timeline-entries">
+                ${t.entries.map(e => `
+                  <div class="neg-timeline-entry">
+                    <span class="neg-tl-agent">${escapeHtml(e.agentName)}</span>
+                    <span class="neg-tl-action action-${(e.action || 'offer').toLowerCase()}">${(e.action || 'OFFER').toUpperCase()}</span>
+                    ${e.offer != null ? `<span class="neg-tl-offer">${e.offerFmt}</span>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // ── Insights ─────────────────────────────────────────────────────
+  let insightsHtml = '';
+  if (insights.length > 0) {
+    insightsHtml = `
+      <div class="neg-outcome-section">
+        <div class="neg-outcome-section-title">💡 Key Insights</div>
+        <ul class="neg-insights-list">
+          ${insights.map(i => `<li>${escapeHtml(i)}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  bodyEl.innerHTML = satisfactionHtml + concessionSumHtml + timelineHtml + insightsHtml;
 }
+
 
 
 /* ============================== Stop Negotiation ============================== */

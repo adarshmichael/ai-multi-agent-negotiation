@@ -149,6 +149,15 @@ const ApiService = (function () {
     return _get(`/negotiations/${negotiationId}/outcome`);
   }
 
+  async function getReport(negotiationId) {
+    return _get(`/negotiations/${negotiationId}/report`);
+  }
+
+  /** Returns the full URL for transcript download (used with window.open or <a href>) */
+  function getTranscriptUrl(negotiationId, format = 'txt') {
+    return `${BASE_URL}/negotiations/${negotiationId}/transcript?format=${format}`;
+  }
+
   async function checkHealth() {
     try {
       const response = await fetch(`${BASE_URL}/health`, { signal: AbortSignal.timeout(3000) });
@@ -242,6 +251,8 @@ const ApiService = (function () {
     getNegotiation,
     getMessages,
     getOutcome,
+    getReport,
+    getTranscriptUrl,
     checkHealth,
     connectWebSocket,
     disconnectWebSocket,

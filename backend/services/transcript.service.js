@@ -1,0 +1,243 @@
+/**
+ * backend/services/transcript.service.js
+ * Serializes a negotiation session to TXT or JSON transcript formats.
+ *
+ * Usage:
+ *   const { buildTxtTranscript, buildJsonTranscript, safeFilename } = require('./transcript.service');
+ */
+
+'use strict';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatINR(amount) {
+  if (amount == null) return '—';
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency', currency: 'INR', maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+}
+
+function repeatChar(ch, n) {
+  return ch.repeat(n);
+}
+
+// ── TXT Transcript ────────────────────────────────────────────────────────────
+
+/**
+ * Build a human-readable TXT transcript.
+ * @param {object} session — live session
+ * @returns {string}
+ */
+function buildTxtTranscript(session) {
+  const agents = session._agents || session.agents || [];
+  const lines  = [];
+
+  const hr1 = repeatChar('═', 64);
+  const hr2 = repeatChar('─', 64);
+
+  lines.push(hr1);
+  lines.push('  NegoSim — AI Multi-Agent Negotiation Platform');
+  lines.push('  NEGOTIATION TRANSCRIPT');
+  lines.push(hr1);
+  lines.push('');
+  lines.push(`  Session ID  : ${session.id}`);
+  lines.push(`  Scenario    : ${session.scenario?.name || 'Unknown'}`);
+  lines.push(`  Mode        : ${session.mode === 'human-vs-ai' || session.practiceMode ? 'Human vs AI (Practice Mode)' : 'AI vs AI'}`);
+  lines.push(`  Max Rounds  : ${session.maxRounds}`);
+  lines.push(`  Total Rounds: ${session.currentRound}`);
+  lines.push(`  Outcome     : ${(session.result || 'unknown').toUpperCase()}`);
+  lines.push(`  Started     : ${formatDate(session.startedAt)}`);
+  lines.push(`  Completed   : ${formatDate(session.completedAt)}`);
+  if (session.agreement?.offer) {
+    lines.push(`  Final Offer : ${formatINR(session.agreement.offer)}`);
+  }
+  lines.push('');
+
+  // Agent profiles
+  lines.push(hr2);
+  lines.push('  AGENT PROFILES');
+  lines.push(hr2);
+  for (const agent of agents) {
+    lines.push('');
+    lines.push(`  Agent       : ${agent.name}`);
+    lines.push(`  Role        : ${agent.role}`);
+    lines.push(`  Personality : ${agent.personality || 'collaborative'}`);
+    lines.push(`  Goal        : ${agent.goal || (agent.goals || []).join('; ')}`);
+    if (agent.numericConstraint) {
+      const nc = agent.numericConstraint;
+      lines.push(`  Constraint  : ${nc.type === 'max' ? 'Max' : 'Min'} ${formatINR(nc.value)}`);
+    }
+    if (agent.targetValue) {
+      lines.push(`  Target      : ${formatINR(agent.targetValue)}`);
+    }
+    const initOffer = session.initialOffers?.[agent.id];
+    const finalOffer = session.offers?.[agent.id];
+    if (initOffer) lines.push(`  Opening Pos : ${formatINR(initOffer)}`);
+    if (finalOffer) lines.push(`  Final Pos   : ${formatINR(finalOffer)}`);
+  }
+  lines.push('');
+
+  // Messages transcript
+  lines.push(hr2);
+  lines.push('  NEGOTIATION TRANSCRIPT');
+  lines.push(hr2);
+
+  let lastRound = 0;
+  for (const msg of session.messages || []) {
+    if (msg.round !== lastRound) {
+      lines.push('');
+      lines.push(`  ── ROUND ${msg.round} ${'─'.repeat(54 - String(msg.round).length)}`);
+      lastRound = msg.round;
+    }
+
+    const ts     = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('en-IN', { hour12: true }) : '';
+    const offerStr = msg.offer != null ? ` [${formatINR(msg.offer)}]` : '';
+    const decStr   = msg.decision ? ` (${msg.decision.toUpperCase()})` : '';
+
+    lines.push('');
+    lines.push(`  ${msg.agentName}${offerStr}${decStr}  ${ts}`);
+    lines.push(`  ${msg.message || ''}`);
+  }
+  lines.push('');
+
+  // Outcome summary
+  lines.push(hr2);
+  lines.push('  OUTCOME');
+  lines.push(hr2);
+  lines.push('');
+  lines.push(`  Result : ${(session.result || '—').toUpperCase()}`);
+  lines.push(`  Reason : ${session.resultReason || '—'}`);
+  if (session.agreement?.offer) {
+    lines.push(`  Final Agreed Offer : ${formatINR(session.agreement.offer)}`);
+  }
+  lines.push('');
+
+  // Concession summary
+  lines.push(hr2);
+  lines.push('  CONCESSION SUMMARY');
+  lines.push(hr2);
+  for (const agent of agents) {
+    const records  = (session.concessionHistory || {})[agent.id] || [];
+    const initPos  = session.initialOffers?.[agent.id];
+    const finalPos = session.offers?.[agent.id];
+    const total    = records.reduce((s, r) => s + (r.concessionAmount || 0), 0);
+    lines.push('');
+    lines.push(`  ${agent.name}`);
+    lines.push(`    Initial Position : ${formatINR(initPos)}`);
+    lines.push(`    Final Position   : ${formatINR(finalPos)}`);
+    lines.push(`    Total Concession : ${formatINR(total)}`);
+    lines.push(`    Moves Made       : ${records.filter(r => r.concessionAmount > 0).length}`);
+  }
+  lines.push('');
+  lines.push(hr1);
+  lines.push('  Generated by NegoSim — AI Multi-Agent Negotiation Platform');
+  lines.push(hr1);
+
+  return lines.join('\n');
+}
+
+// ── JSON Transcript ───────────────────────────────────────────────────────────
+
+/**
+ * Build a machine-readable JSON transcript.
+ * Strips non-serializable fields and internal engine state.
+ * Does NOT include API keys or LLM prompts.
+ *
+ * @param {object} session — live session
+ * @returns {object}
+ */
+function buildJsonTranscript(session) {
+  const agents = session._agents || session.agents || [];
+
+  return {
+    _version:     '1.0',
+    _generator:   'NegoSim AI Multi-Agent Negotiation Platform',
+    negotiationId: session.id,
+    scenario: {
+      id:          session.scenarioId,
+      name:        session.scenario?.name || '',
+      description: session.scenario?.description || '',
+    },
+    mode:          session.mode || 'simulation',
+    maxRounds:     session.maxRounds,
+    totalRounds:   session.currentRound,
+    result:        session.result || null,
+    resultReason:  session.resultReason || null,
+    finalOffer:    session.agreement?.offer ?? null,
+    startedAt:     session.startedAt,
+    completedAt:   session.completedAt,
+
+    agents: agents.map(a => ({
+      id:           a.id,
+      name:         a.name,
+      role:         a.role,
+      personality:  a.personality || 'collaborative',
+      goal:         a.goal || (a.goals || []).join('; '),
+      constraints:  a.constraints || [],
+      numericConstraint: a.numericConstraint || null,
+      targetValue:  a.targetValue || null,
+      initialOffer: session.initialOffers?.[a.id] ?? null,
+      finalOffer:   session.offers?.[a.id] ?? null,
+    })),
+
+    messages: (session.messages || []).map(m => ({
+      round:     m.round,
+      agentId:   m.agentId,
+      agentName: m.agentName,
+      message:   m.message,
+      offer:     m.offer ?? null,
+      decision:  m.decision || null,
+      timestamp: m.timestamp,
+    })),
+
+    negotiationHistory: (session.negotiationHistory || []).map(h => ({
+      round:     h.round,
+      agentId:   h.agentId,
+      agentName: h.agentName,
+      action:    h.action,
+      offer:     h.offer ?? null,
+      timestamp: h.timestamp,
+    })),
+
+    concessionHistory: (() => {
+      const out = {};
+      for (const agent of agents) {
+        out[agent.id] = (session.concessionHistory?.[agent.id] || []).map(r => ({
+          round:               r.round,
+          previousOffer:       r.previousOffer ?? null,
+          currentOffer:        r.currentOffer ?? null,
+          concessionAmount:    r.concessionAmount ?? 0,
+          concessionPercentage: r.concessionPercentage ?? 0,
+          direction:           r.direction,
+          timestamp:           r.timestamp,
+        }));
+      }
+      return out;
+    })(),
+  };
+}
+
+// ── Filename Generator ────────────────────────────────────────────────────────
+
+/**
+ * Generate a safe filename for download.
+ * @param {object} session
+ * @param {'txt'|'json'} format
+ * @returns {string}
+ */
+function safeFilename(session, format) {
+  const scenario = (session.scenario?.name || 'negotiation')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const dateStr = (session.completedAt || session.startedAt || new Date().toISOString())
+    .slice(0, 10); // YYYY-MM-DD
+  return `negosim-${scenario}-${dateStr}.${format}`;
+}
+
+module.exports = { buildTxtTranscript, buildJsonTranscript, safeFilename };

@@ -6,6 +6,8 @@
 const negotiationService = require('../services/negotiation.service');
 const engine = require('../engine/NegotiationEngine');
 const { STATUS, RESULT, serializeNegotiation } = require('../models/negotiation.model');
+const { buildReport } = require('../services/report.service');
+const { buildTxtTranscript, buildJsonTranscript, safeFilename } = require('../services/transcript.service');
 const logger = require('../utils/logger');
 
 /** GET /api/scenarios */
@@ -23,7 +25,7 @@ function getScenarios(req, res, next) {
  */
 function createNegotiation(req, res, next) {
   try {
-    const { scenario_id, agents, maximum_rounds, mode } = req.body;
+    const { scenario_id, agents, maximum_rounds, mode, practice_mode } = req.body;
 
     if (!scenario_id) {
       const err = new Error('scenario_id is required');
@@ -268,6 +270,10 @@ function getOutcome(req, res, next) {
     const isCompleted = [STATUS.COMPLETED, STATUS.FAILED, STATUS.STOPPED].includes(session.status);
     const agents = session._agents || session.agents || [];
 
+    // Build full report if session is complete, otherwise partial
+    let report = null;
+    try { report = buildReport(session); } catch (_) { /* graceful — report optional */ }
+
     res.json({
       negotiationId: id,
       status:        session.status,
@@ -289,7 +295,59 @@ function getOutcome(req, res, next) {
       messages:    session.messages,
       startedAt:   session.startedAt,
       completedAt: session.completedAt,
+      report,        // full structured report (satisfaction, timeline, insights)
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/negotiations/:id/transcript?format=txt|json */
+function getTranscript(req, res, next) {
+  try {
+    const { id } = req.params;
+    const format = (req.query.format || 'txt').toLowerCase();
+    const session = negotiationService.getSession(id);
+
+    if (!session) {
+      const err = new Error(`Negotiation not found: ${id}`);
+      err.statusCode = 404;
+      return next(err);
+    }
+
+    const filename = safeFilename(session, format);
+
+    if (format === 'json') {
+      const data = buildJsonTranscript(session);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      return res.json(data);
+    }
+
+    // Default: TXT
+    const text = buildTxtTranscript(session);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    return res.send(text);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/negotiations/:id/report */
+function getReport(req, res, next) {
+  try {
+    const { id } = req.params;
+    const session = negotiationService.getSession(id);
+
+    if (!session) {
+      const err = new Error(`Negotiation not found: ${id}`);
+      err.statusCode = 404;
+      return next(err);
+    }
+
+    const report = buildReport(session);
+    res.json(report);
   } catch (err) {
     next(err);
   }
@@ -306,4 +364,6 @@ module.exports = {
   stopNegotiation,
   resetNegotiation,
   getOutcome,
+  getTranscript,
+  getReport,
 };

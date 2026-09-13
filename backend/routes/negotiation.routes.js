@@ -21,4 +21,8 @@ router.post('/negotiations/:id/reset',       controller.resetNegotiation);
 router.get('/negotiations/:id/messages',     controller.getMessages);
 router.get('/negotiations/:id/outcome',      controller.getOutcome);
 
+// Milestone 4 — Reporting & Transcript export
+router.get('/negotiations/:id/transcript',   controller.getTranscript);
+router.get('/negotiations/:id/report',       controller.getReport);
+
 module.exports = router;
