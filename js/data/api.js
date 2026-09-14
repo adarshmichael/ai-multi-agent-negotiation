@@ -8,41 +8,49 @@ const ApiService = (function () {
   const RENDER_HOST = 'negosim-backend.onrender.com';
 
   const hostname = window.location.hostname || 'localhost';
-  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+  const port     = window.location.port;
+  const isLocal  = hostname === 'localhost' || hostname === '127.0.0.1';
   const isRenderHost = hostname.includes('onrender.com');
 
   // Allow switching via ?backend=local or ?backend=render, or localStorage
   const urlParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
   const forced = urlParams ? urlParams.get('backend') : null;
-  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('negosim_backend') : null;
-  const useLocal = (forced === 'local' || saved === 'local') && isLocal;
+  const saved  = typeof localStorage !== 'undefined' ? localStorage.getItem('negosim_backend') : null;
+
+  // When served directly from localhost:8001, the backend is this same host
+  const isServedFromBackend = isLocal && port === '8001';
+  const useLocal = isServedFromBackend || (forced === 'local' || saved === 'local');
 
   let backendHost;
   let protocol;
   let wsProtocol;
 
-  if (useLocal) {
-    // Explicit local server on port 8001
+  if (useLocal || isLocal) {
+    // Local backend on port 8001 (either served from it, or explicitly requested)
     backendHost = `${hostname === '127.0.0.1' ? '127.0.0.1' : 'localhost'}:8001`;
-    protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-    wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    protocol    = 'http:';
+    wsProtocol  = 'ws:';
   } else if (isRenderHost) {
     // Hosted directly on the Render backend
     backendHost = window.location.host;
-    protocol = 'https:';
-    wsProtocol = 'wss:';
+    protocol    = 'https:';
+    wsProtocol  = 'wss:';
   } else {
-    // Running on GitHub Pages (*.github.io), VS Code Live Server, or other static hosts:
-    // Route all API and WebSocket requests to the live Render cloud backend!
+    // Running on GitHub Pages (*.github.io) or other static hosts:
+    // Route to the live Render cloud backend
     backendHost = RENDER_HOST;
-    protocol = 'https:';
-    wsProtocol = 'wss:';
+    protocol    = 'https:';
+    wsProtocol  = 'wss:';
   }
 
   const BASE_URL = `${protocol}//${backendHost}/api`;
-  const WS_URL = `${wsProtocol}//${backendHost}`;
+  const WS_URL   = `${wsProtocol}//${backendHost}`;
 
-  console.log(`[ApiService] Connected to Backend: ${BASE_URL} (WS: ${WS_URL})`);
+  const _backendMode = isServedFromBackend ? '🟢 LOCAL (port 8001)'
+    : useLocal ? '🟡 LOCAL (forced)'
+    : isRenderHost ? '🔵 RENDER (same host)'
+    : '🌐 RENDER (cloud)';
+  console.log(`[ApiService] Backend: ${_backendMode}  →  ${BASE_URL}`);
 
   let activeWs = null;
 
