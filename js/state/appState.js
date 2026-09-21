@@ -16,6 +16,7 @@ const AppState = (function () {
   let state = {
     currentStep:        STEPS.SCENARIO,
     selectedScenarioId: null,
+    selectedMode:       null,  // 'human-vs-ai' | 'ai-vs-ai'
 
     // Per-agent configuration — keyed by agentId
     personalities:  {},   // { [agentId]: personalityId }
@@ -174,6 +175,17 @@ const AppState = (function () {
     notify();
   }
 
+  // ==================== Mode ====================
+
+  function setMode(mode) {
+    state.selectedMode = mode;
+    notify();
+  }
+
+  function getMode() {
+    return state.selectedMode;
+  }
+
   // ==================== Negotiation ====================
 
   function setNegotiationState(updates) {
@@ -206,6 +218,7 @@ const AppState = (function () {
       ...state,
       currentStep:         STEPS.SCENARIO,
       selectedScenarioId:  null,
+      selectedMode:        null,
       personalities:       {},
       agentGoals:          {},
       agentConstraints:    {},
@@ -242,6 +255,9 @@ const AppState = (function () {
     allAgentsFullyConfigured,
     // Navigation
     goToStep,
+    // Mode
+    setMode,
+    getMode,
     // Negotiation
     setNegotiationState,
     addMessage,

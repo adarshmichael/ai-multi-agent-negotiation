@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -47,9 +47,46 @@
 
       <div class="scenario-grid" id="scenario-grid"></div>
 
+      <div class="mode-selection-section">
+        <div class="mode-section-header">
+          <h3 class="mode-section-title">Choose Mode</h3>
+          <p class="mode-section-subtitle">Select how you want to participate in the negotiation.</p>
+        </div>
+        <div class="mode-grid" id="mode-grid">
+          <div class="mode-card" data-mode="human-vs-ai" id="mode-card-practice">
+            <div class="mode-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div class="mode-card-body">
+              <div class="mode-card-title">Practice Mode</div>
+              <div class="mode-card-label">You vs AI</div>
+              <div class="mode-card-desc">Step into the negotiation yourself. You play as one agent and negotiate directly against the AI.</div>
+            </div>
+            <div class="mode-card-check"><span>✓</span></div>
+          </div>
+          <div class="mode-card" data-mode="ai-vs-ai" id="mode-card-watch">
+            <div class="mode-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
+                <circle cx="12" cy="12" r="10"/>
+                <polygon points="10 8 16 12 10 16 10 8"/>
+              </svg>
+            </div>
+            <div class="mode-card-body">
+              <div class="mode-card-title">Watch Mode</div>
+              <div class="mode-card-label">AI vs AI</div>
+              <div class="mode-card-desc">Observe two AI agents negotiate autonomously. Watch strategies unfold in real time.</div>
+            </div>
+            <div class="mode-card-check"><span>✓</span></div>
+          </div>
+        </div>
+      </div>
+
       <div class="nav-row">
         <div></div>
-        <button class="btn btn-primary" id="btn-scenario-continue">
+        <button class="btn btn-primary" id="btn-scenario-continue" disabled>
           Continue
           <span>→</span>
         </button>
@@ -59,10 +96,15 @@
     <!-- ================= SCREEN 2: AGENT CONFIGURATION ================= -->
     <section class="screen" id="screen-configure">
       <div class="screen-header">
-        <div class="screen-eyebrow">Step 2 of 4</div>
-        <h2 class="screen-title" id="configure-title">Configure Agents</h2>
-        <p class="screen-subtitle">For each agent, configure their Goals, Constraints, and Personality — in that order.
-          Personality is unlocked only after goals and constraints are set.</p>
+        <div class="screen-header-top">
+          <div>
+            <div class="screen-eyebrow">Step 2 of 4</div>
+            <h2 class="screen-title" id="configure-title">Configure Agents</h2>
+            <p class="screen-subtitle">For each agent, configure their Goals, Constraints, and Personality — in that order.
+              Personality is unlocked only after goals and constraints are set.</p>
+          </div>
+          <div class="mode-badge-persistent" id="mode-badge-screen2"></div>
+        </div>
       </div>
 
       <div class="validation-banner" id="personality-validation">
@@ -87,41 +129,33 @@
     <!-- ================= SCREEN 3: SUMMARY ================= -->
     <section class="screen" id="screen-summary">
       <div class="screen-header">
-        <div class="screen-eyebrow">Step 3 of 4</div>
-        <h2 class="screen-title">Goals &amp; Constraints Summary</h2>
-        <p class="screen-subtitle">Confirm each agent's configuration before starting the negotiation simulation.</p>
+        <div class="screen-header-top">
+          <div>
+            <div class="screen-eyebrow">Step 3 of 4</div>
+            <h2 class="screen-title">Goals &amp; Constraints Summary</h2>
+            <p class="screen-subtitle">Confirm each agent's configuration before starting the negotiation simulation.</p>
+          </div>
+          <div class="mode-badge-persistent" id="mode-badge-screen3"></div>
+        </div>
       </div>
 
       <div class="summary-grid" id="summary-grid"></div>
 
-      <div class="config-section" style="margin-top: 32px;">
+      <div class="config-section">
         <h3 class="config-title">Simulation Settings</h3>
-        <div style="display:flex; gap: 24px; margin-top: 16px;">
-          <div class="form-group" style="flex:1;">
+        <div class="settings-grid">
+          <div class="form-group">
             <label for="input-max-rounds" class="form-label">Maximum Rounds</label>
-            <input type="number" id="input-max-rounds" class="form-control" value="10" min="1" max="50"
-              style="width: 100%; padding: 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 15px;">
-            <p class="form-hint" style="margin-top: 8px; font-size: 13px; color: var(--color-text-faint);">The
-              simulation will automatically terminate if an agreement isn't reached by this round.</p>
+            <input type="number" id="input-max-rounds" class="form-control" value="10" min="1" max="50">
+            <p class="form-hint">The simulation will automatically terminate if an agreement isn't reached by this round.</p>
           </div>
-          <div class="form-group" style="flex:1;">
+          <div class="form-group">
             <label for="input-ai-provider" class="form-label">AI Provider</label>
-            <select id="input-ai-provider" class="form-control"
-              style="width: 100%; padding: 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 15px;">
+            <select id="input-ai-provider" class="form-control">
               <option value="simulation">Mock Agents (Rule-Based)</option>
               <option value="gemini">Gemini API (Real AI)</option>
             </select>
-            <p class="form-hint" style="margin-top: 8px; font-size: 13px; color: var(--color-text-faint);">Select
-              whether to use the local mock engine or real Gemini AI.</p>
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label for="input-practice-mode" class="form-label">Mode</label>
-            <select id="input-practice-mode" class="form-control"
-              style="width: 100%; padding: 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 15px;">
-              <option value="ai-vs-ai">AI vs AI (Watch Only)</option>
-              <option value="human-vs-ai">Practice Mode (You vs AI)</option>
-            </select>
-            <p class="form-hint" style="margin-top: 8px; font-size: 13px; color: var(--color-text-faint);">In Practice Mode, you play as the first agent and negotiate directly against the AI.</p>
+            <p class="form-hint">Select whether to use the local mock engine or real Gemini AI.</p>
           </div>
         </div>
       </div>
@@ -241,10 +275,15 @@
         </div>
 
         <!-- ═══ MAIN ARENA: 3-column layout ═══ -->
+        <div class="arena-tab-switcher" id="arena-tab-switcher">
+          <button class="arena-tab-btn active" data-tab="agents">Agents</button>
+          <button class="arena-tab-btn" data-tab="chat">Chat</button>
+          <button class="arena-tab-btn" data-tab="reasoning">Reasoning</button>
+        </div>
         <div class="neg-arena-v3">
 
           <!-- Left: Agent Intelligence -->
-          <div class="neg-agent-profiles-column">
+          <div class="neg-agent-profiles-column arena-col arena-col-active" data-col="agents">
             <h3 class="column-header">AGENT INTELLIGENCE</h3>
             
             <!-- Buyer Agent Profile -->
@@ -307,6 +346,7 @@
                   <div class="nct-progress-wrap" title="Flexibility consumed">
                     <div class="nct-progress-bar" id="neg-buyer-nct-progress" style="width:0%"></div>
                   </div>
+                  <div class="nct-sparkline-wrap" id="neg-buyer-nct-sparkline"></div>
                   <div class="nct-meta" id="neg-buyer-nct-meta"></div>
                   <div class="nct-flags" id="neg-buyer-nct-flags"></div>
                 </div>
@@ -374,6 +414,7 @@
                   <div class="nct-progress-wrap" title="Flexibility consumed">
                     <div class="nct-progress-bar" id="neg-vendor-nct-progress" style="width:0%"></div>
                   </div>
+                  <div class="nct-sparkline-wrap" id="neg-vendor-nct-sparkline"></div>
                   <div class="nct-meta" id="neg-vendor-nct-meta"></div>
                   <div class="nct-flags" id="neg-vendor-nct-flags"></div>
                 </div>
@@ -383,7 +424,7 @@
           </div>
 
           <!-- Center: Live Chat Timeline -->
-          <div class="neg-chat-column">
+          <div class="neg-chat-column arena-col" data-col="chat">
             <h3 class="column-header"><span class="live-dot"></span> LIVE NEGOTIATION</h3>
             <div class="neg-chat-timeline" id="neg-chat-timeline">
               <div class="neg-chat-empty" id="neg-chat-empty">
@@ -397,7 +438,7 @@
           </div>
 
           <!-- Right: AI Reasoning & State -->
-          <div class="neg-reasoning-column">
+          <div class="neg-reasoning-column arena-col" data-col="reasoning">
             <h3 class="column-header">AI REASONING & STATE</h3>
 
             <!-- Orchestrator Pipeline -->
@@ -486,6 +527,7 @@
   <script src="js/data/scenarios.js"></script>
   <script src="js/data/api.js"></script>
   <script src="js/state/appState.js"></script>
+  <script src="js/components/charts.js"></script>
   <script src="js/components/state-panel.js"></script>
   <script src="js/components/negotiation-timeline.js"></script>
   <script src="js/components/orchestrator-indicator.js"></script>

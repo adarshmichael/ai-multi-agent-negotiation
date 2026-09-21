@@ -1,174 +1,416 @@
 /* ==========================================================================
-   NegoSim — 8. Negotiation Completion & Agreement Terminal Result
+   NegoSim — 8. Completion / Outcome Screen & Result Cards
+   REDESIGN: Dark editorial-technical identity
    ========================================================================== */
 
 /* ==========================================================================
-   Negotiation Completion Panel
+   Result Card (inline post-negotiation overlay)
    ========================================================================== */
-.neg-complete-panel {
-  background: var(--gradient-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6) var(--space-6);
-  margin-top: var(--space-5);
-  text-align: center;
-  box-shadow: var(--shadow-glow);
+.neg-result-card {
+  display: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-top: var(--space-4);
   animation: screenIn var(--transition-med);
 }
 
-.neg-complete-icon {
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
+/* Outcome-colored top accent bar */
+.neg-result-card.result-agreement {
+  border-top: 3px solid var(--color-success-sage);
+}
+
+.neg-result-card.result-rejection,
+.neg-result-card.result-failed {
+  border-top: 3px solid var(--color-danger);
+}
+
+.neg-result-card.result-max_rounds {
+  border-top: 3px solid var(--color-warning-amber);
+}
+
+.neg-result-card.result-stopped {
+  border-top: 3px solid var(--color-text-faint);
+}
+
+
+/* Result header */
+.neg-result-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  background: var(--color-bg-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.neg-result-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto var(--space-4);
-  font-size: 32px;
+  flex-shrink: 0;
 }
 
-.neg-complete-icon.icon-agreement {
-  background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05));
-  border: 2px solid rgba(16, 185, 129, 0.4);
+.neg-result-icon-lg {
+  font-size: 24px;
 }
 
-.neg-complete-icon.icon-failed {
-  background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
-  border: 2px solid rgba(239, 68, 68, 0.3);
-}
-
-.neg-complete-icon.icon-timeout {
-  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
-  border: 2px solid rgba(245, 158, 11, 0.3);
-}
-
-.neg-complete-title {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin-bottom: var(--space-2);
-}
-
-.neg-complete-subtitle {
-  font-size: 14px;
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-5);
-  max-width: 480px;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.6;
-}
-
-.neg-complete-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--space-3);
-  margin: var(--space-5) 0;
-  text-align: left;
-}
-
-.neg-stat-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-sm);
-}
-
-.neg-stat-label {
-  font-size: 10.5px;
+.neg-result-title {
+  font-size: 20px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text-faint);
-  margin-bottom: 4px;
-}
-
-.neg-stat-value {
-  font-size: 17px;
-  font-weight: 800;
   color: var(--color-text);
   letter-spacing: -0.02em;
 }
 
-.neg-stat-value.success { color: var(--color-success); }
-.neg-stat-value.danger  { color: var(--color-danger); }
-.neg-stat-value.warning { color: var(--color-warning); }
-.neg-stat-value.primary { color: var(--color-primary); }
-
-.neg-agent-decisions {
-  display: flex;
-  gap: var(--space-3);
-  justify-content: center;
-  flex-wrap: wrap;
-  margin: var(--space-4) 0;
+.neg-result-subtitle {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  line-height: 1.45;
 }
 
-.neg-agent-decision {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+
+/* Quick stats row */
+.neg-result-quick-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--color-border);
+}
+
+.neg-result-stat {
+  padding: var(--space-4) var(--space-5);
   background: var(--color-surface);
+  text-align: center;
+}
+
+.neg-result-stat-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+}
+
+.neg-result-stat-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+}
+
+
+/* Result body (outcome report sections) */
+.neg-result-body {
+  padding: var(--space-5) var(--space-6);
+}
+
+.neg-result-loading {
+  text-align: center;
+  padding: var(--space-5);
+  color: var(--color-text-faint);
+  font-size: 13px;
+}
+
+
+/* Outcome sections */
+.neg-outcome-section {
+  margin-bottom: var(--space-6);
+}
+
+.neg-outcome-section:last-child {
+  margin-bottom: 0;
+}
+
+.neg-outcome-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+
+/* Satisfaction scores */
+.neg-satisfaction-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.neg-satisfaction-item {
+  padding: var(--space-4);
+  background: var(--color-bg-alt);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  font-size: 13px;
-  box-shadow: var(--shadow-sm);
 }
 
-.neg-decision-icon {
-  font-size: 16px;
+.neg-sat-agent {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 2px;
 }
 
-.neg-agent-decision .agent-name {
-  font-size: 13px;
+.neg-sat-role {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  margin-bottom: var(--space-3);
+}
+
+.neg-sat-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.neg-sat-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--color-border-strong);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.neg-sat-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s var(--ease-out);
+}
+
+.sat-good { background: var(--color-success); }
+.sat-mid  { background: var(--color-warning); }
+.sat-low  { background: var(--color-danger); }
+
+.neg-sat-pct {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  min-width: 40px;
+  text-align: right;
+}
+
+.neg-sat-detail {
+  margin-top: var(--space-2);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
 }
 
 
-/* --- 11. Completion panel: match existing card shadow/radius --- */
-.neg-complete-panel {
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
-  margin-top: var(--space-4);
+/* Concession summary */
+.neg-concession-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
 }
 
-/* --- 12. Nav row at bottom of live panel --- */
-#neg-live-panel .nav-row {
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
-}
-
-#btn-negotiation-restart {
-  max-width: 320px;
-  margin: 0 auto;
-  width: 100%;
-  justify-content: center;
-}
-
-
-/* ---- Terminal Result Card ---- */
-.neg-result-card {
-  text-align: center;
-  padding: 32px 24px;
-  background: var(--color-surface);
+.neg-con-sum-item {
+  padding: var(--space-4);
+  background: var(--color-bg-alt);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  margin-top: 16px;
-  animation: msgSlideIn 0.35s var(--ease-out);
+  border-radius: var(--radius-md);
 }
-.neg-result-icon    { font-size: 44px; margin-bottom: 10px; line-height: 1; }
-.neg-result-title   { font-size: 22px; font-weight: 800; color: var(--color-text); margin-bottom: 6px; }
-.neg-result-subtitle { font-size: 13.5px; color: var(--color-text-muted); margin-bottom: 16px; max-width: 480px; margin-left: auto; margin-right: auto; }
-.neg-result-stats   { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; padding: 16px; background: var(--color-bg-alt); border-radius: var(--radius-md); border: 1px solid var(--color-border); }
-.neg-result-stat    { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.neg-result-stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--color-text-faint); font-family: var(--font-mono); }
-.neg-result-stat-val   { font-size: 18px; font-weight: 800; font-family: var(--font-mono); color: var(--color-text); }
-.neg-result-card.result-agreement  { border-top: 4px solid #10b981; }
-.neg-result-card.result-agreement .neg-result-title { color: #10b981; }
-.neg-result-card.result-rejection  { border-top: 4px solid #ef4444; }
-.neg-result-card.result-rejection .neg-result-title { color: #ef4444; }
-.neg-result-card.result-max_rounds,
-.neg-result-card.result-stopped    { border-top: 4px solid #f59e0b; }
-.neg-result-card.result-max_rounds .neg-result-title,
-.neg-result-card.result-stopped .neg-result-title { color: #f59e0b; }
+
+.neg-con-sum-agent {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+}
+
+.neg-con-sum-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+  color: var(--color-text-muted);
+}
+
+.neg-con-sum-row span {
+  color: var(--color-text-faint);
+}
+
+.neg-con-sum-row strong {
+  color: var(--color-text);
+  font-family: var(--font-mono);
+}
+
+
+/* Concession timeline */
+.neg-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.neg-timeline-round {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.neg-timeline-round-label {
+  padding: var(--space-2) var(--space-4);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.neg-timeline-entries {
+  padding: var(--space-2) var(--space-4);
+}
+
+.neg-timeline-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.neg-tl-agent {
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 80px;
+}
+
+.neg-tl-action {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  border: 1px solid currentColor;
+}
+
+.action-offer   { color: var(--color-primary); background: rgba(110, 123, 250, 0.08); }
+.action-counter { color: var(--color-warning); background: rgba(210, 153, 34, 0.08); }
+.action-accept  { color: var(--color-success); background: rgba(63, 185, 80, 0.08); }
+.action-reject  { color: var(--color-danger); background: rgba(248, 81, 73, 0.08); }
+
+.neg-tl-offer {
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+
+/* Insights */
+.neg-insights-list {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.neg-insights-list li {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  padding: 4px 0;
+  line-height: 1.55;
+}
+
+.neg-insights-list li::marker {
+  color: var(--color-primary);
+}
+
+
+/* Outcome chart containers */
+.neg-outcome-chart-wrap {
+  padding: var(--space-4);
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.neg-outcome-chart-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+}
+
+.neg-satisfaction-chart-wrap {
+  padding: var(--space-4);
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+
+/* Result actions */
+.neg-result-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+  flex-wrap: wrap;
+}
+
+.neg-download-btn {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-strong);
+  font-size: 12px;
+  padding: 8px 14px;
+}
+
+.neg-download-btn:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border-color: var(--color-text-faint);
+}
+
+
+/* ==========================================================================
+   Legacy completion panel (not used in new flow but keep compat)
+   ========================================================================== */
+.neg-complete-panel {
+  display: none;
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.neg-complete-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+}
+
+.neg-complete-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.neg-complete-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+}

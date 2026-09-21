@@ -1,5 +1,6 @@
 /* ==========================================================================
    NegoSim — 4. Agent Configuration, Profiles & Concession Tracking
+   REDESIGN: Dark editorial-technical identity with accent-bordered identity cards
    ========================================================================== */
 
 /* ==========================================================================
@@ -7,7 +8,7 @@
    ========================================================================== */
 .agent-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: var(--space-5);
   margin-bottom: var(--space-6);
 }
@@ -15,15 +16,23 @@
 .agent-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   padding: var(--space-5);
-  box-shadow: var(--shadow-md);
-  transform-style: preserve-3d;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition: box-shadow var(--transition-fast);
+}
+
+/* Buyer agent card — copper left border */
+.agent-card:first-child {
+  border-left: 3px solid var(--color-buyer);
+}
+
+/* Vendor agent card — green left border */
+.agent-card:last-child {
+  border-left: 3px solid var(--color-vendor);
 }
 
 .agent-card:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .agent-card-header {
@@ -36,27 +45,35 @@
 }
 
 .agent-avatar {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: var(--gradient-primary);
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 14px;
   color: white;
   flex-shrink: 0;
-  box-shadow: 0 8px 20px -6px rgba(99, 102, 241, 0.7);
+}
+
+/* Buyer/Vendor agent avatar colors */
+.agent-card:first-child .agent-avatar {
+  background: var(--color-buyer);
+}
+.agent-card:last-child .agent-avatar {
+  background: var(--color-vendor);
 }
 
 .agent-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
+  color: var(--color-text);
 }
 
 .agent-role {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--color-text-faint);
 }
 
@@ -67,10 +84,10 @@
 }
 
 .agent-detail-icon {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--color-bg-alt);
   border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
@@ -79,45 +96,49 @@
 }
 
 .agent-detail-icon svg {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   stroke: var(--color-accent);
 }
 
 .agent-detail-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--color-text-faint);
   margin-bottom: 2px;
+  font-family: var(--font-mono);
 }
 
 .agent-detail-value {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--color-text-muted);
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .constraints-list {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 16px;
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 
 .constraints-list li {
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .constraints-list li:last-child {
   margin-bottom: 0;
 }
 
 .personality-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--color-text-faint);
   margin: var(--space-4) 0 var(--space-3);
+  font-family: var(--font-mono);
 }
 
 .personality-options {
@@ -128,30 +149,28 @@
 
 .personality-btn {
   position: relative;
-  padding: 12px 8px;
-  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--color-bg-alt);
   color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 600;
   text-align: center;
   transition: all var(--transition-fast);
-  transform: translateZ(0);
+  cursor: pointer;
 }
 
 .personality-btn:hover {
   border-color: var(--color-border-strong);
   color: var(--color-text);
-  transform: translateY(-2px) translateZ(10px);
+  background: var(--color-surface-raised);
 }
 
 .personality-btn.active {
-  background: var(--gradient-primary);
-  border-color: transparent;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: white;
-  box-shadow: 0 10px 22px -8px rgba(99, 102, 241, 0.7);
-  transform: translateY(-2px) translateZ(14px);
 }
 
 
@@ -163,22 +182,22 @@
 .agent-config-tabs {
   display: flex;
   gap: 2px;
-  background: var(--color-bg-alt);
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  padding: 4px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding: 3px;
   margin: -20px -24px 20px;
   border-bottom: 1px solid var(--color-border);
 }
 
 .agent-config-tab-btn {
   flex: 1;
-  padding: 8px 12px;
+  padding: 8px 10px;
   background: transparent;
   border: none;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--color-text-muted);
+  color: var(--color-text-faint);
   cursor: pointer;
   transition: all var(--transition-fast);
   display: flex;
@@ -190,247 +209,265 @@
 
 .agent-config-tab-btn:hover:not(.locked) {
   background: var(--color-surface);
-  color: var(--color-text);
+  color: var(--color-text-muted);
 }
 
 .agent-config-tab-btn.active {
   background: var(--color-surface);
   color: var(--color-primary);
   font-weight: 600;
-  box-shadow: var(--shadow-sm);
 }
 
-.agent-config-tab-btn.done::after {
-  content: '✓';
-  font-size: 11px;
+.agent-config-tab-btn.done {
   color: var(--color-success);
-  margin-left: 2px;
 }
 
 .agent-config-tab-btn.locked {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 /* Tab panels */
 .tab-panel {
   display: none;
-  animation: fadeIn var(--transition-fast);
 }
 
 .tab-panel.active {
   display: block;
+  animation: screenIn var(--transition-fast);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Config progress dots */
+.agent-config-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
 }
+
+.config-step-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+  transition: background var(--transition-fast);
+}
+
+.config-step-dot.active {
+  background: var(--color-primary);
+  box-shadow: 0 0 4px rgba(110, 123, 250, 0.4);
+}
+
+.config-step-dot.done {
+  background: var(--color-success);
+}
+
+.config-progress-label {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  margin-left: 4px;
+}
+
 
 /* ==========================================================================
-   Goal Chips
+   Goal chips
    ========================================================================== */
-
 .goals-section-label {
   font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: var(--space-2);
+  color: var(--color-text-faint);
+  margin-bottom: var(--space-3);
 }
 
 .goals-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: var(--space-3);
+  gap: var(--space-2);
 }
 
 .goal-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   padding: 7px 14px;
-  border-radius: 20px;
-  border: 1.5px solid var(--color-border);
-  background: var(--color-surface);
-  font-size: 13px;
-  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
   color: var(--color-text-muted);
   cursor: pointer;
   transition: all var(--transition-fast);
-  user-select: none;
+  background: var(--color-bg-alt);
 }
 
 .goal-chip:hover {
-  border-color: var(--color-primary-light);
-  color: var(--color-primary);
-  background: rgba(99, 102, 241, 0.05);
-  transform: translateY(-1px);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
 }
 
 .goal-chip.selected {
   border-color: var(--color-primary);
-  background: rgba(99, 102, 241, 0.08);
-  color: var(--color-primary);
-  font-weight: 600;
+  background: rgba(110, 123, 250, 0.08);
+  color: var(--color-primary-light);
 }
 
-.goal-chip.selected::before {
-  content: '✓';
-  font-size: 11px;
-  color: var(--color-primary);
-}
-
-/* Custom goal entry row */
 .custom-goal-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: var(--space-3);
 }
 
 .custom-goal-input {
   flex: 1;
-  padding: 9px 14px;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 13px;
   font-family: var(--font-sans);
-  background: var(--color-surface);
   color: var(--color-text);
+  background: var(--color-bg-alt);
+  outline: none;
   transition: border-color var(--transition-fast);
 }
 
+.custom-goal-input::placeholder {
+  color: var(--color-text-faint);
+}
+
 .custom-goal-input:focus {
-  outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
 }
 
 .btn-add-goal {
-  padding: 9px 14px;
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 16px;
-  font-weight: 600;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-alt);
+  color: var(--color-text-muted);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: background var(--transition-fast);
-  flex-shrink: 0;
+  transition: all var(--transition-fast);
 }
 
 .btn-add-goal:hover {
-  background: var(--color-primary-dark);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
 }
 
-/* Selected goals display tags */
 .selected-goals-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: var(--space-3);
-  min-height: 28px;
+  gap: var(--space-2);
+  min-height: 0;
 }
 
 .selected-goal-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px 4px 12px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  border-radius: 20px;
+  padding: 5px 10px;
+  background: rgba(110, 123, 250, 0.08);
+  border: 1px solid rgba(110, 123, 250, 0.15);
+  border-radius: var(--radius-pill);
   font-size: 12px;
+  color: var(--color-primary-light);
   font-weight: 500;
-  color: var(--color-primary-dark);
 }
 
 .remove-goal-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
+  background: none;
   border: none;
-  background: rgba(99,102,241,0.15);
-  border-radius: 50%;
+  padding: 0 2px;
   cursor: pointer;
-  font-size: 10px;
-  color: var(--color-primary-dark);
-  transition: background var(--transition-fast);
-  padding: 0;
+  color: var(--color-text-faint);
+  font-size: 12px;
   line-height: 1;
+  transition: color var(--transition-fast);
 }
 
 .remove-goal-btn:hover {
-  background: var(--color-danger);
-  color: #fff;
+  color: var(--color-danger);
 }
 
 .goals-validation-hint {
   font-size: 12px;
   color: var(--color-text-faint);
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
 }
 
-.goals-validation-hint.error {
-  color: var(--color-danger);
+.tab-next-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-4);
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
+
+.tab-next-btn:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: white;
+}
+
+.tab-next-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 
 /* ==========================================================================
-   Constraint Options
+   Constraint options
    ========================================================================== */
-
 .constraint-options-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: var(--space-3);
+  gap: var(--space-2);
 }
 
 .constraint-option-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
+  background: var(--color-bg-alt);
 }
 
 .constraint-option-row:hover {
-  border-color: var(--color-primary-light);
-  background: rgba(99, 102, 241, 0.03);
+  border-color: var(--color-border-strong);
 }
 
 .constraint-option-row.selected {
   border-color: var(--color-primary);
-  background: rgba(99, 102, 241, 0.06);
+  background: rgba(110, 123, 250, 0.05);
 }
 
 .constraint-option-top {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .constraint-checkbox {
-  width: 17px;
-  height: 17px;
-  border: 2px solid var(--color-border-strong);
-  border-radius: 4px;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 3px;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
   transition: all var(--transition-fast);
-  background: var(--color-surface);
-  color: #fff;
+  position: relative;
 }
 
 .constraint-option-row.selected .constraint-checkbox {
@@ -440,168 +477,128 @@
 
 .constraint-option-row.selected .constraint-checkbox::after {
   content: '✓';
+  position: absolute;
+  top: -1px;
+  left: 2px;
+  font-size: 11px;
+  color: white;
+  font-weight: 700;
 }
 
 .constraint-option-label {
   font-size: 13px;
-  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.constraint-option-row.selected .constraint-option-label {
   color: var(--color-text);
-  flex: 1;
 }
 
-/* Numeric input within constraint */
 .constraint-numeric-wrap {
-  padding-left: 27px;
-  display: none;
-}
-
-.constraint-option-row.selected .constraint-numeric-wrap {
-  display: block;
+  margin-left: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .constraint-numeric-label {
   font-size: 11px;
-  color: var(--color-text-muted);
-  font-weight: 500;
-  margin-bottom: 5px;
+  color: var(--color-text-faint);
 }
 
 .constraint-numeric-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 13px;
-  font-family: var(--font-sans);
-  background: var(--color-bg-alt);
+  font-family: var(--font-mono);
   color: var(--color-text);
+  background: var(--color-bg);
+  max-width: 200px;
+  outline: none;
   transition: border-color var(--transition-fast);
 }
 
 .constraint-numeric-input:focus {
-  outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
 }
+
+.constraint-option-row:not(.selected) .constraint-numeric-wrap {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
 
 /* ==========================================================================
-   Tab navigation buttons (next step)
+   Live Negotiation Agent Profile Cards
    ========================================================================== */
-
-.tab-next-btn {
-  width: 100%;
-  margin-top: var(--space-4);
-  padding: 11px 20px;
-  background: var(--gradient-primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity var(--transition-fast), transform var(--transition-fast);
-  font-family: var(--font-sans);
-}
-
-.tab-next-btn:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-}
-
-.tab-next-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* ==========================================================================
-   Config progress dots (in agent card header)
-   ========================================================================== */
-
-.agent-config-progress {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.config-step-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-border-strong);
-  transition: background var(--transition-fast);
-}
-
-.config-step-dot.done  { background: var(--color-success); }
-.config-step-dot.active { background: var(--color-primary); }
-
-.config-progress-label {
-  font-size: 11px;
-  color: var(--color-text-faint);
-}
-
-/* ==========================================================================
-   Summary — extended with goals
-   ========================================================================== */
-
-.summary-goals-list {
-  list-style: none;
-  padding: 0;
-  margin: 4px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.summary-goals-list li {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.summary-goals-list li::before {
-  content: '›';
-  color: var(--color-primary);
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-
-/* Left Column: Profiles in Arena V3 */
 .neg-agent-profiles-column {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
+  gap: 6px;
 }
 
 .neg-profile-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-sm);
-  position: relative;
   overflow: hidden;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.neg-profile-card.panel-active {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.neg-profile-card.card-active {
+  border-color: var(--color-border-strong);
+}
+
+.neg-profile-buyer {
+  border-top: 2px solid var(--color-buyer);
+}
+
+.neg-profile-vendor {
+  border-top: 2px solid var(--color-vendor);
 }
 
 .neg-profile-header {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-alt);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.neg-profile-meta {
-  flex: 1;
+.neg-agent-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
 }
+
+.neg-agent-avatar-buyer {
+  background: var(--color-buyer);
+}
+
+.neg-agent-avatar-vendor {
+  background: var(--color-vendor);
+}
+
+.neg-profile-meta { flex: 1; }
 
 .neg-profile-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
+  color: var(--color-text);
 }
 
 .neg-profile-role {
@@ -609,53 +606,159 @@
   color: var(--color-text-faint);
 }
 
+/* Agent status chip */
+.neg-agent-status-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+  color: var(--color-text-faint);
+}
+
+.status-chip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.neg-agent-status-chip[data-state="thinking"] {
+  color: var(--color-accent);
+  border-color: rgba(88, 166, 255, 0.2);
+  background: rgba(88, 166, 255, 0.08);
+}
+.neg-agent-status-chip[data-state="thinking"] .status-chip-dot {
+  animation: pulseOpacity 1s infinite;
+}
+
+.neg-agent-status-chip[data-state="offer_sent"] {
+  color: var(--color-primary);
+  border-color: rgba(110, 123, 250, 0.2);
+  background: rgba(110, 123, 250, 0.08);
+}
+
+.neg-agent-status-chip[data-state="accepted"] {
+  color: var(--color-success);
+  border-color: rgba(63, 185, 80, 0.2);
+  background: rgba(63, 185, 80, 0.08);
+}
+
+.neg-agent-status-chip[data-state="evaluating"] {
+  color: var(--color-warning);
+  border-color: rgba(210, 153, 34, 0.2);
+  background: rgba(210, 153, 34, 0.08);
+}
+
+/* Profile body */
 .neg-profile-body {
-  font-size: 13px;
+  padding: var(--space-2) var(--space-3);
+  font-size: 11px;
   color: var(--color-text-muted);
 }
 
 .neg-profile-item {
-  margin-bottom: var(--space-2);
+  margin-bottom: 4px;
+  line-height: 1.4;
 }
 
 .neg-profile-item strong {
-  display: block;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--color-text-faint);
-  margin-bottom: 2px;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .constraints-block {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-text);
   margin-top: 2px;
 }
 
-/* ==========================================================================
-   MODULE 4 — CONCESSION TRACKER (NCT) inside agent profile cards
-   ========================================================================== */
+/* Stance badge */
+.agent-stance-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  transition: all var(--transition-fast);
+}
 
+.stance-firm        { color: var(--color-stance-firm); background: rgba(240, 136, 62, 0.08); }
+.stance-aggressive  { color: var(--color-stance-aggressive); background: rgba(248, 81, 73, 0.08); }
+.stance-cautious    { color: var(--color-stance-cautious); background: rgba(210, 153, 34, 0.08); }
+.stance-flexible    { color: var(--color-stance-flexible); background: rgba(88, 166, 255, 0.08); }
+.stance-cooperative { color: var(--color-stance-cooperative); background: rgba(63, 185, 80, 0.08); }
+.stance-near-agreement { color: var(--color-success-sage); background: rgba(124, 184, 137, 0.1); }
+.stance-accepted    { color: var(--color-success); background: rgba(63, 185, 80, 0.1); }
+.stance-rejected    { color: var(--color-danger); background: rgba(248, 81, 73, 0.1); }
+
+/* Thinking indicator */
+.neg-agent-thinking {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-size: 12px;
+  color: var(--color-text-faint);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+}
+
+.thinking-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.thinking-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: thinkingDot 1.2s ease-in-out infinite;
+}
+
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes thinkingDot {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.1); }
+}
+
+
+/* ==========================================================================
+   Concession Tracker
+   ========================================================================== */
 .neg-concession-tracker {
-  margin: 8px 0 0 0;
-  border-top: 1px dashed var(--color-border-strong);
-  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
 }
 
 .nct-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 0 5px 0;
+  padding: 4px var(--space-3);
+  background: var(--color-bg-alt);
 }
 
 .nct-title {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   color: var(--color-text-faint);
   font-family: var(--font-mono);
 }
@@ -663,164 +766,145 @@
 .nct-toggle {
   background: none;
   border: none;
-  cursor: pointer;
-  font-size: 10px;
   color: var(--color-text-faint);
+  font-size: 10px;
+  cursor: pointer;
   padding: 2px 4px;
-  border-radius: 4px;
-  line-height: 1;
-  transition: color var(--transition-fast), background var(--transition-fast);
+  transition: color var(--transition-fast);
 }
-.nct-toggle:hover { background: var(--color-border); color: var(--color-text); }
 
-/* Collapsed state */
-.nct-body.nct-collapsed { display: none; }
+.nct-toggle:hover {
+  color: var(--color-text-muted);
+}
 
-/* Row: label + value */
+.nct-body {
+  padding: var(--space-2) var(--space-3);
+  transition: max-height var(--transition-med), padding var(--transition-med);
+}
+
+.nct-body.nct-collapsed {
+  max-height: 0;
+  overflow: hidden;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .nct-offer-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2px 0;
-  font-size: 11px;
+  padding: 3px 0;
 }
 
 .nct-label {
+  font-size: 11px;
   color: var(--color-text-faint);
-  font-size: 10.5px;
 }
 
 .nct-val {
+  font-size: 12px;
+  font-weight: 600;
   font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 11px;
   color: var(--color-text-muted);
 }
 
-/* Highlighted current-offer row */
-.nct-current-row .nct-label { color: var(--color-text-muted); font-weight: 600; }
-.nct-current-row .nct-val,
-.nct-current             { color: var(--color-primary); font-size: 12px; font-weight: 800; }
+.nct-current-row {
+  padding: 4px 0;
+}
+
+.nct-current {
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 13px;
+}
 
 .nct-divider {
   height: 1px;
   background: var(--color-border);
-  margin: 5px 0;
+  margin: var(--space-2) 0;
 }
 
-/* Three stat boxes in a row */
 .nct-stat-row {
   display: flex;
-  gap: 4px;
-  margin-bottom: 6px;
+  gap: var(--space-3);
+  margin: var(--space-2) 0;
 }
 
 .nct-stat {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 5px 4px;
-  background: var(--color-bg-alt);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  min-width: 0;
+  text-align: center;
 }
 
 .nct-stat-label {
   font-size: 9px;
   font-weight: 700;
+  color: var(--color-text-faint);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-text-faint);
-  white-space: nowrap;
+  font-family: var(--font-mono);
 }
 
 .nct-stat-val {
+  font-size: 12px;
+  font-weight: 700;
   font-family: var(--font-mono);
-  font-weight: 800;
-  font-size: 11px;
   color: var(--color-text);
-  white-space: nowrap;
+  margin-top: 2px;
 }
 
-/* Animated progress bar — shows % of flexibility consumed */
 .nct-progress-wrap {
-  height: 5px;
+  height: 4px;
   background: var(--color-border);
-  border-radius: 99px;
+  border-radius: 2px;
   overflow: hidden;
-  margin-bottom: 4px;
+  margin: var(--space-2) 0;
 }
 
 .nct-progress-bar {
   height: 100%;
-  border-radius: 99px;
-  background: var(--color-success);
-  transition: width 0.5s var(--ease-out), background 0.4s ease;
+  background: var(--color-primary);
+  border-radius: 2px;
+  transition: width var(--transition-med);
 }
 
-/* Color thresholds */
-.nct-progress-bar[data-level="warn"]    { background: var(--color-warning); }
-.nct-progress-bar[data-level="danger"]  { background: var(--color-danger); }
+.nct-progress-bar[data-level="warn"] {
+  background: var(--color-warning);
+}
 
-/* Meta row (flexibility remaining, rounds) */
+.nct-progress-bar[data-level="danger"] {
+  background: var(--color-danger);
+}
+
+/* Sparkline container inside concession tracker */
+.nct-sparkline-wrap {
+  height: 40px;
+  margin: var(--space-2) 0;
+}
+
 .nct-meta {
   font-size: 10px;
   color: var(--color-text-faint);
   font-family: var(--font-mono);
-  margin-bottom: 3px;
+  margin-top: var(--space-1);
 }
 
-/* Warning flag chips */
 .nct-flags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 2px;
+  margin-top: var(--space-1);
 }
 
 .nct-flag-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  letter-spacing: 0.02em;
-  animation: fadeInUp 0.3s var(--ease-out);
+  letter-spacing: 0.04em;
 }
 
-.nct-flag-chip.flag-reversal   { background: rgba(239,68,68,0.12);   color: #b91c1c; }
-.nct-flag-chip.flag-excessive  { background: rgba(245,158,11,0.14);  color: #92400e; }
-.nct-flag-chip.flag-stagnation { background: rgba(90,95,104,0.12);   color: var(--color-text-muted); }
-.nct-flag-chip.flag-limit      { background: rgba(239,68,68,0.12);   color: #b91c1c; }
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.neg-chat-round-divider { display: flex; align-items: center; gap: 10px; margin: 4px 0; }
-.neg-chat-round-divider::before, .neg-chat-round-divider::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
-.neg-chat-round-label {
-  font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
-  color: var(--color-text-faint); font-family: var(--font-mono);
-  white-space: nowrap; padding: 2px 8px;
-  border: 1px solid var(--color-border); border-radius: 4px;
-}
-
-/* Thinking bubble in chat */
-.neg-chat-thinking {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 14px; border-radius: var(--radius-md);
-  background: var(--color-bg-alt); border: 1px dashed var(--color-border-strong);
-  font-size: 12px; color: var(--color-text-faint); font-style: italic;
-  animation: msgSlideIn 0.3s var(--ease-out); max-width: 75%;
-}
-.neg-chat-thinking.thinking-buyer  { align-self: flex-start; }
-.neg-chat-thinking.thinking-vendor { align-self: flex-end; }
-
+.flag-reversal   { color: var(--color-warning); background: rgba(210, 153, 34, 0.1); border: 1px solid rgba(210, 153, 34, 0.2); }
+.flag-excessive  { color: var(--color-danger); background: rgba(248, 81, 73, 0.08); border: 1px solid rgba(248, 81, 73, 0.15); }
+.flag-stagnation { color: var(--color-text-faint); background: var(--color-bg-alt); border: 1px solid var(--color-border); }
+.flag-limit      { color: var(--color-accent); background: rgba(88, 166, 255, 0.08); border: 1px solid rgba(88, 166, 255, 0.15); }

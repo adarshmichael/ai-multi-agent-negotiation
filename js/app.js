@@ -135,17 +135,59 @@ function renderScenarioGrid() {
   }).join('');
 
   grid.querySelectorAll('.scenario-card').forEach(card => {
-    attachTiltEffect(card);
     card.addEventListener('click', () => {
       AppState.selectScenario(card.dataset.scenarioId);
       document.getElementById('scenario-validation').classList.remove('show');
+      _updateContinueBtn();
     });
+  });
+
+  // Mode selection
+  renderModeSelection();
+}
+
+function renderModeSelection() {
+  const state = AppState.getState();
+  const modeCards = document.querySelectorAll('.mode-card');
+  modeCards.forEach(card => {
+    const mode = card.dataset.mode;
+    card.classList.toggle('selected', mode === state.selectedMode);
+    if (!card._modeWired) {
+      card._modeWired = true;
+      card.addEventListener('click', () => {
+        AppState.setMode(mode);
+        document.querySelectorAll('.mode-card').forEach(c => c.classList.toggle('selected', c.dataset.mode === mode));
+        document.getElementById('scenario-validation').classList.remove('show');
+        _updateContinueBtn();
+      });
+    }
   });
 }
 
+function _updateContinueBtn() {
+  const { selectedScenarioId, selectedMode } = AppState.getState();
+  const btn = document.getElementById('btn-scenario-continue');
+  if (btn) btn.disabled = !(selectedScenarioId && selectedMode);
+}
+
+function _renderModeBadge(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const mode = AppState.getMode();
+  if (!mode) { el.style.display = 'none'; return; }
+  el.style.display = 'inline-flex';
+  if (mode === 'human-vs-ai') {
+    el.textContent = '👤 Practice Mode';
+    el.className = 'mode-badge-persistent mode-practice';
+  } else {
+    el.textContent = '🤖 Watch Mode';
+    el.className = 'mode-badge-persistent mode-watch';
+  }
+}
+
 function handleScenarioContinue() {
-  const { selectedScenarioId } = AppState.getState();
-  if (!selectedScenarioId) {
+  const { selectedScenarioId, selectedMode } = AppState.getState();
+  if (!selectedScenarioId || !selectedMode) {
     document.getElementById('scenario-validation').classList.add('show');
     return;
   }
@@ -852,9 +894,8 @@ async function handleStartNegotiation() {
     const aiProviderEl   = document.getElementById('input-ai-provider');
     const mode           = aiProviderEl ? aiProviderEl.value : 'simulation';
 
-    // Read Practice Mode toggle (human-vs-ai or ai-vs-ai)
-    const practiceModeEl = document.getElementById('input-practice-mode');
-    const isPracticeMode = practiceModeEl ? practiceModeEl.value === 'human-vs-ai' : false;
+    // Read Practice Mode from state (moved from Screen 3 dropdown to Screen 1 cards)
+    const isPracticeMode = AppState.getMode() === 'human-vs-ai';
 
     // 1. Create negotiation session (sends goals + constraints per agent)
     AppState.setNegotiationState({ negotiationStatus: 'starting', isPracticeMode });
@@ -1378,6 +1419,9 @@ function _nctPrefix(agentId) {
     ? 'buyer' : 'vendor';
 }
 
+// Per-agent sparkline history for concession tracker charts
+let _offerHistory = { buyer: [], vendor: [] };
+
 function updateConcessionTracker(agentId, snapshot) {
   const prefix = _nctPrefix(agentId);
   if (!snapshot) return;
@@ -1402,6 +1446,17 @@ function updateConcessionTracker(agentId, snapshot) {
     if (pct >= 80)      barEl.setAttribute('data-level', 'danger');
     else if (pct >= 50) barEl.setAttribute('data-level', 'warn');
     else                barEl.removeAttribute('data-level');
+  }
+
+  // Track offer history for sparkline
+  if (snapshot.current_offer !== null && snapshot.current_offer !== undefined) {
+    _offerHistory[prefix].push(snapshot.current_offer);
+    // Render sparkline
+    if (window.NegCharts) {
+      const color = prefix === 'buyer' ? 'var(--color-buyer)' : 'var(--color-vendor)';
+      const computedColor = prefix === 'buyer' ? '#E07A3D' : '#3FB950';
+      NegCharts.renderSparkline(`neg-${prefix}-nct-sparkline`, _offerHistory[prefix], computedColor);
+    }
   }
 
   const metaEl = document.getElementById(`neg-${prefix}-nct-meta`);
@@ -1673,6 +1728,8 @@ function setAgentCardThinking(agentIndex, thinking, phrase) {
  * Clear all live negotiation panels for restart (v2 layout).
  */
 function clearEquilibriumPanels() {
+  // Reset offer history for sparklines
+  _offerHistory = { buyer: [], vendor: [] };
   // Reset central chat timeline
   const timeline = document.getElementById('neg-chat-timeline');
   if (timeline) {
@@ -1694,6 +1751,9 @@ function clearEquilibriumPanels() {
     if (offerEl) offerEl.textContent = '—';
     const actionEl = document.getElementById(`neg-${prefix}-action`);
     if (actionEl) actionEl.textContent = '—';
+    // Clear sparkline
+    const sparkEl = document.getElementById(`neg-${prefix}-nct-sparkline`);
+    if (sparkEl) sparkEl.innerHTML = '';
   });
   
   resetOrchPipeline();
@@ -2381,12 +2441,44 @@ function _renderOutcomeReport(report, result) {
   const concessionSummary  = report.concessionSummary  || [];
   const insights           = report.insights           || [];
 
+  // ── Offer Timeline Chart ─────────────────────────────────────────
+  let chartHtml = '';
+  if (concessionTimeline.length > 0) {
+    // Extract per-agent offer data from timeline
+    const buyerOffers = [];
+    const vendorOffers = [];
+    concessionTimeline.forEach(t => {
+      (t.entries || []).forEach(e => {
+        const agentId = (e.agentId || e.agentName || '').toLowerCase();
+        const isBuyer = agentId.includes('buyer') || agentId.includes('candidate') || agentId.includes('project');
+        if (e.offer != null) {
+          (isBuyer ? buyerOffers : vendorOffers).push({ round: t.round, offer: e.offer });
+        }
+      });
+    });
+    chartHtml = `
+      <div class="neg-outcome-section">
+        <div class="neg-outcome-section-title">📈 Offer Convergence</div>
+        <div class="neg-outcome-chart-wrap" id="neg-outcome-chart"></div>
+      </div>
+    `;
+    // Defer chart rendering to after innerHTML is set
+    setTimeout(() => {
+      if (window.NegCharts) {
+        NegCharts.renderOutcomeTimeline('neg-outcome-chart', buyerOffers, vendorOffers, {
+          buyer: '#E07A3D', vendor: '#3FB950'
+        });
+      }
+    }, 50);
+  }
+
   // ── Satisfaction Scores ──────────────────────────────────────────
   let satisfactionHtml = '';
   if (satisfactionScores.length > 0) {
     satisfactionHtml = `
       <div class="neg-outcome-section">
         <div class="neg-outcome-section-title">🎯 Objective Satisfaction</div>
+        <div class="neg-satisfaction-chart-wrap" id="neg-satisfaction-chart"></div>
         <div class="neg-satisfaction-grid">
           ${satisfactionScores.map(s => {
             const score = s.score;
@@ -2410,6 +2502,16 @@ function _renderOutcomeReport(report, result) {
         </div>
       </div>
     `;
+    // Render satisfaction comparison bars
+    setTimeout(() => {
+      if (window.NegCharts) {
+        NegCharts.renderSatisfactionBars('neg-satisfaction-chart', satisfactionScores.map(s => ({
+          agentName: s.agentName,
+          score: s.score || 0,
+          color: s.role?.toLowerCase().includes('buyer') || s.role?.toLowerCase().includes('candidate') ? '#E07A3D' : '#3FB950'
+        })));
+      }
+    }, 100);
   }
 
   // ── Concession Summary ───────────────────────────────────────────
@@ -2472,7 +2574,7 @@ function _renderOutcomeReport(report, result) {
     `;
   }
 
-  bodyEl.innerHTML = satisfactionHtml + concessionSumHtml + timelineHtml + insightsHtml;
+  bodyEl.innerHTML = chartHtml + satisfactionHtml + concessionSumHtml + timelineHtml + insightsHtml;
 }
 
 
@@ -2510,9 +2612,15 @@ async function handleStopNegotiation() {
 function render() {
   const { currentStep } = AppState.getState();
   renderScenarioGrid();
-  if (currentStep === AppState.STEPS.CONFIGURE) renderAgentGrid();
-  if (currentStep === AppState.STEPS.SUMMARY)   renderSummary();
-  if (currentStep === AppState.STEPS.NEGOTIATE)  renderNegotiateScreen();
+  if (currentStep === AppState.STEPS.CONFIGURE) {
+    renderAgentGrid();
+    _renderModeBadge('mode-badge-screen2');
+  }
+  if (currentStep === AppState.STEPS.SUMMARY) {
+    renderSummary();
+    _renderModeBadge('mode-badge-screen3');
+  }
+  if (currentStep === AppState.STEPS.NEGOTIATE) renderNegotiateScreen();
   showScreen(currentStep);
 }
 
@@ -2716,6 +2824,23 @@ async function init() {
   if (!isSpecialBoot) {
     AppState.loadScenarios();
     render();
+  }
+
+  // Arena tab switcher (tablet responsive)
+  const tabSwitcher = document.getElementById('arena-tab-switcher');
+  if (tabSwitcher) {
+    tabSwitcher.querySelectorAll('.arena-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        // Update button states
+        tabSwitcher.querySelectorAll('.arena-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // Update column visibility
+        document.querySelectorAll('.arena-col').forEach(col => {
+          col.classList.toggle('arena-col-active', col.dataset.col === tab);
+        });
+      });
+    });
   }
 
   // Populate scenario switcher
