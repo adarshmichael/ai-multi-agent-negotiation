@@ -1,4 +1,4 @@
-﻿/**
+/**
  * services/llm.service.js
  * Gemini API integration for generating agent negotiation responses.
  * API key is ONLY accessed server-side via environment variables.
@@ -12,13 +12,17 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { config } = require('../config/env');
 const logger = require('../utils/logger');
 
-// Active models supported by Gemini API in order of speed, reliability & reasoning
+/// Active models supported by Gemini API in order of preference (speed + reliability)
 const MODEL_CANDIDATES = [
-  'gemini-3.1-flash-lite-preview',
-  'gemini-3.7-flash',
-  'gemini-3.5-flash',
-  'gemini-3.6-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
 ];
+
+// Max retries per model for transient errors (429, 503)
+const MAX_RETRIES_PER_MODEL = 3;
+const BASE_RETRY_DELAY_MS = 1000;
 
 let currentKeyIndex = 0;
 const genAICache = new Map();
@@ -51,16 +55,26 @@ function rotateToNextKey(reason = '') {
 }
 
 /**
+ * Checks whether an error is transient (worth retrying).
+ */
+function isTransientError(err) {
+  if (err.status === 429 || err.status === 503) return true;
+  if (err.message && (err.message.includes('429') || err.message.includes('503') || err.message.includes('overloaded') || err.message.includes('high demand'))) return true;
+  return false;
+}
+
+/**
  * Generate an agent response from a prompt using Gemini LLM.
- * Automatically fails over across working models and rotates API keys if quota/rate limits are hit.
+ * Automatically retries with exponential backoff on transient errors,
+ * fails over across working models, and rotates API keys if quota/rate limits are hit.
  *
- * @param {string} prompt      â€” full prompt from promptBuilder
- * @param {string} agentName   â€” for logging only
- * @param {object} agentConfig â€” agent configuration
- * @param {number} round       â€” current round number
- * @param {number} maxRounds   â€” max rounds
- * @param {object} offerState  â€” latest offers
- * @returns {Promise<object>}  â€” { message, offer, decision, reasoning, parameters }
+ * @param {string} prompt      — full prompt from promptBuilder
+ * @param {string} agentName   — for logging only
+ * @param {object} agentConfig — agent configuration
+ * @param {number} round       — current round number
+ * @param {number} maxRounds   — max rounds
+ * @param {object} offerState  — latest offers
+ * @returns {Promise<object>}  — { message, offer, decision, reasoning, parameters }
  */
 async function generateAgentResponse(prompt, agentName, agentConfig, round, maxRounds, offerState) {
   const hasKey = config.geminiApiKey || (config.geminiApiKeys && config.geminiApiKeys.length > 0);
@@ -73,73 +87,86 @@ async function generateAgentResponse(prompt, agentName, agentConfig, round, maxR
   let lastError = null;
 
   for (const modelName of MODEL_CANDIDATES) {
-    try {
-      const { ai, keyIndex, totalKeys } = getGenAIInstance();
-      logger.llm(`Querying ${modelName} [Key ${keyIndex}/${totalKeys}] for ${agentName} (round ${round})...`);
-
-      const model = ai.getGenerativeModel(
-        {
-          model: modelName,
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.9,
-            maxOutputTokens: 2000,
-          },
-        },
-        { timeout: 15000 }
-      );
-
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-
-      logger.llm(`${agentName} (${modelName}) raw response: ${text.slice(0, 150)}...`);
-
-      // Parse JSON from model output
-      let parsed = null;
+    // Retry loop per model for transient errors
+    for (let attempt = 1; attempt <= MAX_RETRIES_PER_MODEL; attempt++) {
       try {
-        const cleaned = text
-          .replace(/```json\s*/gi, '')
-          .replace(/```\s*/gi, '')
-          .trim();
-        parsed = JSON.parse(cleaned);
-      } catch (parseErr) {
-        const jsonMatch = text.match(/\{[\s\S]*?\}/);
-        if (jsonMatch) {
-          parsed = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error(`JSON parse failed: ${parseErr.message}`);
+        const { ai, keyIndex, totalKeys } = getGenAIInstance();
+        logger.llm(`Querying ${modelName} [Key ${keyIndex}/${totalKeys}] for ${agentName} (round ${round}, attempt ${attempt})...`);
+
+        const model = ai.getGenerativeModel(
+          {
+            model: modelName,
+            generationConfig: {
+              temperature: 0.7,
+              topP: 0.9,
+              maxOutputTokens: 2000,
+            },
+          },
+          { timeout: 20000 }
+        );
+
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim();
+
+        logger.llm(`${agentName} (${modelName}) raw response: ${text.slice(0, 150)}...`);
+
+        // Parse JSON from model output
+        let parsed = null;
+        try {
+          const cleaned = text
+            .replace(/```json\s*/gi, '')
+            .replace(/```\s*/gi, '')
+            .trim();
+          parsed = JSON.parse(cleaned);
+        } catch (parseErr) {
+          const jsonMatch = text.match(/\{[\s\S]*?\}/);
+          if (jsonMatch) {
+            parsed = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error(`JSON parse failed: ${parseErr.message}`);
+          }
         }
+
+        if (!parsed || typeof parsed !== 'object') {
+          throw new Error('LLM returned non-object JSON payload');
+        }
+
+        if (!parsed.message) {
+          throw new Error('LLM response missing "message" string');
+        }
+
+        logger.llm(`✓ ${agentName} successfully generated via ${modelName}. Decision: ${parsed.decision}, Offer: ${parsed.offer}`);
+        return parsed;
+
+      } catch (err) {
+        lastError = err;
+        const statusPrefix = err.status ? `[HTTP ${err.status}] ` : '';
+        const safeErrMsg = statusPrefix + (err.message ? err.message.slice(0, 120) : 'Unknown error');
+
+        // Rotate key on quota/auth/overload errors
+        if (err.status === 429 || err.status === 403 || err.status === 503 || (err.message && (err.message.includes('429') || err.message.includes('503')))) {
+          rotateToNextKey(`Status ${err.status || 'transient error'}`);
+        }
+
+        // If transient and we have retries left, backoff and retry the same model
+        if (isTransientError(err) && attempt < MAX_RETRIES_PER_MODEL) {
+          const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt - 1) + Math.random() * 500;
+          logger.warn('LLM', `Model ${modelName} attempt ${attempt} failed (transient) for ${agentName}: ${safeErrMsg}. Retrying in ${Math.round(delay)}ms...`);
+          await sleep(delay);
+          continue;
+        }
+
+        logger.warn('LLM', `Model ${modelName} failed for ${agentName}: ${safeErrMsg}. Trying next candidate...`);
+        await sleep(300);
+        break; // Move to next model candidate
       }
-
-      if (!parsed || typeof parsed !== 'object') {
-        throw new Error('LLM returned non-object JSON payload');
-      }
-
-      if (!parsed.message) {
-        throw new Error('LLM response missing "message" string');
-      }
-
-      logger.llm(`âœ“ ${agentName} successfully generated via ${modelName}. Decision: ${parsed.decision}, Offer: ${parsed.offer}`);
-      return parsed;
-
-    } catch (err) {
-      lastError = err;
-      const statusPrefix = err.status ? `[HTTP ${err.status}] ` : '';
-      const safeErrMsg = statusPrefix + (err.message ? err.message.slice(0, 120) : 'Unknown error');
-      
-      // If quota exhausted, rate limit, auth error, or server overloaded (503), rotate to the next key
-      if (err.status === 429 || err.status === 403 || err.status === 503 || (err.message && (err.message.includes('429') || err.message.includes('503')))) {
-        rotateToNextKey(`Status ${err.status || 'transient error'}`);
-      }
-
-      logger.warn('LLM', `Model ${modelName} failed for ${agentName}: ${safeErrMsg}. Trying next candidate...`);
-      await sleep(300);
     }
   }
 
-  // If all candidate models failed
-  logger.error('LLM', `All Gemini model candidates failed for ${agentName}: ${lastError?.message?.slice(0, 150)}`);
-  throw new Error(`LLM provider failure for ${agentName}: ${lastError?.message || 'Service unavailable'}`);
+  // If all candidate models failed, fall back to mock so the negotiation doesn't crash
+  logger.error('LLM', `All Gemini model candidates failed for ${agentName}: ${lastError?.message?.slice(0, 150)}. Falling back to mock response.`);
+  logger.warn('LLM', 'Using mock response as final fallback to prevent negotiation failure.');
+  return generateMockResponse(agentName, agentConfig, round, maxRounds, offerState);
 }
 
 function sleep(ms) {
