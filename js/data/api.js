@@ -5,7 +5,7 @@
  */
 
 const ApiService = (function () {
-  const RENDER_HOST = 'negosim-backend-din6.onrender.com';
+  const RENDER_HOST = 'negosim-backend.onrender.com';
 
   const hostname = window.location.hostname || 'localhost';
   const port     = window.location.port;
