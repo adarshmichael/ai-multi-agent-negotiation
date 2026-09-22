@@ -104,7 +104,7 @@ function checkMaxRounds(session) {
  * @param {object} session
  * @param {number} [stagnationThreshold=3] — rounds with no change to trigger deadlock
  */
-function checkDeadlock(session, stagnationThreshold = 3) {
+function checkDeadlock(session, stagnationThreshold = 4) {
   const msgs = session.messages;
   // Need at least (threshold * 2) messages (both agents × threshold rounds)
   const minMsgs = stagnationThreshold * 2;
@@ -136,7 +136,7 @@ function checkDeadlock(session, stagnationThreshold = 3) {
   const stagnantAgents = agents.filter(a => agentStagnantRounds[a.id] >= stagnationThreshold);
   const warnAgents     = agents.filter(a => agentStagnantRounds[a.id] >= stagnationThreshold - 1);
 
-  // Hard deadlock — ALL agents stagnant for threshold rounds
+  // Hard deadlock — only when ALL agents are stagnant for threshold rounds
   if (stagnantAgents.length === agents.length) {
     const extended = stagnantAgents.some(a => agentStagnantRounds[a.id] > stagnationThreshold);
     const names = stagnantAgents.map(a => a.name).join(' & ');
@@ -148,14 +148,16 @@ function checkDeadlock(session, stagnationThreshold = 3) {
     };
   }
 
-  // Single agent stagnant at threshold — hard single-agent deadlock
+  // Single agent stagnant — WARN only, do NOT terminate
+  // (This was previously killing negotiations when slow-conceding personalities like "aggressive" were used)
   if (stagnantAgents.length >= 1) {
     const agent = stagnantAgents[0];
-    logger.warn('Evaluation', `Deadlock: ${agent.name} stagnant for ${stagnantAgents[0].id ? agentStagnantRounds[stagnantAgents[0].id] : '?'} rounds.`);
+    const rounds = agentStagnantRounds[agent.id] || stagnationThreshold;
+    logger.warn('Evaluation', `Single-agent stagnation warning: ${agent.name} stagnant for ${rounds} rounds (not terminating).`);
     return {
-      deadlocked: true,
-      finalOfferSignal: false,
-      reason: `${agent.name} has not moved from their position for ${stagnationThreshold} consecutive rounds. Deadlock declared.`,
+      deadlocked: false,
+      warning: true,
+      reason: `${agent.name} has not moved from their position for ${rounds} consecutive rounds. Consider adjusting your approach.`,
     };
   }
 

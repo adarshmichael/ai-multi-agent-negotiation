@@ -187,7 +187,11 @@ async function executeTurn(session) {
   const currentAgent      = agents[currentAgentIndex];
   const opponentIndex     = (currentAgentIndex + 1) % agents.length;
   const opponent          = agents[opponentIndex];
-  const round             = session.currentRound + 1;
+
+  // Only increment round when it's the first agent's turn (a "round" = full exchange)
+  const round = currentAgentIndex === 0
+    ? session.currentRound + 1
+    : session.currentRound;
 
   // Update session with new round and current agent
   updateSession(negotiationId, {
@@ -289,18 +293,38 @@ async function executeTurn(session) {
       decision = await decisionProvider.decide(currentAgent, session);
     } catch (err) {
       logger.error('Engine', `DecisionProvider error for ${currentAgent.name}: ${err.message}`);
-      updateSession(negotiationId, {
-        status: STATUS.FAILED,
-        result: RESULT.ERROR,
-        resultReason: `LLM reasoning failed for ${currentAgent.name}: ${err.message}`,
-      });
-      broadcast(negotiationId, 'negotiation_failed', {
-        reason: `AI reasoning service temporarily unavailable: ${err.message}`,
-        agentId: currentAgent.id,
-        agentName: currentAgent.name,
-        round,
-      });
-      return 'terminate';
+      logger.warn('Engine', `Falling back to RuleBasedDecisionProvider for ${currentAgent.name} to keep negotiation alive.`);
+
+      // ── FALLBACK: use deterministic rule-based logic instead of crashing ──
+      try {
+        const fallbackProvider = new RuleBasedDecisionProvider();
+        decision = await fallbackProvider.decide(currentAgent, session);
+        decision.reason = (decision.reason || '') + ' [Fallback: AI service was temporarily unavailable, used rule-based logic]';
+        logger.info('Engine', `Fallback decision for ${currentAgent.name}: ${decision.decision} | offer: ${decision.offer}`);
+
+        // Notify the UI that fallback was used (non-fatal warning, not a failure)
+        broadcast(negotiationId, 'agent_fallback', {
+          agentId: currentAgent.id,
+          agentName: currentAgent.name,
+          round,
+          reason: 'AI service temporarily unavailable. Using rule-based logic for this turn.',
+        });
+      } catch (fallbackErr) {
+        // If even the rule-based fallback fails, THEN terminate
+        logger.error('Engine', `Fallback also failed for ${currentAgent.name}: ${fallbackErr.message}`);
+        updateSession(negotiationId, {
+          status: STATUS.FAILED,
+          result: RESULT.ERROR,
+          resultReason: `Both AI and rule-based reasoning failed for ${currentAgent.name}: ${err.message}`,
+        });
+        broadcast(negotiationId, 'negotiation_failed', {
+          reason: `AI reasoning service temporarily unavailable: ${err.message}`,
+          agentId: currentAgent.id,
+          agentName: currentAgent.name,
+          round,
+        });
+        return 'terminate';
+      }
     }
   }
 

@@ -123,40 +123,64 @@ class RuleBasedDecisionProvider extends AgentDecisionProvider {
     const opponent        = session.agents.find(a => a.id !== agent.id);
     const opponentOffer   = opponent ? (session.offers[opponent.id] ?? null) : null;
 
+    // Personality-aware: earliest round fraction at which each personality will consider accepting
+    const acceptThresholds = {
+      aggressive:    0.80,  // Only accept in the last 20% of rounds
+      competitive:   0.75,  // Last 25%
+      'risk-averse': 0.60,  // Last 40%
+      analytical:    0.65,  // Last 35%
+      professional:  0.60,  // Last 40%
+      collaborative: 0.50,  // Past halfway
+      flexible:      0.40,  // Can accept from 40% onwards
+    };
+    const earliestAcceptFraction = acceptThresholds[personality] ?? 0.50;
+    const roundProgress = maxRounds > 0 ? round / maxRounds : 0;
+    const canAcceptByPersonality = roundProgress >= earliestAcceptFraction;
+    const isFinalRound = round >= maxRounds;
+
     logger.info('RuleEngine',
-      `${agent.name} | Round ${round} | personality=${personality} | myOffer=${myCurrentOffer} | opponentOffer=${opponentOffer}`
+      `${agent.name} | Round ${round}/${maxRounds} (${(roundProgress * 100).toFixed(0)}%) | personality=${personality} | canAccept=${canAcceptByPersonality} | myOffer=${myCurrentOffer} | opponentOffer=${opponentOffer}`
     );
 
     // Round 1 or no opponent offer yet → generate initial offer
-    if (round === 1 || opponentOffer === null) {
+    if (round <= 1 || opponentOffer === null) {
       return this._initialOffer(agent, params, nc, round);
     }
 
     // Check deterministic evaluation (Module 2)
     const evaluation = session._latestEvaluation;
     if (evaluation && evaluation.recommendation) {
-      if (evaluation.recommendation === 'ACCEPT') {
+      if (evaluation.recommendation === 'ACCEPT' && canAcceptByPersonality) {
+        // Only accept if personality allows it at this round
         return this._accept(agent, opponentOffer);
-      } else if (evaluation.recommendation === 'REJECT') {
+      } else if (evaluation.recommendation === 'ACCEPT' && !canAcceptByPersonality) {
+        // Evaluation says accept, but personality wants to negotiate more — counter instead
+        logger.info('RuleEngine', `${agent.name}: Evaluation says ACCEPT but ${personality} personality wants to negotiate more (round ${round}/${maxRounds}).`);
+        // Fall through to counter-offer
+      } else if (evaluation.recommendation === 'REJECT' && isFinalRound) {
+        // Only hard-reject on the final round
         return this._reject(agent, opponentOffer);
+      } else if (evaluation.recommendation === 'REJECT') {
+        // Not final round — counter instead of rejecting
+        logger.info('RuleEngine', `${agent.name}: Evaluation says REJECT but round ${round}/${maxRounds} — countering instead.`);
+        // Fall through to counter-offer
       }
     }
 
-    // If deterministic evaluation didn't catch it, fallback to default behavior
     // Check if opponent's offer satisfies our hard constraint
     const constraintSatisfied = this.evaluateConstraint(nc, opponentOffer);
 
-    // Check if offer is good enough to accept
-    if (constraintSatisfied && this._isAcceptable(nc, opponentOffer, params)) {
+    // Check if offer is good enough to accept AND personality allows it
+    if (constraintSatisfied && this._isAcceptable(nc, opponentOffer, params) && canAcceptByPersonality) {
       return this._accept(agent, opponentOffer);
     }
 
-    // Constraint violated and no rounds left → reject
-    if (!constraintSatisfied && round >= maxRounds) {
+    // Constraint violated and final round → reject
+    if (!constraintSatisfied && isFinalRound) {
       return this._reject(agent, opponentOffer);
     }
 
-    // Normal counter-offer
+    // Normal counter-offer (the default path for most rounds)
     return this._counterOffer(agent, nc, opponentOffer, myCurrentOffer, params, round, maxRounds);
   }
 
@@ -326,14 +350,24 @@ class LLMDecisionProvider extends AgentDecisionProvider {
       concession:    concessionState,
     });
 
-    const response = await generateAgentResponse(
-      prompt,
-      agent.name,
-      agent,
-      session.currentRound,
-      session.maxRounds,
-      session.offers
-    );
+    let response;
+    try {
+      response = await generateAgentResponse(
+        prompt,
+        agent.name,
+        agent,
+        session.currentRound,
+        session.maxRounds,
+        session.offers
+      );
+    } catch (llmErr) {
+      // If LLM + mock fallback both fail, use rule-based logic directly
+      logger.error('LLM', `generateAgentResponse threw for ${agent.name}: ${llmErr.message}. Using RuleBasedDecisionProvider.`);
+      const ruleProvider = new RuleBasedDecisionProvider();
+      const ruleDecision = await ruleProvider.decide(agent, session);
+      ruleDecision.reason = (ruleDecision.reason || '') + ' [LLM unavailable — rule-based fallback]';
+      return ruleDecision;
+    }
 
     // Normalize decision string (COUNTER -> counter_offer, ACCEPT -> accept, REJECT -> reject)
     let decision = (response.decision || 'counter_offer').toLowerCase().trim();

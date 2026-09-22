@@ -155,40 +155,62 @@ function evaluateOffer({ agent, opponentOffer, session = null, currentRound = nu
   let reason = '';
   let distanceFromTarget = 0;
 
+  // Round progress thresholds
+  const roundProgress = max > 0 ? round / max : 0;  // 0.0 → 1.0
+  const isLateGame    = roundProgress >= 0.7;         // last 30% of rounds
+  const isMidGame     = roundProgress >= 0.5;         // past halfway
+
   if (isBuyer) {
     // Buyer: Cannot exceed maxAcceptable (budget)
     // Distance from target: target - price (positive = savings below target, negative = above target)
     distanceFromTarget = targetValue !== null ? (targetValue - price) : 0;
 
     if (maxAcceptable !== null && price > maxAcceptable) {
+      // Hard constraint violated
       constraintStatus = 'VIOLATED';
       evaluation = 'UNACCEPTABLE';
-      recommendation = 'REJECT';
-      reason = `Offer of ${formatINR(price)} exceeds maximum budget limit of ${formatINR(maxAcceptable)}.`;
+
+      if (isFinalRound) {
+        // Final round + constraint violated → must reject
+        recommendation = 'REJECT';
+        reason = `Offer of ${formatINR(price)} exceeds maximum budget limit of ${formatINR(maxAcceptable)}. Final round — must reject.`;
+      } else {
+        // Early/mid rounds → counter at the constraint boundary instead of rejecting
+        recommendation = 'COUNTER';
+        reason = `Offer of ${formatINR(price)} exceeds budget limit of ${formatINR(maxAcceptable)}. Countering to stay within limits.`;
+      }
     } else if (targetValue !== null && price <= targetValue) {
       // Met or beat buyer target (favorable)
       constraintStatus = 'WITHIN_LIMIT';
       evaluation = 'FAVORABLE';
-      recommendation = 'ACCEPT';
-      const savings = targetValue - price;
-      reason = savings > 0
-        ? `Offer of ${formatINR(price)} is ${formatINR(savings)} below target (${formatINR(targetValue)}). Highly favorable.`
-        : `Offer of ${formatINR(price)} matches the agent's target value.`;
+
+      if (isLateGame || isFinalRound) {
+        // Late in negotiation — accept a favorable deal
+        recommendation = 'ACCEPT';
+        const savings = targetValue - price;
+        reason = savings > 0
+          ? `Offer of ${formatINR(price)} is ${formatINR(savings)} below target (${formatINR(targetValue)}). Late in negotiation — accepting.`
+          : `Offer of ${formatINR(price)} matches target. Accepting in round ${round}/${max}.`;
+      } else {
+        // Early rounds — try to get an even better deal
+        recommendation = 'COUNTER';
+        reason = `Offer of ${formatINR(price)} meets target (${formatINR(targetValue)}), but round ${round}/${max} — room to negotiate for a better deal.`;
+      }
     } else {
       // Between target and budget limit
       constraintStatus = 'WITHIN_LIMIT';
       evaluation = 'PARTIALLY_ACCEPTABLE';
 
-      // Check if convergence tolerance reached or final round
-      if (gap !== null && myLastOffer && gap <= (myLastOffer * 0.02)) {
+      if (gap !== null && myLastOffer && gap <= (myLastOffer * 0.02) && isMidGame) {
+        // Convergence: offers within 2% AND past midpoint
         recommendation = 'ACCEPT';
-        reason = `Offer of ${formatINR(price)} is within ${formatINR(gap)} (2%) of our position. Recommendation is to accept.`;
+        reason = `Offer of ${formatINR(price)} is within ${formatINR(gap)} (2%) of our position. Past midpoint — accept.`;
       } else if (isFinalRound) {
         recommendation = 'ACCEPT';
-        reason = `Offer of ${formatINR(price)} is within budget limit (${formatINR(maxAcceptable)}). Reached final round ${round}/${max}; accept to secure deal.`;
+        reason = `Offer of ${formatINR(price)} is within budget (${formatINR(maxAcceptable)}). Final round ${round}/${max} — accepting to secure deal.`;
       } else {
         recommendation = 'COUNTER';
-        reason = `Offer is above the agent's target (${formatINR(targetValue)}) but still within negotiable limits (budget ceiling ${formatINR(maxAcceptable)}).`;
+        reason = `Offer is above target (${formatINR(targetValue)}) but within budget (${formatINR(maxAcceptable)}). Round ${round}/${max} — continuing to negotiate.`;
       }
     }
   } else {
@@ -197,34 +219,51 @@ function evaluateOffer({ agent, opponentOffer, session = null, currentRound = nu
     distanceFromTarget = targetValue !== null ? (price - targetValue) : 0;
 
     if (minAcceptable !== null && price < minAcceptable) {
+      // Hard constraint violated
       constraintStatus = 'VIOLATED';
       evaluation = 'UNACCEPTABLE';
-      recommendation = 'REJECT';
-      reason = `Offer of ${formatINR(price)} is below minimum acceptable price of ${formatINR(minAcceptable)}.`;
+
+      if (isFinalRound) {
+        // Final round + constraint violated → must reject
+        recommendation = 'REJECT';
+        reason = `Offer of ${formatINR(price)} is below minimum price of ${formatINR(minAcceptable)}. Final round — must reject.`;
+      } else {
+        // Early/mid rounds → counter at the constraint boundary
+        recommendation = 'COUNTER';
+        reason = `Offer of ${formatINR(price)} is below minimum price of ${formatINR(minAcceptable)}. Countering to protect floor.`;
+      }
     } else if (targetValue !== null && price >= targetValue) {
       // Met or beat seller target (favorable)
       constraintStatus = 'WITHIN_LIMIT';
       evaluation = 'FAVORABLE';
-      recommendation = 'ACCEPT';
-      const premium = price - targetValue;
-      reason = premium > 0
-        ? `Offer of ${formatINR(price)} exceeds target (${formatINR(targetValue)}) by ${formatINR(premium)}. Highly favorable.`
-        : `Offer of ${formatINR(price)} matches the agent's target value.`;
+
+      if (isLateGame || isFinalRound) {
+        // Late in negotiation — accept a favorable deal
+        recommendation = 'ACCEPT';
+        const premium = price - targetValue;
+        reason = premium > 0
+          ? `Offer of ${formatINR(price)} exceeds target (${formatINR(targetValue)}) by ${formatINR(premium)}. Late in negotiation — accepting.`
+          : `Offer of ${formatINR(price)} matches target. Accepting in round ${round}/${max}.`;
+      } else {
+        // Early rounds — try to get an even better deal
+        recommendation = 'COUNTER';
+        reason = `Offer of ${formatINR(price)} meets target (${formatINR(targetValue)}), but round ${round}/${max} — room to negotiate for more.`;
+      }
     } else {
       // Between min acceptable price and target
       constraintStatus = 'WITHIN_LIMIT';
       evaluation = 'PARTIALLY_ACCEPTABLE';
 
-      // Check if convergence tolerance reached or final round
-      if (gap !== null && myLastOffer && gap <= (myLastOffer * 0.02)) {
+      if (gap !== null && myLastOffer && gap <= (myLastOffer * 0.02) && isMidGame) {
+        // Convergence: offers within 2% AND past midpoint
         recommendation = 'ACCEPT';
-        reason = `Offer of ${formatINR(price)} is within ${formatINR(gap)} (2%) of our position. Recommendation is to accept.`;
+        reason = `Offer of ${formatINR(price)} is within ${formatINR(gap)} (2%) of our position. Past midpoint — accept.`;
       } else if (isFinalRound) {
         recommendation = 'ACCEPT';
-        reason = `Offer of ${formatINR(price)} satisfies minimum price (${formatINR(minAcceptable)}). Reached final round ${round}/${max}; accept to close agreement.`;
+        reason = `Offer of ${formatINR(price)} satisfies minimum price (${formatINR(minAcceptable)}). Final round ${round}/${max} — accepting.`;
       } else {
         recommendation = 'COUNTER';
-        reason = `Offer is below the agent's target (${formatINR(targetValue)}) but still within negotiable limits (floor price ${formatINR(minAcceptable)}).`;
+        reason = `Offer is below target (${formatINR(targetValue)}) but within limits (floor ${formatINR(minAcceptable)}). Round ${round}/${max} — continuing to negotiate.`;
       }
     }
   }
