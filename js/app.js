@@ -937,27 +937,34 @@ async function handleStartNegotiation() {
       LiveNegotiationScreen.init(agents, scenario, session.maxRounds || maxRounds);
     }
 
-    // 3. Connect WebSocket
-    window.ApiService.connectWebSocket(negotiationId, {
-      onOpen: () => {
-        console.log('[Negotiation] WebSocket connected');
-      },
-      onEvent: (eventName, data) => {
-        handleNegotiationEvent(eventName, data, agents);
-      },
-      onClose: (event) => {
-        const status = AppState.getState().negotiationStatus;
-        if (status === 'in_progress') {
-          console.warn('[Negotiation] WebSocket closed unexpectedly');
-          updateNegotiationHeader('disconnected', AppState.getState().currentRound, AppState.getState().maxRounds, scenario.name);
-        }
-      },
-      onError: (err) => {
-        console.error('[Negotiation] WebSocket error:', err);
-      },
+    // 3. Connect WebSocket — MUST be open before starting the engine
+    //    to avoid missing early events (especially human_turn_required in Practice Mode)
+    await new Promise((resolve, reject) => {
+      window.ApiService.connectWebSocket(negotiationId, {
+        onOpen: () => {
+          console.log('[Negotiation] WebSocket connected');
+          resolve();
+        },
+        onEvent: (eventName, data) => {
+          handleNegotiationEvent(eventName, data, agents);
+        },
+        onClose: (event) => {
+          const status = AppState.getState().negotiationStatus;
+          if (status === 'in_progress') {
+            console.warn('[Negotiation] WebSocket closed unexpectedly');
+            updateNegotiationHeader('disconnected', AppState.getState().currentRound, AppState.getState().maxRounds, scenario.name);
+          }
+        },
+        onError: (err) => {
+          console.error('[Negotiation] WebSocket error:', err);
+          reject(err);
+        },
+      });
+      // Safety timeout — don't hang forever if WS fails to connect
+      setTimeout(() => reject(new Error('WebSocket connection timed out')), 10000);
     });
 
-    // 4. Start the negotiation engine
+    // 4. Start the negotiation engine (only after WS is confirmed open)
     await window.ApiService.startNegotiation(negotiationId);
 
   } catch (err) {
@@ -2666,16 +2673,19 @@ async function init() {
       initAgentPanels(agents);
       updateOrchStatusBar(0, session.maxRounds || 10, '—', 'starting');
 
-      window.ApiService.connectWebSocket(negId, {
-        onOpen: () => console.log('[Negotiation] WebSocket connected'),
-        onEvent: (eventName, data) => handleNegotiationEvent(eventName, data, agents),
-        onClose: (event) => {
-          if (AppState.getState().negotiationStatus === 'in_progress') {
-            console.warn('[Negotiation] WebSocket closed unexpectedly');
-            updateNegotiationHeader('disconnected', AppState.getState().currentRound, AppState.getState().maxRounds, scenario.name);
-          }
-        },
-        onError: (err) => console.error('[Negotiation] WebSocket error:', err),
+      await new Promise((resolve, reject) => {
+        window.ApiService.connectWebSocket(negId, {
+          onOpen: () => { console.log('[Negotiation] WebSocket connected'); resolve(); },
+          onEvent: (eventName, data) => handleNegotiationEvent(eventName, data, agents),
+          onClose: (event) => {
+            if (AppState.getState().negotiationStatus === 'in_progress') {
+              console.warn('[Negotiation] WebSocket closed unexpectedly');
+              updateNegotiationHeader('disconnected', AppState.getState().currentRound, AppState.getState().maxRounds, scenario.name);
+            }
+          },
+          onError: (err) => { console.error('[Negotiation] WebSocket error:', err); reject(err); },
+        });
+        setTimeout(() => reject(new Error('WebSocket connection timed out')), 10000);
       });
 
       if (session.status === 'created' || session.status === 'starting') {
