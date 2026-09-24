@@ -15,11 +15,13 @@ validateConfig();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const { WebSocketServer } = require('ws');
 const url = require('url');
 
 const healthRoutes = require('./routes/health.routes');
 const negotiationRoutes = require('./routes/negotiation.routes');
+const authRoutes = require('./routes/auth.routes');
 const errorHandler = require('./middleware/errorHandler');
 const engine = require('./engine/NegotiationEngine');
 const negotiationService = require('./services/negotiation.service');
@@ -40,6 +42,7 @@ app.use(express.urlencoded({ extended: true }));
 // ======== Routes ========
 const path = require('path');
 app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api', negotiationRoutes);
 
 // Serve frontend static files
@@ -133,6 +136,15 @@ wss.on('connection', (ws, request, negotiationId) => {
   });
 });
 
+// ======== MongoDB Connection ========
+mongoose.connect(config.mongoUri)
+  .then(() => {
+    logger.info('MongoDB', `Connected to ${config.mongoUri.replace(/\/\/.*@/, '//***@')}`);
+  })
+  .catch((err) => {
+    logger.warn('MongoDB', `Connection failed: ${err.message}. Auth features will be unavailable.`);
+  });
+
 // ======== Start Server ========
 server.listen(config.port, () => {
   console.log('');
@@ -144,6 +156,7 @@ server.listen(config.port, () => {
   console.log('');
   logger.info('Server', `Listening on port ${config.port}`);
   logger.info('Server', `Gemini API: ${config.geminiApiKey ? 'CONFIGURED ✓' : 'NOT CONFIGURED ✗'}`);
+  logger.info('Server', `MongoDB:    ${config.mongoUri ? 'CONFIGURED ✓' : 'NOT CONFIGURED ✗'}`);
 });
 
 // Graceful shutdown

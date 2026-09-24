@@ -2397,8 +2397,8 @@ async function showResultCard(data) {
         ↺ Start a New Negotiation
       </button>
       ${negotiationId ? `
-        <button class="btn neg-download-btn" id="btn-download-txt" title="Download TXT Transcript">
-          ⬇ Download TXT
+        <button class="btn neg-download-btn" id="btn-download-pdf" title="Download PDF Transcript">
+          ⬇ Download PDF
         </button>
         <button class="btn neg-download-btn" id="btn-download-json" title="Download JSON Transcript">
           ⬇ Download JSON
@@ -2411,12 +2411,110 @@ async function showResultCard(data) {
 
   // Wire download buttons
   if (negotiationId) {
-    const btnTxt  = document.getElementById('btn-download-txt');
+    const btnPdf  = document.getElementById('btn-download-pdf');
     const btnJson = document.getElementById('btn-download-json');
-    if (btnTxt) btnTxt.addEventListener('click', () => {
-      const url = window.ApiService.getTranscriptUrl(negotiationId, 'txt');
-      const a = document.createElement('a'); a.href = url; a.download = ''; a.click();
+
+    // PDF Download — fetch TXT transcript and convert to PDF client-side
+    if (btnPdf) btnPdf.addEventListener('click', async () => {
+      btnPdf.disabled = true;
+      btnPdf.textContent = '⏳ Generating...';
+      try {
+        const txtUrl = window.ApiService.getTranscriptUrl(negotiationId, 'txt');
+        const response = await fetch(txtUrl);
+        const txtContent = await response.text();
+
+        // Dynamically load jsPDF if not already loaded
+        if (!window.jspdf) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        // PDF styling
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 15;
+        const maxLineWidth = pageWidth - 2 * margin;
+        const lineHeight = 4.5;
+        let y = margin;
+
+        // Header bar
+        doc.setFillColor(13, 17, 23); // --color-bg
+        doc.rect(0, 0, pageWidth, 22, 'F');
+        doc.setFontSize(14);
+        doc.setTextColor(230, 237, 243); // --color-text
+        doc.text('NegoSim — Negotiation Transcript', margin, 14);
+        doc.setFontSize(8);
+        doc.setTextColor(139, 148, 158); // --color-text-muted
+        doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, pageWidth - margin, 14, { align: 'right' });
+        y = 30;
+
+        // Transcript content
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(50, 50, 50);
+
+        const lines = txtContent.split('\n');
+        for (const line of lines) {
+          // Handle page overflow
+          if (y + lineHeight > pageHeight - margin) {
+            doc.addPage();
+            y = margin;
+          }
+
+          // Style section headers differently
+          if (line.includes('═') || line.includes('─')) {
+            doc.setTextColor(110, 123, 250); // --color-primary
+            doc.text(line.substring(0, 90), margin, y);
+            doc.setTextColor(50, 50, 50);
+          } else if (line.trim().startsWith('ROUND') || line.trim().startsWith('──')) {
+            doc.setFont('courier', 'bold');
+            doc.setTextColor(224, 122, 61); // --color-buyer accent
+            doc.text(line.substring(0, 90), margin, y);
+            doc.setFont('courier', 'normal');
+            doc.setTextColor(50, 50, 50);
+          } else {
+            const splitLines = doc.splitTextToSize(line || ' ', maxLineWidth);
+            for (const sl of splitLines) {
+              if (y + lineHeight > pageHeight - margin) {
+                doc.addPage();
+                y = margin;
+              }
+              doc.text(sl, margin, y);
+              y += lineHeight;
+            }
+            continue; // skip the y increment below since we handled it
+          }
+          y += lineHeight;
+        }
+
+        // Footer on last page
+        doc.setFontSize(7);
+        doc.setTextColor(139, 148, 158);
+        doc.text('NegoSim — AI Multi-Agent Negotiation Platform', margin, pageHeight - 8);
+
+        // Download
+        const scenarioName = AppState.getState().selectedScenario?.name || 'negotiation';
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const filename = `negosim-${scenarioName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${dateStr}.pdf`;
+        doc.save(filename);
+
+      } catch (err) {
+        console.error('PDF generation failed:', err);
+        alert('PDF generation failed. Please try again.');
+      } finally {
+        btnPdf.disabled = false;
+        btnPdf.textContent = '⬇ Download PDF';
+      }
     });
+
     if (btnJson) btnJson.addEventListener('click', () => {
       const url = window.ApiService.getTranscriptUrl(negotiationId, 'json');
       const a = document.createElement('a'); a.href = url; a.download = ''; a.click();
@@ -2830,6 +2928,28 @@ async function init() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   });
+
+  // ── User Profile & Logout ──
+  const userJson = localStorage.getItem('negosim_user');
+  if (userJson) {
+    try {
+      const user = JSON.parse(userJson);
+      const avatarEl = document.getElementById('header-user-avatar');
+      if (avatarEl && user.name) {
+        avatarEl.textContent = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        avatarEl.title = `Signed in as ${user.name} (${user.email})`;
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  const btnLogout = document.getElementById('btn-logout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', () => {
+      localStorage.removeItem('negosim_token');
+      localStorage.removeItem('negosim_user');
+      window.location.href = 'login.html';
+    });
+  }
 
   if (!isSpecialBoot) {
     AppState.loadScenarios();

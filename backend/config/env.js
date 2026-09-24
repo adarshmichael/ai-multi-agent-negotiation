@@ -20,6 +20,10 @@ const config = {
   maxRounds:     parseInt(process.env.MAX_ROUNDS || '10', 10),
   thinkDelayMs:  parseInt(process.env.THINK_DELAY_MS || '1500', 10),
   nodeEnv:       process.env.NODE_ENV || 'development',
+  mongoUri:      process.env.MONGODB_URI || 'mongodb://localhost:27017/negosim',
+  jwtSecret:     process.env.JWT_SECRET || 'negosim-dev-secret-change-in-production',
+  jwtExpiry:     process.env.JWT_EXPIRY || '7d',
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
 };
 
 function validateConfig() {

@@ -208,9 +208,13 @@ function buildReport(session) {
 
   // Satisfaction scores
   const satisfactionScores = agents.map(agent => {
-    const agentFinalOffer = session.offers[agent.id] ?? finalOffer;
+    // BUG FIX: Use the AGREED deal price (finalOffer) for satisfaction,
+    // not the agent's own last counter-offer (session.offers[agent.id]).
+    // The agent's own position would always look favorable from their
+    // perspective, inflating scores. What matters is the actual settlement.
+    const scoredOffer = finalOffer ?? session.offers[agent.id] ?? null;
     const agentInitOffer  = session.initialOffers[agent.id] ?? null;
-    const score = calcSatisfaction(agent, agentFinalOffer ?? finalOffer, agentInitOffer);
+    const score = calcSatisfaction(agent, scoredOffer, agentInitOffer);
     return {
       agentId:       agent.id,
       agentName:     agent.name,
@@ -218,8 +222,8 @@ function buildReport(session) {
       goal:          agent.goal || (agent.goals || [])[0] || '',
       target:        agent.targetValue ?? null,
       targetFmt:     formatINR(agent.targetValue),
-      finalOffer:    agentFinalOffer ?? finalOffer,
-      finalOfferFmt: formatINR(agentFinalOffer ?? finalOffer),
+      finalOffer:    scoredOffer,
+      finalOfferFmt: formatINR(scoredOffer),
       score:         score,
       constraint:    agent.numericConstraint || null,
     };
