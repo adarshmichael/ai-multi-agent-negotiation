@@ -21,14 +21,25 @@
 /* ── Deep Premium Background ── */
 .auth-bg {
   position: absolute;
-  inset: 0;
+  inset: -5%; /* slightly larger for the scale animation */
   z-index: 0;
-  background: 
-    radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 40%),
-    radial-gradient(circle at 85% 30%, rgba(37, 99, 235, 0.15), transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(139, 92, 246, 0.1), transparent 50%);
-  filter: blur(60px);
-  animation: pulseBg 15s ease-in-out infinite alternate;
+  background-image: url("https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=2000&auto=format&fit=crop");
+  background-size: cover;
+  background-position: center;
+  animation: slowPan 25s ease-in-out infinite alternate;
+}
+
+.auth-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(5,5,5,0.85) 0%, rgba(20,10,35,0.7) 100%);
+  z-index: 1;
+}
+
+@keyframes slowPan {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
 }
 
 .auth-bg-grid {
@@ -39,13 +50,8 @@
     linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
   background-size: 50px 50px;
-  mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
-  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
-}
-
-@keyframes pulseBg {
-  0% { transform: scale(1); opacity: 0.8; }
-  100% { transform: scale(1.1); opacity: 1; }
+  mask-image: radial-gradient(circle at center, black 50%, transparent 90%);
+  -webkit-mask-image: radial-gradient(circle at center, black 50%, transparent 90%);
 }
 
 /* Floating animated elements */
