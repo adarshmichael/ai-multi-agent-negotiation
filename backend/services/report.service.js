@@ -39,7 +39,8 @@ function calcSatisfaction(agent, finalOffer, initialOffer) {
   if (finalOffer == null) return null;
 
   const nc = agent.numericConstraint;
-  const target = agent.targetValue;
+  // If targetValue is completely missing, we use their initialOffer (their ideal starting point) as a fallback target!
+  const target = agent.targetValue != null ? agent.targetValue : initialOffer;
 
   // Constraint-aware scoring
   if (nc && target != null) {

@@ -1,576 +1,383 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NegoSim — Multi-Agent Negotiation Platform</title>
-  <meta name="description"
-    content="AI-powered multi-agent negotiation training and simulation platform. Configure agents, set goals, and watch live negotiations unfold." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css" />
-</head>
+  <title>NegoSim — Welcome</title>
+  <meta name="description" content="Sign in to NegoSim — AI-powered multi-agent negotiation platform." />
+  
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/auth.css" />
 
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
 <body>
 
-  <!-- Auth guard — redirect to login if not authenticated -->
-  <script>
-      if (localStorage.getItem('negosim_token')) {
-        const token = localStorage.getItem('negosim_token');
-        if (token === 'mock-token-fallback') {
-           // Skip backend check for local demo mode
-           return;
-        }
-
-        const RENDER_HOST = 'negosim-backend.onrender.com';
-        const hostname = window.location.hostname || 'localhost';
-        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-        const API_BASE = isLocal ? 'http://localhost:8001/api' : `https://${RENDER_HOST}/api`;
-
-        fetch(`${API_BASE}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` }})
-        .then(r => { if(!r.ok) { localStorage.removeItem('negosim_token'); window.location.href='login.html'; } })
-        .catch(() => { 
-           console.warn('Backend /me failed, assuming demo mode.'); 
-        });
-      } else {
-        window.location.href = 'login.html';
-      }
-  </script>
-
-
-  <div class="app-shell">
-
-    <header class="app-header">
-      <div class="brand">
-        <div class="brand-mark">N</div>
-        <div class="brand-text">
-          <h1>NegoSim</h1>
-          <span>Multi-Agent Negotiation Training Platform</span>
+  <div class="auth-page">
+    
+    <!-- LEFT SIDE: FORM PANEL -->
+    <div class="auth-form-side">
+      <div class="auth-container">
+        
+        <!-- Header -->
+        <div class="auth-header">
+          <div class="auth-brand">
+            <div class="auth-brand-mark">N</div>
+            <div class="auth-brand-text">NegoSim</div>
+          </div>
+          <h1 class="auth-title" id="auth-title">Welcome Back</h1>
+          <p class="auth-subtitle" id="auth-subtitle">Sign in to your account to continue.</p>
         </div>
-      </div>
 
-      <nav class="stepper" id="stepper"></nav>
-
-      <div class="header-user" id="header-user">
-        <div class="header-user-avatar" id="header-user-avatar"></div>
-        <button class="header-logout-btn" id="btn-logout" title="Sign out">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-        </button>
-      </div>
-    </header>
-
-    <!-- ================= SCREEN 1: SCENARIO SELECTION ================= -->
-    <section class="screen" id="screen-scenario">
-      <div class="screen-header">
-        <div class="screen-eyebrow">Step 1 of 4</div>
-        <h2 class="screen-title">Select a Negotiation Scenario</h2>
-        <p class="screen-subtitle">Choose the scenario you'd like to configure and train against. Each scenario defines
-          its own pair of negotiating agents.</p>
-      </div>
-
-      <div class="validation-banner" id="scenario-validation">
-        <span>⚠</span>
-        <span>Please select a scenario before continuing.</span>
-      </div>
-
-      <div class="scenario-grid" id="scenario-grid"></div>
-
-      <div class="mode-selection-section">
-        <div class="mode-section-header">
-          <h3 class="mode-section-title">Choose Mode</h3>
-          <p class="mode-section-subtitle">Select how you want to participate in the negotiation.</p>
+        <!-- Custom Animated Tab Switcher -->
+        <div class="auth-tabs" id="auth-tabs">
+          <div class="auth-tab-bg"></div>
+          <button class="auth-tab active" id="tab-login" data-tab="login">Sign In</button>
+          <button class="auth-tab" id="tab-register" data-tab="register">Create Account</button>
         </div>
-        <div class="mode-grid" id="mode-grid">
-          <div class="mode-card" data-mode="human-vs-ai" id="mode-card-practice">
-            <div class="mode-card-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+
+        <div class="auth-message" id="auth-message">
+          <span id="auth-message-icon"></span>
+          <span id="auth-message-text"></span>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <form id="form-login" autocomplete="on">
+          <div class="auth-form-group">
+            <div class="auth-input-wrap">
+              <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
               </svg>
+              <input class="auth-input" type="email" id="login-email" name="email" placeholder=" " required autocomplete="email" />
+              <label class="auth-floating-label" for="login-email">Email Address</label>
             </div>
-            <div class="mode-card-body">
-              <div class="mode-card-title">Practice Mode</div>
-              <div class="mode-card-label">You vs AI</div>
-              <div class="mode-card-desc">Step into the negotiation yourself. You play as one agent and negotiate directly against the AI.</div>
-            </div>
-            <div class="mode-card-check"><span>✓</span></div>
           </div>
-          <div class="mode-card" data-mode="ai-vs-ai" id="mode-card-watch">
-            <div class="mode-card-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
-                <circle cx="12" cy="12" r="10"/>
-                <polygon points="10 8 16 12 10 16 10 8"/>
+
+          <div class="auth-form-group">
+            <div class="auth-input-wrap">
+              <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
+              <input class="auth-input" type="password" id="login-password" name="password" placeholder=" " required autocomplete="current-password" />
+              <label class="auth-floating-label" for="login-password">Password</label>
+              <button type="button" class="auth-pw-toggle" id="login-pw-toggle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
             </div>
-            <div class="mode-card-body">
-              <div class="mode-card-title">Watch Mode</div>
-              <div class="mode-card-label">AI vs AI</div>
-              <div class="mode-card-desc">Observe two AI agents negotiate autonomously. Watch strategies unfold in real time.</div>
-            </div>
-            <div class="mode-card-check"><span>✓</span></div>
           </div>
-        </div>
-      </div>
 
-      <div class="nav-row">
-        <div></div>
-        <button class="btn btn-primary" id="btn-scenario-continue" disabled>
-          Continue
-          <span>→</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- ================= SCREEN 2: AGENT CONFIGURATION ================= -->
-    <section class="screen" id="screen-configure">
-      <div class="screen-header">
-        <div class="screen-header-top">
-          <div>
-            <div class="screen-eyebrow">Step 2 of 4</div>
-            <h2 class="screen-title" id="configure-title">Configure Agents</h2>
-            <p class="screen-subtitle">For each agent, configure their Goals, Constraints, and Personality — in that order.
-              Personality is unlocked only after goals and constraints are set.</p>
-          </div>
-          <div class="mode-badge-persistent" id="mode-badge-screen2"></div>
-        </div>
-      </div>
-
-      <div class="validation-banner" id="personality-validation">
-        <span>⚠</span>
-        <span>Complete Goals → Constraints → Personality for all agents before continuing.</span>
-      </div>
-
-      <div class="agent-grid" id="agent-grid"></div>
-
-      <div class="nav-row">
-        <button class="btn btn-secondary" id="btn-configure-back">← Back</button>
-        <div style="display:flex; gap:12px;">
-          <button class="btn btn-ghost" id="btn-save-config">Save Configuration</button>
-          <button class="btn btn-primary" id="btn-configure-continue">
-            Review Summary
-            <span>→</span>
+          <button type="submit" class="auth-submit" id="btn-login">
+            <span class="auth-spinner"></span>
+            <span class="auth-btn-text">Sign In</span>
           </button>
-        </div>
-      </div>
-    </section>
+        </form>
 
-    <!-- ================= SCREEN 3: SUMMARY ================= -->
-    <section class="screen" id="screen-summary">
-      <div class="screen-header">
-        <div class="screen-header-top">
-          <div>
-            <div class="screen-eyebrow">Step 3 of 4</div>
-            <h2 class="screen-title">Goals &amp; Constraints Summary</h2>
-            <p class="screen-subtitle">Confirm each agent's configuration before starting the negotiation simulation.</p>
+        <!-- REGISTER FORM -->
+        <form id="form-register" style="display:none;" autocomplete="on">
+          <div class="auth-form-group">
+            <div class="auth-input-wrap">
+              <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+              <input class="auth-input" type="text" id="register-name" name="name" placeholder=" " required autocomplete="name" />
+              <label class="auth-floating-label" for="register-name">Full Name</label>
+            </div>
           </div>
-          <div class="mode-badge-persistent" id="mode-badge-screen3"></div>
-        </div>
-      </div>
 
-      <div class="summary-grid" id="summary-grid"></div>
-
-      <div class="config-section">
-        <h3 class="config-title">Simulation Settings</h3>
-        <div class="settings-grid">
-          <div class="form-group">
-            <label for="input-max-rounds" class="form-label">Maximum Rounds</label>
-            <input type="number" id="input-max-rounds" class="form-control" value="10" min="1" max="50">
-            <p class="form-hint">The simulation will automatically terminate if an agreement isn't reached by this round.</p>
+          <div class="auth-form-group">
+            <div class="auth-input-wrap">
+              <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              </svg>
+              <input class="auth-input" type="email" id="register-email" name="email" placeholder=" " required autocomplete="email" />
+              <label class="auth-floating-label" for="register-email">Email Address</label>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="input-ai-provider" class="form-label">AI Provider</label>
-            <select id="input-ai-provider" class="form-control">
-              <option value="simulation">Mock Agents (Rule-Based)</option>
-              <option value="gemini">Gemini API (Real AI)</option>
-            </select>
-            <p class="form-hint">Select whether to use the local mock engine or real Gemini AI.</p>
+
+          <div class="auth-form-group">
+            <div class="auth-input-wrap">
+              <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <input class="auth-input" type="password" id="register-password" name="password" placeholder=" " required autocomplete="new-password" minlength="6" />
+              <label class="auth-floating-label" for="register-password">Create Password</label>
+              <button type="button" class="auth-pw-toggle" id="register-pw-toggle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <!-- Animated Password Strength -->
+            <div class="auth-pw-strength" id="pw-strength">
+              <div class="auth-pw-strength-bar" id="pw-bar-1"></div>
+              <div class="auth-pw-strength-bar" id="pw-bar-2"></div>
+              <div class="auth-pw-strength-bar" id="pw-bar-3"></div>
+              <div class="auth-pw-strength-bar" id="pw-bar-4"></div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div class="nav-row">
-        <button class="btn btn-secondary" id="btn-summary-back">← Back</button>
-        <button class="btn btn-primary" id="btn-summary-continue">
-          Ready to Start Negotiation
-          <span>→</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- ================= SCREEN 4: LIVE NEGOTIATION ================= -->
-    <section class="screen" id="screen-negotiate">
-
-      <!-- ---- Pre-start panel ---- -->
-      <div id="neg-start-panel">
-        <div class="ready-panel">
-          <div class="ready-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-          </div>
-          <h2 class="ready-title">Ready to Start Negotiation</h2>
-          <p class="ready-subtitle" id="neg-ready-subtitle">Your scenario and agents are fully configured. Click below
-            to launch the live AI negotiation.</p>
-
-          <div class="neg-start-meta" id="neg-start-meta"></div>
-
-          <button class="btn btn-primary btn-start-negotiation" id="btn-start-negotiation">
-            <span id="btn-start-text">🚀 Start Negotiation</span>
+          <button type="submit" class="auth-submit" id="btn-register">
+            <span class="auth-spinner"></span>
+            <span class="auth-btn-text">Create Account</span>
           </button>
+        </form>
 
-          <div class="validation-banner" id="backend-validation" style="margin-top:16px;">
-            <span>⚠</span>
-            <span id="backend-validation-msg">Unable to connect to the backend server. Please start it first.</span>
-          </div>
+        <!-- Divider -->
+        <div class="auth-divider">
+          <div class="auth-divider-line"></div>
+          <span class="auth-divider-text">Or</span>
+          <div class="auth-divider-line"></div>
         </div>
 
-        <div class="nav-row">
-          <button class="btn btn-secondary" id="btn-ready-back">← Back to Summary</button>
-          <button class="btn btn-ghost" id="btn-ready-restart">Start Over</button>
-        </div>
-      </div>
-
-      <!-- ---- Live Negotiation Console ---- -->
-      <div id="neg-live-panel" style="display:none;">
-
-        <!-- ═══ ORCHESTRATOR CONTROL BAR ═══ -->
-        <div class="neg-control-bar" id="neg-control-bar">
-          <div class="neg-control-bar-left">
-            <div class="neg-orch-pulse-wrap" aria-hidden="true">
-              <svg viewBox="0 0 36 36" fill="none" width="26" height="26">
-                <polygon points="18,2 33,10 33,26 18,34 3,26 3,10" stroke="currentColor" stroke-width="1.5"
-                  fill="currentColor" fill-opacity="0.1" />
-                <circle cx="18" cy="18" r="4" fill="currentColor" opacity="0.8" />
-              </svg>
-              <div class="neg-orch-node-pulse" id="neg-orch-pulse"></div>
-            </div>
-            <div class="neg-control-label">ORCHESTRATOR</div>
-            <div class="neg-control-divider"></div>
-            <div class="neg-control-stat">
-              <span class="neg-control-stat-label">ROUND</span>
-              <span class="neg-control-stat-value" id="neg-orch-round">— / —</span>
-            </div>
-            <div class="neg-control-divider"></div>
-            <div class="neg-control-stat">
-              <span class="neg-control-stat-label">ACTIVE</span>
-              <span class="neg-control-stat-value" id="neg-orch-turn">—</span>
-            </div>
-            <div class="neg-control-divider"></div>
-            <div class="neg-status-pill" id="neg-orch-status-pill" data-status="starting">
-              <span class="neg-status-dot" id="neg-status-dot"></span>
-              <span id="neg-status-text">INITIALIZING</span>
-            </div>
-          </div>
-          <div class="neg-control-bar-right">
-            <button class="btn-control" id="btn-pause-negotiation" title="Pause">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
-                <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
-              </svg>
-              Pause
-            </button>
-            <button class="btn-control" id="btn-resume-negotiation" title="Resume" style="display:none;">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
-              Resume
-            </button>
-            <button class="btn-control btn-control-danger" id="btn-stop-negotiation" title="Stop">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-              </svg>
-              Stop
-            </button>
-            <button class="btn-control" id="btn-reset-negotiation" title="Reset">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="13" height="13">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-              </svg>
-              Reset
-            </button>
-          </div>
-        </div>
-
-        <!-- ═══ SCENARIO STRIP ═══ -->
-        <div class="neg-scenario-strip">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
+        <!-- Social Login -->
+        <button type="button" class="auth-google-btn" id="btn-google-login">
+          <svg viewBox="0 0 24 24" width="18" height="18">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          <span class="neg-scenario-strip-name" id="neg-scenario-name">Negotiation</span>
-          <span class="neg-scenario-strip-sep">·</span>
-          <span class="neg-scenario-strip-desc" id="neg-scenario-desc"></span>
-          <span class="neg-scenario-strip-mode" id="neg-mode-badge">MOCK</span>
-        </div>
+          Continue with Google
+        </button>
+        
+      </div>
+    </div>
 
-        <!-- ═══ MAIN ARENA: 3-column layout ═══ -->
-        <div class="arena-tab-switcher" id="arena-tab-switcher">
-          <button class="arena-tab-btn active" data-tab="agents">Agents</button>
-          <button class="arena-tab-btn" data-tab="chat">Chat</button>
-          <button class="arena-tab-btn" data-tab="reasoning">Reasoning</button>
-        </div>
-        <div class="neg-arena-v3">
-
-          <!-- Left: Agent Intelligence -->
-          <div class="neg-agent-profiles-column arena-col arena-col-active" data-col="agents">
-            <h3 class="column-header">AGENT INTELLIGENCE</h3>
-            
-            <!-- Buyer Agent Profile -->
-            <div class="neg-profile-card neg-profile-buyer" id="neg-buyer-panel">
-              <div class="neg-profile-header">
-                <div class="neg-agent-avatar neg-agent-avatar-buyer" id="neg-buyer-avatar"><span id="neg-buyer-initials">BA</span></div>
-                <div class="neg-profile-meta">
-                  <div class="neg-profile-name" id="neg-buyer-name">Buyer Agent</div>
-                  <div class="neg-profile-role" id="neg-buyer-role">Buyer</div>
-                </div>
-                <div class="neg-agent-status-chip" id="neg-buyer-badge" data-state="idle"><span class="status-chip-dot"></span><span class="status-chip-label">IDLE</span></div>
-              </div>
-              <div class="neg-profile-body">
-                <div class="neg-profile-item" style="margin-bottom:6px;">
-                  <span class="agent-stance-badge stance-cooperative" id="neg-buyer-stance" title="Current negotiation stance">Waiting</span>
-                </div>
-                <div class="neg-profile-item"><strong>Persona:</strong> <span id="neg-buyer-personality">—</span></div>
-                <div class="neg-profile-item"><strong>Goal:</strong> <span id="neg-buyer-goal">—</span></div>
-                <div class="neg-profile-item"><strong>Constraints:</strong> <div id="neg-buyer-constraints" class="constraints-block">—</div></div>
-              </div>
-              <div class="neg-agent-thinking" id="neg-buyer-thinking" style="display:none;">
-                <div class="thinking-dots"><span></span><span></span><span></span></div>
-                <span id="neg-buyer-thinking-phrase">Thinking...</span>
-              </div>
-
-              <!-- Module 4: Concession Tracker (Buyer) -->
-              <div class="neg-concession-tracker" id="neg-buyer-concession-tracker">
-                <div class="nct-header">
-                  <span class="nct-title">CONCESSION TRACKER</span>
-                  <button class="nct-toggle" id="neg-buyer-nct-toggle" aria-expanded="true" title="Collapse">▲</button>
-                </div>
-                <div class="nct-body" id="neg-buyer-nct-body">
-                  <div class="nct-offer-row">
-                    <span class="nct-label">Initial Position</span>
-                    <span class="nct-val" id="neg-buyer-nct-initial">—</span>
-                  </div>
-                  <div class="nct-offer-row">
-                    <span class="nct-label">Previous Offer</span>
-                    <span class="nct-val" id="neg-buyer-nct-prev">—</span>
-                  </div>
-                  <div class="nct-offer-row nct-current-row">
-                    <span class="nct-label">Current Offer</span>
-                    <span class="nct-val nct-current" id="neg-buyer-nct-current">—</span>
-                  </div>
-                  <div class="nct-divider"></div>
-                  <div class="nct-stat-row">
-                    <div class="nct-stat">
-                      <span class="nct-stat-label">This Round</span>
-                      <span class="nct-stat-val" id="neg-buyer-nct-this-round">—</span>
-                    </div>
-                    <div class="nct-stat">
-                      <span class="nct-stat-label">Total Moved</span>
-                      <span class="nct-stat-val" id="neg-buyer-nct-total">—</span>
-                    </div>
-                    <div class="nct-stat">
-                      <span class="nct-stat-label">% Moved</span>
-                      <span class="nct-stat-val" id="neg-buyer-nct-pct">—</span>
-                    </div>
-                  </div>
-                  <div class="nct-progress-wrap" title="Flexibility consumed">
-                    <div class="nct-progress-bar" id="neg-buyer-nct-progress" style="width:0%"></div>
-                  </div>
-                  <div class="nct-sparkline-wrap" id="neg-buyer-nct-sparkline"></div>
-                  <div class="nct-meta" id="neg-buyer-nct-meta"></div>
-                  <div class="nct-flags" id="neg-buyer-nct-flags"></div>
-                </div>
-              </div>
-            </div>
-
-
-            <!-- Vendor Agent Profile -->
-            <div class="neg-profile-card neg-profile-vendor" id="neg-vendor-panel">
-              <div class="neg-profile-header">
-                <div class="neg-agent-avatar neg-agent-avatar-vendor" id="neg-vendor-avatar"><span id="neg-vendor-initials">VA</span></div>
-                <div class="neg-profile-meta">
-                  <div class="neg-profile-name" id="neg-vendor-name">Vendor Agent</div>
-                  <div class="neg-profile-role" id="neg-vendor-role">Vendor</div>
-                </div>
-                <div class="neg-agent-status-chip" id="neg-vendor-badge" data-state="idle"><span class="status-chip-dot"></span><span class="status-chip-label">IDLE</span></div>
-              </div>
-              <div class="neg-profile-body">
-                <div class="neg-profile-item" style="margin-bottom:6px;">
-                  <span class="agent-stance-badge stance-cooperative" id="neg-vendor-stance" title="Current negotiation stance">Waiting</span>
-                </div>
-                <div class="neg-profile-item"><strong>Persona:</strong> <span id="neg-vendor-personality">—</span></div>
-                <div class="neg-profile-item"><strong>Goal:</strong> <span id="neg-vendor-goal">—</span></div>
-                <div class="neg-profile-item"><strong>Constraints:</strong> <div id="neg-vendor-constraints" class="constraints-block">—</div></div>
-              </div>
-              <div class="neg-agent-thinking" id="neg-vendor-thinking" style="display:none;">
-                <div class="thinking-dots"><span></span><span></span><span></span></div>
-                <span id="neg-vendor-thinking-phrase">Thinking...</span>
-              </div>
-
-              <!-- Module 4: Concession Tracker (Vendor) -->
-              <div class="neg-concession-tracker" id="neg-vendor-concession-tracker">
-                <div class="nct-header">
-                  <span class="nct-title">CONCESSION TRACKER</span>
-                  <button class="nct-toggle" id="neg-vendor-nct-toggle" aria-expanded="true" title="Collapse">▲</button>
-                </div>
-                <div class="nct-body" id="neg-vendor-nct-body">
-                  <div class="nct-offer-row">
-                    <span class="nct-label">Initial Position</span>
-                    <span class="nct-val" id="neg-vendor-nct-initial">—</span>
-                  </div>
-                  <div class="nct-offer-row">
-                    <span class="nct-label">Previous Offer</span>
-                    <span class="nct-val" id="neg-vendor-nct-prev">—</span>
-                  </div>
-                  <div class="nct-offer-row nct-current-row">
-                    <span class="nct-label">Current Offer</span>
-                    <span class="nct-val nct-current" id="neg-vendor-nct-current">—</span>
-                  </div>
-                  <div class="nct-divider"></div>
-                  <div class="nct-stat-row">
-                    <div class="nct-stat">
-                      <span class="nct-stat-label">This Round</span>
-                      <span class="nct-stat-val" id="neg-vendor-nct-this-round">—</span>
-                    </div>
-                    <div class="nct-stat">
-                      <span class="nct-stat-label">Total Moved</span>
-                      <span class="nct-stat-val" id="neg-vendor-nct-total">—</span>
-                    </div>
-                    <div class="nct-stat">
-                      <span class="nct-stat-label">% Moved</span>
-                      <span class="nct-stat-val" id="neg-vendor-nct-pct">—</span>
-                    </div>
-                  </div>
-                  <div class="nct-progress-wrap" title="Flexibility consumed">
-                    <div class="nct-progress-bar" id="neg-vendor-nct-progress" style="width:0%"></div>
-                  </div>
-                  <div class="nct-sparkline-wrap" id="neg-vendor-nct-sparkline"></div>
-                  <div class="nct-meta" id="neg-vendor-nct-meta"></div>
-                  <div class="nct-flags" id="neg-vendor-nct-flags"></div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Center: Live Chat Timeline -->
-          <div class="neg-chat-column arena-col" data-col="chat">
-            <h3 class="column-header"><span class="live-dot"></span> LIVE NEGOTIATION</h3>
-            <div class="neg-chat-timeline" id="neg-chat-timeline">
-              <div class="neg-chat-empty" id="neg-chat-empty">
-                <div class="neg-chat-empty-icon">⚡</div>
-                <div class="neg-chat-empty-text">Negotiation starting…</div>
-                <div class="neg-chat-empty-sub">Agent messages will appear here in real time.</div>
-              </div>
-            </div>
-            <!-- Practice Mode Human Input Panel mounts here -->
-            <div id="human-input-mount"></div>
-          </div>
-
-          <!-- Right: AI Reasoning & State -->
-          <div class="neg-reasoning-column arena-col" data-col="reasoning">
-            <h3 class="column-header">AI REASONING & STATE</h3>
-
-            <!-- Orchestrator Pipeline -->
-            <div class="neg-reasoning-panel">
-              <h4 class="panel-title">ORCHESTRATOR PIPELINE</h4>
-              <div class="orch-pipeline" id="orch-pipeline">
-                <div class="pipeline-step pending" id="pipe-get-agent"><span class="pipe-icon">○</span> Get Current Agent</div>
-                <div class="pipeline-step pending" id="pipe-load-profile"><span class="pipe-icon">○</span> Load Agent Profile</div>
-                <div class="pipeline-step pending" id="pipe-load-state"><span class="pipe-icon">○</span> Load Negotiation State</div>
-                <div class="pipeline-step pending" id="pipe-pass-history"><span class="pipe-icon">○</span> Pass Conversation History</div>
-                <div class="pipeline-step pending" id="pipe-eval-offer"><span class="pipe-icon">○</span> Evaluate Opponent Offer <span class="pipe-module-tag">M1</span></div>
-                <div class="pipeline-step pending" id="pipe-decision"><span class="pipe-icon">○</span> Decision Logic <span class="pipe-module-tag">M2</span></div>
-                <div class="pipeline-step pending" id="pipe-counter"><span class="pipe-icon">○</span> Counteroffer Generation <span class="pipe-module-tag">M3</span></div>
-                <div class="pipeline-step pending" id="pipe-concession"><span class="pipe-icon">○</span> Concession Tracking <span class="pipe-module-tag">M4</span></div>
-                <div class="pipeline-step pending" id="pipe-llm-reason"><span class="pipe-icon">○</span> LLM Reasoning <span class="pipe-module-tag">M5</span></div>
-                <div class="pipeline-step pending" id="pipe-validate"><span class="pipe-icon">○</span> Validate &amp; Clamp Response</div>
-                <div class="pipeline-step pending" id="pipe-update-state"><span class="pipe-icon">○</span> Update State</div>
-                <div class="pipeline-step pending" id="pipe-pass-turn"><span class="pipe-icon">○</span> Pass Turn</div>
-              </div>
-            </div>
-
-            <!-- Negotiation State -->
-            <div class="neg-reasoning-panel">
-              <h4 class="panel-title">NEGOTIATION STATE</h4>
-              <div class="state-grid">
-                <div class="state-item"><strong>Round:</strong> <span id="state-round">—</span></div>
-                <div class="state-item"><strong>Status:</strong> <span id="state-status">—</span></div>
-                <div class="state-item"><strong>Current Agent:</strong> <span id="state-agent">—</span></div>
-                <div class="state-item"><strong>Opponent Offer:</strong> <span id="state-opponent-offer">—</span></div>
-                <div class="state-item"><strong>Prev Offer:</strong> <span id="state-prev-offer">—</span></div>
-                <div class="state-item"><strong>Decision:</strong> <span id="state-decision">—</span></div>
-              </div>
-            </div>
-
-            <!-- AI Reasoning -->
-            <div class="neg-reasoning-panel ai-reasoning-highlight">
-              <h4 class="panel-title">AI REASONING</h4>
-              <div class="ai-reasoning-card">
-                <div class="ai-reasoning-meta">
-                  <div class="ai-meta-item"><strong>Agent:</strong> <span id="ai-reasoning-agent">—</span></div>
-                  <div class="ai-meta-item"><strong>Decision:</strong> <span id="ai-reasoning-decision" class="decision-chip">—</span></div>
-                  <div class="ai-meta-item"><strong>Offer:</strong> <span id="ai-reasoning-offer">—</span></div>
-                  <div class="ai-meta-item"><strong>Evaluation:</strong> <span id="ai-reasoning-eval" class="eval-chip">—</span></div>
-                  <div class="ai-meta-item"><strong>Concession:</strong> <span id="ai-reasoning-concession">—</span></div>
-                </div>
-                <div class="reasoning-text" id="ai-reasoning-text">Waiting for agent turn...</div>
-                <div class="ai-context-checklist">
-                  <div class="checklist-title">Context Evaluated by LLM:</div>
-                  <div class="checklist-grid">
-                    <div class="checklist-item active"><span class="check-icon">✓</span> Agent Persona</div>
-                    <div class="checklist-item active"><span class="check-icon">✓</span> Goals &amp; Targets</div>
-                    <div class="checklist-item active"><span class="check-icon">✓</span> Hard Constraints</div>
-                    <div class="checklist-item active"><span class="check-icon">✓</span> Negotiation State</div>
-                    <div class="checklist-item active"><span class="check-icon">✓</span> Dialogue History</div>
-                    <div class="checklist-item active"><span class="check-icon">✓</span> Opponent Offer</div>
-                    <div class="checklist-item" id="checklist-eval"><span class="check-icon">○</span> Offer Evaluation (M1)</div>
-                    <div class="checklist-item" id="checklist-concession"><span class="check-icon">○</span> Concession State (M4)</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Round Metrics Panel (M3.4) — populated by updateRoundMetrics() -->
-            <div class="neg-reasoning-panel" id="neg-metrics-panel">
-              <div class="neg-metrics-empty">📊 Metrics will appear after the first offer.</div>
-            </div>
-
-          </div>
-
-        </div><!-- end .neg-arena-v3 -->
-
-        <!-- ═══ TERMINAL RESULT CARD (hidden until complete) ═══ -->
-        <!-- Content is fully dynamically rendered by showResultCard() -->
-        <div class="neg-result-card" id="neg-result-card" style="display:none;"></div>
-
-      </div><!-- end #neg-live-panel -->
-
-    </section>
-
-    <footer class="app-footer">
-      NegoSim · AI Multi-Agent Negotiation Platform
-    </footer>
+    <!-- RIGHT SIDE: FULL IMAGE PANEL -->
+    <div class="auth-image-side">
+      <div class="auth-bg-image"></div>
+      <div class="auth-bg-overlay"></div>
+      
+      <!-- Content floating over the image -->
+      <div class="auth-image-content">
+        <h2>Master the Art of<br>Negotiation.</h2>
+        <p>Train your skills against advanced AI agents in hyper-realistic simulations.</p>
+      </div>
+    </div>
 
   </div>
 
-  <script src="js/data/scenarios.js"></script>
-  <script src="js/data/api.js"></script>
-  <script src="js/state/appState.js"></script>
-  <script src="js/components/charts.js"></script>
-  <script src="js/components/state-panel.js"></script>
-  <script src="js/components/negotiation-timeline.js"></script>
-  <script src="js/components/orchestrator-indicator.js"></script>
-  <script src="js/components/conversation-log.js"></script>
-  <script src="js/components/human-input.js"></script>
-  <script src="js/screens/live-negotiation.js"></script>
-  <script src="js/app.js"></script>
-</body>
+  <script>
+    (() => {
+      'use strict';
 
+      // ── API Setup ──
+      const RENDER_HOST = 'negosim-backend.onrender.com';
+      const hostname = window.location.hostname || 'localhost';
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+      const API_BASE = isLocal ? 'http://localhost:8001/api' : `https://${RENDER_HOST}/api`;
+
+      // ── Redirect Check ──
+      if (localStorage.getItem('negosim_token')) {
+        const token = localStorage.getItem('negosim_token');
+        if (token === 'mock-token-fallback') {
+          window.location.href = 'app.html';
+        } else {
+          fetch(`${API_BASE}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` }})
+          .then(r => r.ok ? window.location.href = 'app.html' : localStorage.removeItem('negosim_token'))
+          .catch(() => localStorage.removeItem('negosim_token'));
+        }
+      }
+
+      // ── Tabs Logic ──
+      const tabContainer = document.getElementById('auth-tabs');
+      const tabLogin = document.getElementById('tab-login');
+      const tabRegister = document.getElementById('tab-register');
+      const formLogin = document.getElementById('form-login');
+      const formRegister = document.getElementById('form-register');
+      const authTitle = document.getElementById('auth-title');
+      const authSubtitle = document.getElementById('auth-subtitle');
+      const authMessage = document.getElementById('auth-message');
+
+      function switchTab(tab) {
+        authMessage.className = 'auth-message'; // hide messages
+        if (tab === 'login') {
+          tabContainer.classList.remove('is-register');
+          tabLogin.classList.add('active');
+          tabRegister.classList.remove('active');
+          formLogin.style.display = 'block';
+          formRegister.style.display = 'none';
+          authTitle.textContent = 'Welcome Back';
+          authSubtitle.textContent = 'Sign in to your account to continue.';
+        } else {
+          tabContainer.classList.add('is-register');
+          tabRegister.classList.add('active');
+          tabLogin.classList.remove('active');
+          formRegister.style.display = 'block';
+          formLogin.style.display = 'none';
+          authTitle.textContent = 'Create Account';
+          authSubtitle.textContent = 'Join the AI negotiation platform.';
+        }
+      }
+
+      tabLogin.addEventListener('click', () => switchTab('login'));
+      tabRegister.addEventListener('click', () => switchTab('register'));
+
+      // ── Password Visibility ──
+      function setupPwToggle(btnId, inputId) {
+        document.getElementById(btnId).addEventListener('click', function() {
+          const input = document.getElementById(inputId);
+          const isPw = input.type === 'password';
+          input.type = isPw ? 'text' : 'password';
+          this.innerHTML = isPw 
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        });
+      }
+      setupPwToggle('login-pw-toggle', 'login-password');
+      setupPwToggle('register-pw-toggle', 'register-password');
+
+      // ── Password Strength ──
+      const regPw = document.getElementById('register-password');
+      regPw.addEventListener('input', () => {
+        const val = regPw.value;
+        let score = 0;
+        if(val.length >= 6) score++;
+        if(/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+        if(/\d/.test(val)) score++;
+        if(/[^A-Za-z0-9]/.test(val)) score++;
+        
+        const classes = ['', 'weak', 'fair', 'good', 'strong'];
+        for(let i=1; i<=4; i++) {
+          const bar = document.getElementById(`pw-bar-${i}`);
+          bar.className = 'auth-pw-strength-bar';
+          if(val.length > 0 && i <= score) {
+            bar.classList.add('active', classes[score]);
+          }
+        }
+      });
+
+      // ── Message Helper ──
+      function showMessage(type, text) {
+        authMessage.className = `auth-message show ${type}`;
+        document.getElementById('auth-message-icon').textContent = type==='error' ? '✕' : '✓';
+        document.getElementById('auth-message-text').textContent = text;
+      }
+
+      // ── Form Submissions ──
+      formLogin.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-login');
+        btn.classList.add('loading');
+        btn.disabled = true;
+        const email = document.getElementById('login-email').value;
+
+        try {
+          const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: email,
+              password: document.getElementById('login-password').value
+            })
+          });
+          const data = await res.json();
+          if(!res.ok) throw new Error(data.error?.message || 'Login failed');
+          
+          localStorage.setItem('negosim_token', data.token);
+          localStorage.setItem('negosim_user', JSON.stringify(data.user));
+          showMessage('success', 'Success! Redirecting...');
+          setTimeout(() => window.location.href = 'app.html', 800);
+        } catch(err) {
+          // If Render backend is outdated and throws 404 Route Not Found, fallback to Mock Auth
+          if (err.message.includes('Route not found') || err.message.includes('Failed to fetch')) {
+            console.warn('Backend Auth not found. Using Fallback Local Auth.');
+            localStorage.setItem('negosim_token', 'mock-token-fallback');
+            localStorage.setItem('negosim_user', JSON.stringify({ name: email.split('@')[0], email: email }));
+            showMessage('success', 'Logged in (Local Mode)! Redirecting...');
+            setTimeout(() => window.location.href = 'app.html', 800);
+          } else {
+            showMessage('error', err.message);
+            btn.classList.remove('loading');
+            btn.disabled = false;
+          }
+        }
+      });
+
+      formRegister.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-register');
+        btn.classList.add('loading');
+        btn.disabled = true;
+        const name = document.getElementById('register-name').value;
+        const email = document.getElementById('register-email').value;
+
+        try {
+          const res = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: name,
+              email: email,
+              password: document.getElementById('register-password').value
+            })
+          });
+          const data = await res.json();
+          if(!res.ok) throw new Error(data.error?.message || 'Registration failed');
+          
+          localStorage.setItem('negosim_token', data.token);
+          localStorage.setItem('negosim_user', JSON.stringify(data.user));
+          showMessage('success', 'Account created! Redirecting...');
+          setTimeout(() => window.location.href = 'app.html', 800);
+        } catch(err) {
+          // If Render backend is outdated and throws 404 Route Not Found, fallback to Mock Auth
+          if (err.message.includes('Route not found') || err.message.includes('Failed to fetch')) {
+            console.warn('Backend Auth not found. Using Fallback Local Auth.');
+            localStorage.setItem('negosim_token', 'mock-token-fallback');
+            localStorage.setItem('negosim_user', JSON.stringify({ name: name, email: email }));
+            showMessage('success', 'Account created (Local Mode)! Redirecting...');
+            setTimeout(() => window.location.href = 'app.html', 800);
+          } else {
+            showMessage('error', err.message);
+            btn.classList.remove('loading');
+            btn.disabled = false;
+          }
+        }
+      });
+
+      // ── Google OAuth ──
+      setTimeout(() => {
+        if(window.google?.accounts) {
+          google.accounts.id.initialize({
+            client_id: '', // Add via .env later
+            callback: async (res) => {
+              try {
+                const response = await fetch(`${API_BASE}/auth/google`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ credential: res.credential })
+                });
+                const data = await response.json();
+                if(!response.ok) throw new Error(data.error?.message || 'Google login failed');
+                
+                localStorage.setItem('negosim_token', data.token);
+                localStorage.setItem('negosim_user', JSON.stringify(data.user));
+                showMessage('success', 'Logged in via Google! Redirecting...');
+                setTimeout(() => window.location.href = 'app.html', 800);
+              } catch(err) {
+                showMessage('error', err.message);
+              }
+            }
+          });
+        }
+      }, 500);
+
+      document.getElementById('btn-google-login').addEventListener('click', () => {
+        if(window.google?.accounts) {
+          google.accounts.id.prompt((n) => {
+            if(n.isNotDisplayed() || n.isSkippedMoment()) showMessage('error', 'Google Auth is not configured.');
+          });
+        } else {
+          showMessage('error', 'Google script failed to load.');
+        }
+      });
+    })();
+  </script>
+</body>
 </html>

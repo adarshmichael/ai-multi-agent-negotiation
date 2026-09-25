@@ -2947,7 +2947,7 @@ async function init() {
     btnLogout.addEventListener('click', () => {
       localStorage.removeItem('negosim_token');
       localStorage.removeItem('negosim_user');
-      window.location.href = 'login.html';
+      window.location.href = 'index.html';
     });
   }
 
