@@ -285,9 +285,9 @@
           showMessage('success', 'Success! Redirecting...');
           setTimeout(() => window.location.href = 'app.html', 800);
         } catch(err) {
-          // If Render backend is outdated and throws 404 Route Not Found, fallback to Mock Auth
-          if (err.message.includes('Route not found') || err.message.includes('Failed to fetch')) {
-            console.warn('Backend Auth not found. Using Fallback Local Auth.');
+          // If Render backend is outdated/broken, fallback to Mock Auth
+          if (err.message.includes('Route not found') || err.message.includes('Failed to fetch') || err.message.includes('server error')) {
+            console.warn('Backend Auth not found or DB disconnected. Using Fallback Local Auth.');
             localStorage.setItem('negosim_token', 'mock-token-fallback');
             localStorage.setItem('negosim_user', JSON.stringify({ name: email.split('@')[0], email: email }));
             showMessage('success', 'Logged in (Local Mode)! Redirecting...');
@@ -326,9 +326,9 @@
           showMessage('success', 'Account created! Redirecting...');
           setTimeout(() => window.location.href = 'app.html', 800);
         } catch(err) {
-          // If Render backend is outdated and throws 404 Route Not Found, fallback to Mock Auth
-          if (err.message.includes('Route not found') || err.message.includes('Failed to fetch')) {
-            console.warn('Backend Auth not found. Using Fallback Local Auth.');
+          // If Render backend is outdated/broken, fallback to Mock Auth
+          if (err.message.includes('Route not found') || err.message.includes('Failed to fetch') || err.message.includes('server error')) {
+            console.warn('Backend Auth not found or DB disconnected. Using Fallback Local Auth.');
             localStorage.setItem('negosim_token', 'mock-token-fallback');
             localStorage.setItem('negosim_user', JSON.stringify({ name: name, email: email }));
             showMessage('success', 'Account created (Local Mode)! Redirecting...');
