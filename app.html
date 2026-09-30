@@ -52,14 +52,14 @@
           <span>Multi-Agent Negotiation Training Platform</span>
         </div>
       </div>
-      
-      <nav class="app-nav">
-        <a href="#" class="app-nav-link active" data-step="scenario">New Negotiation</a>
-        <a href="#" class="app-nav-link" data-step="dashboard">Dashboard</a>
-        <a href="#" class="app-nav-link" data-step="history">History</a>
-      </nav>
 
       <nav class="stepper" id="stepper"></nav>
+
+      <div class="header-nav" style="display:flex; gap:16px; align-items:center; margin-left:auto; margin-right:24px;">
+        <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.SCENARIO)">New Negotiation</button>
+        <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.DASHBOARD)">Dashboard</button>
+        <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.HISTORY)">History</button>
+      </div>
 
       <div class="header-user" id="header-user">
         <div class="header-user-avatar" id="header-user-avatar"></div>
@@ -564,16 +564,18 @@
     <section class="screen" id="screen-dashboard">
       <div class="screen-header">
         <h2 class="screen-title">Performance Dashboard</h2>
-        <p class="screen-subtitle">Track your negotiation success, concession habits, and overall AI training progress.</p>
+        <p class="screen-subtitle">Your aggregate negotiation analytics and insights.</p>
       </div>
+      <!-- Content populated by dashboard-screen.js -->
     </section>
 
     <!-- ================= SCREEN 6: HISTORY ================= -->
     <section class="screen" id="screen-history">
       <div class="screen-header">
         <h2 class="screen-title">Negotiation History</h2>
-        <p class="screen-subtitle">Review past sessions, read full transcripts, and analyze the AI's reasoning.</p>
+        <p class="screen-subtitle">Review past sessions and analyze AI reasoning.</p>
       </div>
+      <!-- Content populated by history-screen.js -->
     </section>
 
     <footer class="app-footer">
