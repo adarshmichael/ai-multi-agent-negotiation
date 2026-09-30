@@ -28,6 +28,7 @@ const { ACTION, decisionToAction }               = require('../models/offer.mode
 const { RuleBasedDecisionProvider, LLMDecisionProvider } = require('./decisionProvider');
 const { config }                                 = require('../config/env');
 const logger                                     = require('../utils/logger');
+const { saveSession: persistSession }            = require('../services/session.service');
 
 // ============================================================
 // Decision Provider — selected by session mode
@@ -532,6 +533,12 @@ async function finalize(session, result, finalOffer, reason, agents, negotiation
       initialOffer: session.initialOffers[a.id] || null,
       finalOffer:   session.offers[a.id] || null,
     })),
+  });
+
+  // ── Auto-save session to MongoDB (non-blocking) ──
+  // Uses 'anonymous' as fallback userId; the frontend can supply userId via the save endpoint.
+  persistSession(session, session._userId || 'anonymous').catch(err => {
+    logger.warn('Engine', `Auto-save failed for ${negotiationId}: ${err.message}`);
   });
 }
 

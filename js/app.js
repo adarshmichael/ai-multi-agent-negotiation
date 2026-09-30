@@ -42,19 +42,31 @@ function escapeHtml(text) {
 /* ============================== Stepper ============================== */
 
 const STEP_ORDER = [
-  { id: AppState.STEPS.SCENARIO,  label: 'Scenario' },
-  { id: AppState.STEPS.CONFIGURE, label: 'Configure' },
-  { id: AppState.STEPS.SUMMARY,   label: 'Summary' },
-  { id: AppState.STEPS.NEGOTIATE, label: 'Negotiate' },
+  { id: AppState.STEPS.DASHBOARD, label: 'Dashboard', icon: 'chart' },
+  { id: AppState.STEPS.SCENARIO,  label: 'Scenario', icon: '' },
+  { id: AppState.STEPS.CONFIGURE, label: 'Configure', icon: '' },
+  { id: AppState.STEPS.SUMMARY,   label: 'Summary', icon: '' },
+  { id: AppState.STEPS.NEGOTIATE, label: 'Negotiate', icon: '' },
+  { id: AppState.STEPS.HISTORY,   label: 'History', icon: 'briefcase' },
 ];
 
 function renderStepper() {
   const { currentStep } = AppState.getState();
-  const currentIndex    = STEP_ORDER.findIndex(s => s.id === currentStep);
   const el = document.getElementById('stepper');
-  el.innerHTML = STEP_ORDER.map((step, i) => {
+  
+  // Hide stepper on dashboard and history screens
+  if (currentStep === AppState.STEPS.DASHBOARD || currentStep === AppState.STEPS.HISTORY) {
+    el.style.display = 'none';
+    return;
+  }
+  
+  el.style.display = 'flex';
+  const wizardSteps = STEP_ORDER.filter(s => s.id !== AppState.STEPS.DASHBOARD && s.id !== AppState.STEPS.HISTORY);
+  const currentIndex = wizardSteps.findIndex(s => s.id === currentStep);
+  
+  el.innerHTML = wizardSteps.map((step, i) => {
     const cls       = i === currentIndex ? 'active' : i < currentIndex ? 'done' : '';
-    const connector = i < STEP_ORDER.length - 1 ? '<div class="step-connector"></div>' : '';
+    const connector = i < wizardSteps.length - 1 ? '<div class="step-connector"></div>' : '';
     return `<div class="step-pill ${cls}"><span class="dot"></span>${step.label}</div>${connector}`;
   }).join('');
 }
@@ -70,6 +82,8 @@ function showScreen(stepId) {
     [AppState.STEPS.CONFIGURE]: 'screen-configure',
     [AppState.STEPS.SUMMARY]:   'screen-summary',
     [AppState.STEPS.NEGOTIATE]: 'screen-negotiate',
+    [AppState.STEPS.DASHBOARD]: 'screen-dashboard',
+    [AppState.STEPS.HISTORY]:   'screen-history',
   };
   const screenId = map[stepId];
   if (screenId) document.getElementById(screenId).classList.add('active');
@@ -2716,6 +2730,25 @@ async function handleStopNegotiation() {
 
 function render() {
   const { currentStep } = AppState.getState();
+  
+  // Handle mounting/unmounting of new screens
+  if (currentStep === AppState.STEPS.DASHBOARD && window.DashboardScreen) {
+    window.DashboardScreen.mount('screen-dashboard');
+  } else if (window.DashboardScreen) {
+    window.DashboardScreen.unmount();
+  }
+  
+  if (currentStep === AppState.STEPS.HISTORY && window.HistoryScreen) {
+    window.HistoryScreen.mount('screen-history');
+  } else if (window.HistoryScreen) {
+    window.HistoryScreen.unmount();
+  }
+
+  // Update header nav active state
+  document.querySelectorAll('.app-nav-link').forEach(link => {
+    link.classList.toggle('active', link.dataset.step === currentStep);
+  });
+
   renderScenarioGrid();
   if (currentStep === AppState.STEPS.CONFIGURE) {
     renderAgentGrid();
@@ -2804,6 +2837,21 @@ async function init() {
   }
 
   // ---- Normal app event wiring ----
+
+  // Header Nav
+  document.querySelectorAll('.app-nav-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Don't allow navigating away if a negotiation is actively running
+      if (AppState.getState().negotiationStatus === 'in_progress') {
+        if (!confirm('A negotiation is running. Are you sure you want to leave? It will be stopped.')) return;
+        window.ApiService.stopNegotiation(AppState.getState().negotiationId).catch(console.error);
+        window.ApiService.disconnectWebSocket();
+        AppState.resetNegotiation();
+      }
+      AppState.goToStep(link.dataset.step);
+    });
+  });
 
   // Screen 1
   document.getElementById('btn-scenario-continue').addEventListener('click', handleScenarioContinue);

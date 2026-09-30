@@ -56,6 +56,11 @@ function createNegotiation(req, res, next) {
     }
 
     const session = negotiationService.createSession({ scenario_id, agents, maximum_rounds, mode, practice_mode });
+    // Tag userId for session auto-save (session.service.js)
+    const liveSession = negotiationService.getSession(session.id);
+    if (liveSession) {
+      liveSession._userId = req.body.userId || req.query.userId || (req.user && req.user.id) || 'anonymous';
+    }
     logger.negotiation(`Created: ${session.id}`);
     res.status(201).json(session);
   } catch (err) {

@@ -11,6 +11,8 @@ const AppState = (function () {
     SUMMARY:   'summary',
     READY:     'ready',
     NEGOTIATE: 'negotiate',
+    DASHBOARD: 'dashboard',
+    HISTORY:   'history',
   };
 
   let state = {

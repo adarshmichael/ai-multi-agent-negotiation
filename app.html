@@ -52,6 +52,12 @@
           <span>Multi-Agent Negotiation Training Platform</span>
         </div>
       </div>
+      
+      <nav class="app-nav">
+        <a href="#" class="app-nav-link active" data-step="scenario">New Negotiation</a>
+        <a href="#" class="app-nav-link" data-step="dashboard">Dashboard</a>
+        <a href="#" class="app-nav-link" data-step="history">History</a>
+      </nav>
 
       <nav class="stepper" id="stepper"></nav>
 
@@ -554,6 +560,22 @@
 
     </section>
 
+    <!-- ================= SCREEN 5: DASHBOARD ================= -->
+    <section class="screen" id="screen-dashboard">
+      <div class="screen-header">
+        <h2 class="screen-title">Performance Dashboard</h2>
+        <p class="screen-subtitle">Track your negotiation success, concession habits, and overall AI training progress.</p>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN 6: HISTORY ================= -->
+    <section class="screen" id="screen-history">
+      <div class="screen-header">
+        <h2 class="screen-title">Negotiation History</h2>
+        <p class="screen-subtitle">Review past sessions, read full transcripts, and analyze the AI's reasoning.</p>
+      </div>
+    </section>
+
     <footer class="app-footer">
       NegoSim · AI Multi-Agent Negotiation Platform
     </footer>
@@ -562,6 +584,7 @@
 
   <script src="js/data/scenarios.js"></script>
   <script src="js/data/api.js"></script>
+  <script src="js/services/session-service.js"></script>
   <script src="js/state/appState.js"></script>
   <script src="js/components/charts.js"></script>
   <script src="js/components/state-panel.js"></script>
@@ -570,6 +593,8 @@
   <script src="js/components/conversation-log.js"></script>
   <script src="js/components/human-input.js"></script>
   <script src="js/screens/live-negotiation.js"></script>
+  <script src="js/screens/dashboard-screen.js"></script>
+  <script src="js/screens/history-screen.js"></script>
   <script src="js/app.js"></script>
 </body>
 

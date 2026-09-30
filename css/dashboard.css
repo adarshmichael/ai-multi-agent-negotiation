@@ -1,0 +1,389 @@
+/* ==========================================================================
+   NegoSim — Dashboard Styles
+   Scoped under .dashboard-page or .dash-* classes. No global selector changes.
+   ========================================================================== */
+
+/* ── Loading & Empty States ── */
+.dashboard-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 24px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.dashboard-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.dashboard-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.dashboard-empty-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.dashboard-empty-sub {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  max-width: 420px;
+}
+
+/* ── Dashboard Grid ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 8px 0;
+}
+
+/* ── Cards ── */
+.dash-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.dash-card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.dash-card-wide {
+  grid-column: span 3;
+}
+
+.dash-card-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.dash-card-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+.dash-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+/* ── Score Ring ── */
+.dash-score-ring-wrap {
+  width: 140px;
+  height: 140px;
+}
+
+.dash-score-ring {
+  width: 100%;
+  height: 100%;
+}
+
+.dash-score-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.dash-trend {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.dash-trend.trend-up {
+  color: var(--color-success);
+  background: rgba(63, 185, 80, 0.1);
+}
+
+.dash-trend.trend-down {
+  color: var(--color-danger);
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.dash-trend.trend-flat {
+  color: var(--color-text-muted);
+  background: rgba(139, 148, 158, 0.1);
+}
+
+.dash-meta-sub {
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+
+/* ── Success Stats ── */
+.dash-success-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.dash-stat-block {
+  flex: 1;
+  text-align: center;
+}
+
+.dash-stat-val {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dash-stat-success .dash-stat-val { color: var(--color-success); }
+.dash-stat-fail .dash-stat-val { color: var(--color-danger); }
+
+.dash-stat-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.dash-stat-pct {
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+/* ── Progress Bar ── */
+.dash-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.dash-progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-pill);
+  transition: width 0.8s var(--ease-out);
+}
+
+.dash-progress-sm {
+  height: 5px;
+}
+
+/* ── Big Number ── */
+.dash-big-num {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.dash-big-sub {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* ── Concession Grid ── */
+.dash-concession-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.dash-con-item {
+  text-align: center;
+  padding: 12px 8px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.dash-con-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 4px;
+}
+
+.dash-con-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Trend Filters ── */
+.dash-trend-filters {
+  display: flex;
+  gap: 4px;
+}
+
+.dash-filter-btn {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dash-filter-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.dash-filter-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+/* ── Trend Chart ── */
+.dash-trend-chart {
+  width: 100%;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash-trend-svg {
+  width: 100%;
+  max-height: 200px;
+}
+
+.dash-chart-empty {
+  color: var(--color-text-faint);
+  font-size: 13px;
+  padding: 40px;
+  text-align: center;
+}
+
+/* ── Scenario Stats ── */
+.dash-scenario-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dash-scenario-item {
+  padding: 14px 16px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.dash-scenario-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+
+.dash-scenario-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.dash-scenario-score,
+.dash-scenario-rate,
+.dash-scenario-count {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.dash-scenario-score { color: var(--color-accent); font-weight: 600; }
+.dash-scenario-rate  { color: var(--color-success); font-weight: 600; }
+
+/* ── Insights ── */
+.dash-insights-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dash-insights-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13.5px;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.dash-insights-list li:last-child {
+  border-bottom: none;
+}
+
+.dash-insights-list li::before {
+  content: '💡 ';
+  margin-right: 4px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dash-card-wide {
+    grid-column: span 2;
+  }
+  .dash-concession-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .dash-card-wide {
+    grid-column: span 1;
+  }
+  .dash-concession-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dash-score-ring-wrap {
+    width: 110px;
+    height: 110px;
+  }
+  .dash-big-num {
+    font-size: 36px;
+  }
+}
