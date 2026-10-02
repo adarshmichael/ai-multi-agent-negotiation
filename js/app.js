@@ -89,6 +89,19 @@ function showScreen(stepId) {
   }
 }
 
+window.startNewNegotiation = function() {
+  if (window.ApiService) window.ApiService.disconnectWebSocket();
+  AppState.reset();
+  AppState.resetNegotiation();
+  // Clear UI elements explicitly just to be safe
+  const chat = document.getElementById('neg-chat');
+  if (chat) chat.innerHTML = '';
+  const url = new URL(window.location);
+  url.searchParams.delete('negId');
+  window.history.replaceState({}, '', url);
+  AppState.goToStep(AppState.STEPS.SCENARIO);
+};
+
 /* ============================== 3D tilt interaction ============================== */
 
 function attachTiltEffect(card) {

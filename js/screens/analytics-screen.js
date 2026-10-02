@@ -58,7 +58,7 @@ const AnalyticsScreen = (function () {
       const mrPct = Math.round((d.max_rounds || 0) / total * 100);
       const h = Math.round((total / maxTotal) * 80);
       return `
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0;max-width:40px;">
           <div style="font-size:10px;color:var(--color-text-muted);font-family:var(--font-mono);margin-bottom:4px;">${total}</div>
           <div style="width:100%;height:${h}px;min-height:4px;border-radius:4px 4px 0 0;overflow:hidden;display:flex;flex-direction:column-reverse;">
             <div style="width:100%;height:${agPct}%;background:var(--color-success);"></div>
