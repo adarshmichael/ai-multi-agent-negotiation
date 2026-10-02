@@ -86,25 +86,8 @@
 
   <div class="app-shell">
 
-    <header class="app-header">
-      <div class="brand">
-        <div class="brand-mark">N</div>
-        <div class="brand-text">
-          <h1>NegoSim</h1>
-          <span>Multi-Agent Negotiation Training Platform</span>
-        </div>
-      </div>
-
-      <nav class="stepper" id="stepper"></nav>
-
-      <div class="header-nav" style="display:flex; gap:16px; align-items:center; margin-left:auto; margin-right:24px;">
-        <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.SCENARIO)">New Negotiation</button>
-        <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.DASHBOARD)">Dashboard</button>
-        <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.ANALYTICS)">Analytics</button>
-        <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.HISTORY)">History</button>
-        <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.COACH)">AI Coach</button>
-        <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.SCENARIO_BUILDER)">Build Scenario</button>
-      </div>
+    <header class="app-header" style="justify-content: space-between;">
+      <nav class="stepper" id="stepper" style="margin-left: 0;"></nav>
 
       <div class="header-user" id="header-user">
         <div class="header-user-avatar" id="header-user-avatar"></div>
