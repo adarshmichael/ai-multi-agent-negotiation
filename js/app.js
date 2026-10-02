@@ -66,15 +66,21 @@ let lastRenderedStep = null;
 function showScreen(stepId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const map = {
-    [AppState.STEPS.SCENARIO]:  'screen-scenario',
-    [AppState.STEPS.CONFIGURE]: 'screen-configure',
-    [AppState.STEPS.SUMMARY]:   'screen-summary',
-    [AppState.STEPS.NEGOTIATE]: 'screen-negotiate',
-    [AppState.STEPS.DASHBOARD]: 'screen-dashboard',
-    [AppState.STEPS.HISTORY]:   'screen-history',
+    [AppState.STEPS.SCENARIO]:         'screen-scenario',
+    [AppState.STEPS.CONFIGURE]:        'screen-configure',
+    [AppState.STEPS.SUMMARY]:          'screen-summary',
+    [AppState.STEPS.NEGOTIATE]:        'screen-negotiate',
+    [AppState.STEPS.DASHBOARD]:        'screen-dashboard',
+    [AppState.STEPS.HISTORY]:          'screen-history',
+    [AppState.STEPS.ANALYTICS]:        'screen-analytics',
+    [AppState.STEPS.COACH]:            'screen-coach',
+    [AppState.STEPS.SCENARIO_BUILDER]: 'screen-scenario-builder',
   };
   const screenId = map[stepId];
-  if (screenId) document.getElementById(screenId).classList.add('active');
+  if (screenId) {
+    const el = document.getElementById(screenId);
+    if (el) el.classList.add('active');
+  }
   renderStepper();
   
   if (lastRenderedStep !== stepId) {
@@ -2405,6 +2411,18 @@ async function showResultCard(data) {
         <button class="btn neg-download-btn" id="btn-download-json" title="Download JSON Transcript">
           ⬇ Download JSON
         </button>
+        <button class="btn neg-download-btn" id="btn-download-csv" title="Download CSV Data">
+          ⬇ Download CSV
+        </button>
+        <button class="btn neg-download-btn" id="btn-export-report" title="Open printable PDF report in new tab">
+          📄 Full Report
+        </button>
+      ` : ''}
+      ${AppState.getState().selectedMode === 'human-vs-ai' && negotiationId ? `
+        <button class="hint-btn" id="btn-get-coaching" style="margin-top:8px;">
+          🎯 Get AI Coaching Feedback
+        </button>
+        <div id="coaching-result-area"></div>
       ` : ''}
     </div>
   `;
@@ -2521,6 +2539,94 @@ async function showResultCard(data) {
       const url = window.ApiService.getTranscriptUrl(negotiationId, 'json');
       const a = document.createElement('a'); a.href = url; a.download = ''; a.click();
     });
+
+    // CSV Export — hits /api/sessions/:id/export/csv via sessionService lookup
+    const btnCsv = document.getElementById('btn-download-csv');
+    if (btnCsv) btnCsv.addEventListener('click', async () => {
+      btnCsv.disabled = true;
+      btnCsv.textContent = '⏳...';
+      try {
+        const BASE = window.ApiService.getBackendInfo().baseUrl;
+        const userId = (() => { try { return JSON.parse(localStorage.getItem('negosim_user') || '{}').id || 'anonymous'; } catch { return 'anonymous'; } })();
+        // Try to find saved session — the negotiationId may be the session _id
+        const sessions = await window.SessionService.getSessions({ search: negotiationId, limit: 5 });
+        const session = (sessions.sessions || []).find(s => s._id === negotiationId || s.negotiationId === negotiationId);
+        if (session) {
+          window.open(`${BASE}/sessions/${session._id}/export/csv?userId=${encodeURIComponent(userId)}`, '_blank');
+        } else {
+          alert('Session not yet saved. Please wait a moment and try again.');
+        }
+      } catch (err) {
+        console.warn('CSV export fallback:', err.message);
+        alert('CSV export failed. The session may not be saved yet.');
+      } finally {
+        btnCsv.disabled = false;
+        btnCsv.textContent = '⬇ Download CSV';
+      }
+    });
+
+    // Full Report (server-rendered HTML PDF)
+    const btnReport = document.getElementById('btn-export-report');
+    if (btnReport) btnReport.addEventListener('click', async () => {
+      btnReport.disabled = true;
+      try {
+        const BASE = window.ApiService.getBackendInfo().baseUrl;
+        const userId = (() => { try { return JSON.parse(localStorage.getItem('negosim_user') || '{}').id || 'anonymous'; } catch { return 'anonymous'; } })();
+        const sessions = await window.SessionService.getSessions({ search: negotiationId, limit: 5 });
+        const session = (sessions.sessions || []).find(s => s._id === negotiationId || s.negotiationId === negotiationId);
+        if (session) {
+          window.open(`${BASE}/sessions/${session._id}/export/pdf?userId=${encodeURIComponent(userId)}`, '_blank');
+        } else {
+          alert('Session not yet saved. Please wait a moment and try again.');
+        }
+      } catch (err) {
+        alert('Report export failed.');
+      } finally {
+        btnReport.disabled = false;
+      }
+    });
+
+    // Coaching button (Practice Mode only)
+    const btnCoaching = document.getElementById('btn-get-coaching');
+    const coachingArea = document.getElementById('coaching-result-area');
+    if (btnCoaching && window.CoachService) {
+      btnCoaching.addEventListener('click', async () => {
+        btnCoaching.disabled = true;
+        btnCoaching.textContent = '⏳ Generating coaching…';
+        try {
+          // Find the persisted session for this negotiation
+          const sessions = await window.SessionService.getSessions({ search: negotiationId, limit: 5 });
+          const session = (sessions.sessions || []).find(s => s._id === negotiationId || s.negotiationId === negotiationId);
+          const sessionId = session?._id || negotiationId;
+
+          const res = await window.CoachService.generateCoaching(sessionId);
+          const coaching = res.coaching;
+          if (!coaching) throw new Error('No coaching data returned.');
+
+          const score = coaching.overallScore != null ? coaching.overallScore : '—';
+          const tips = (coaching.actionableTips || []).map(t => `<li>${escapeHtml(t)}</li>`).join('');
+          const strengths = (coaching.strengths || []).map(s => `<li>${escapeHtml(s)}</li>`).join('');
+
+          if (coachingArea) {
+            coachingArea.innerHTML = `
+              <div class="coach-card" style="margin-top:16px;text-align:left;">
+                <div style="font-size:15px;font-weight:700;color:var(--color-coach);margin-bottom:8px;">🎯 AI Coach Score: ${score}/100</div>
+                ${strengths ? `<div style="margin-bottom:8px;"><b>Strengths:</b><ul style="margin:4px 0;padding-left:20px;">${strengths}</ul></div>` : ''}
+                ${tips ? `<div><b>Tips:</b><ul style="margin:4px 0;padding-left:20px;">${tips}</ul></div>` : ''}
+                <button class="btn btn-ghost btn-sm" onclick="AppState.goToStep(AppState.STEPS.COACH)" style="margin-top:12px;">View Full Coaching Report →</button>
+              </div>
+            `;
+          }
+          btnCoaching.style.display = 'none';
+        } catch (err) {
+          if (coachingArea) {
+            coachingArea.innerHTML = `<div style="color:var(--color-danger);font-size:12px;margin-top:8px;">${err.message}</div>`;
+          }
+          btnCoaching.disabled = false;
+          btnCoaching.textContent = '🎯 Get AI Coaching Feedback';
+        }
+      });
+    }
   }
 
   // Fetch full report and render rich outcome
@@ -2729,19 +2835,32 @@ function render() {
   }
   if (currentStep === AppState.STEPS.NEGOTIATE) renderNegotiateScreen();
   
-  if (currentStep === AppState.STEPS.DASHBOARD) {
-    if (window.HistoryScreen) window.HistoryScreen.unmount();
-    if (window.DashboardScreen) window.DashboardScreen.mount('screen-dashboard');
-  } else {
-    if (window.DashboardScreen) window.DashboardScreen.unmount();
-  }
+  // ── Dynamic screen mounts ──
+  const dynamicScreens = [
+    { step: AppState.STEPS.DASHBOARD,        screen: window.DashboardScreen,       id: 'screen-dashboard' },
+    { step: AppState.STEPS.HISTORY,          screen: window.HistoryScreen,         id: 'screen-history' },
+    { step: AppState.STEPS.ANALYTICS,        screen: window.AnalyticsScreen,       id: 'screen-analytics' },
+    { step: AppState.STEPS.COACH,            screen: window.CoachScreen,           id: 'screen-coach' },
+    { step: AppState.STEPS.SCENARIO_BUILDER, screen: window.ScenarioBuilderScreen, id: 'screen-scenario-builder' },
+  ];
 
-  if (currentStep === AppState.STEPS.HISTORY) {
-    if (window.DashboardScreen) window.DashboardScreen.unmount();
-    if (window.HistoryScreen) window.HistoryScreen.mount('screen-history');
-  } else {
-    if (window.HistoryScreen) window.HistoryScreen.unmount();
-  }
+  dynamicScreens.forEach(({ step, screen, id }) => {
+    if (!screen) return;
+    if (currentStep === step) {
+      // Unmount all others
+      dynamicScreens.forEach(({ step: s, screen: sc }) => {
+        if (s !== step && sc) sc.unmount?.();
+      });
+      screen.mount?.(id);
+    } else {
+      screen.unmount?.();
+    }
+  });
+
+  // Update sidebar active state
+  document.querySelectorAll('.sidebar-nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.step === currentStep);
+  });
 
   showScreen(currentStep);
 }
@@ -2965,6 +3084,65 @@ async function init() {
       localStorage.removeItem('negosim_token');
       localStorage.removeItem('negosim_user');
       window.location.href = 'index.html';
+    });
+  }
+
+  // ── AI Coach Hint Button (Practice Mode) ──
+  const hintPanel = document.getElementById('hint-panel');
+  const hintBtn   = document.getElementById('btn-get-hint');
+  const hintBubble = document.getElementById('hint-bubble');
+  const hintCounter = document.getElementById('hint-counter');
+  let hintsUsed = 0;
+  const HINT_MAX = 3;
+
+  // Show/hide hint panel based on mode
+  AppState.onChange((state) => {
+    if (hintPanel) {
+      const isPractice = state.selectedMode === 'human-vs-ai';
+      const isNegotiating = state.currentStep === AppState.STEPS.NEGOTIATE &&
+        ['in_progress', 'starting'].includes(state.negotiationStatus);
+      hintPanel.style.display = (isPractice && isNegotiating) ? 'block' : 'none';
+    }
+  });
+
+  if (hintBtn && window.CoachService) {
+    hintBtn.addEventListener('click', async () => {
+      const { negotiationId } = AppState.getState();
+      if (!negotiationId) return;
+
+      if (hintsUsed >= HINT_MAX) {
+        if (hintBubble) {
+          hintBubble.style.display = 'block';
+          hintBubble.textContent = 'You have used all your hints for this session.';
+        }
+        return;
+      }
+
+      hintBtn.disabled = true;
+      hintBtn.textContent = '⏳ Thinking…';
+
+      try {
+        const result = await window.CoachService.getHint(negotiationId);
+        hintsUsed = result.used || hintsUsed + 1;
+        const remaining = result.remaining != null ? result.remaining : (HINT_MAX - hintsUsed);
+
+        if (hintBubble) {
+          hintBubble.style.display = 'block';
+          hintBubble.textContent = result.hint || 'No hint available right now.';
+        }
+        if (hintCounter) {
+          hintCounter.textContent = `${remaining} left`;
+        }
+        hintBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Ask AI Coach <span class="hint-counter">${remaining} left</span>`;
+        hintBtn.disabled = remaining <= 0;
+      } catch (err) {
+        if (hintBubble) {
+          hintBubble.style.display = 'block';
+          hintBubble.textContent = err.message || 'Could not get hint.';
+        }
+        hintBtn.disabled = false;
+        hintBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Ask AI Coach <span class="hint-counter">${HINT_MAX - hintsUsed} left</span>`;
+      }
     });
   }
 

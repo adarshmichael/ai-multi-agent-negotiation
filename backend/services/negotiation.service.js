@@ -195,7 +195,28 @@ function getAllScenarios() {
 }
 
 function getScenarioById(id) {
-  return SCENARIOS.find(s => s.id === id) || null;
+  // Check built-in scenarios first
+  const builtin = SCENARIOS.find(s => s.id === id);
+  if (builtin) return builtin;
+  // Custom scenario IDs are MongoDB ObjectIds — handled separately via
+  // customScenario.service.getScenarioById(id, userId) in the controller.
+  // Return null here so the controller can fall through to the async lookup.
+  return null;
+}
+
+/**
+ * Async variant that checks built-in then custom scenarios.
+ * Used by createSession to support custom scenario IDs.
+ */
+async function getScenarioByIdAsync(id, userId) {
+  const builtin = SCENARIOS.find(s => s.id === id);
+  if (builtin) return builtin;
+  try {
+    const { getScenarioById: getCustom } = require('./customScenario.service');
+    return await getCustom(id, userId || 'anonymous');
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -294,10 +315,73 @@ function getAllSessions() {
   return Array.from(sessions.values()).map(serializeNegotiation);
 }
 
+/**
+ * Create a session directly from a scenario definition object.
+ * This is used when scenario_id is a custom scenario (MongoDB ObjectId)
+ * that has already been fetched and converted to the standard shape.
+ *
+ * @param {object} params
+ *   scenarioDef          — scenario shape (from built-in or toScenarioShape())
+ *   agentPersonalities   — array from request body
+ *   maximum_rounds
+ *   mode
+ *   practice_mode
+ */
+function createSessionFromScenarioDef({ scenarioDef, agentPersonalities, maximum_rounds, mode, practice_mode }) {
+  if (!scenarioDef) throw new Error('scenarioDef is required');
+
+  const agentConfigs = scenarioDef.agents.map((agentDef, index) => {
+    const userConfig = agentPersonalities?.find(a => a.id === agentDef.id);
+
+    const goals = (userConfig?.goals && userConfig.goals.length > 0)
+      ? userConfig.goals
+      : agentDef.goals || [agentDef.goal];
+
+    const constraints = (userConfig?.constraints?.selected && userConfig.constraints.selected.length > 0)
+      ? userConfig.constraints.selected
+      : agentDef.constraints;
+
+    let numericConstraint = agentDef.numericConstraint;
+    if (userConfig?.constraints?.numericMax && userConfig.constraints.numericMax > 0) {
+      numericConstraint = { type: 'max', value: Number(userConfig.constraints.numericMax) };
+    } else if (userConfig?.constraints?.numericMin && userConfig.constraints.numericMin > 0) {
+      numericConstraint = { type: 'min', value: Number(userConfig.constraints.numericMin) };
+    }
+
+    const targetValue = userConfig?.targetValue || agentDef.targetValue || null;
+    const agentTypeOverride = (practice_mode && index === 0) ? 'human' : agentDef.agentType;
+
+    return createAgentConfig({
+      ...agentDef,
+      goal: goals.join('; '),
+      goals,
+      constraints,
+      numericConstraint,
+      targetValue,
+      personality: userConfig?.personality || agentDef.personality || 'collaborative',
+      agentType: agentTypeOverride,
+    });
+  });
+
+  const session = createNegotiation({
+    scenarioId:  scenarioDef.id,
+    scenario:    { name: scenarioDef.name, description: scenarioDef.description },
+    agents:      agentConfigs,
+    maxRounds:   maximum_rounds || scenarioDef.maxRounds || 10,
+    mode:        mode || 'simulation',
+  });
+
+  sessions.set(session.id, session);
+  logger.negotiation(`Session created (from def): ${session.id} | Scenario: ${scenarioDef.name}`);
+  return serializeNegotiation(session);
+}
+
 module.exports = {
   getAllScenarios,
   getScenarioById,
+  getScenarioByIdAsync,
   createSession,
+  createSessionFromScenarioDef,
   getSession,
   getSerializedSession,
   updateSession,

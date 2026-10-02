@@ -4,6 +4,7 @@
  */
 
 const negotiationService = require('../services/negotiation.service');
+const { getScenarioByIdAsync, createSessionFromScenarioDef } = negotiationService;
 const engine = require('../engine/NegotiationEngine');
 const { STATUS, RESULT, serializeNegotiation } = require('../models/negotiation.model');
 const { buildReport } = require('../services/report.service');
@@ -21,9 +22,10 @@ function getScenarios(req, res, next) {
 
 /**
  * POST /api/negotiations
- * Body: { scenario_id, agents, maximum_rounds?, mode? }
+ * Body: { scenario_id, agents, maximum_rounds?, mode?, userId? }
+ * Supports both built-in and custom (MongoDB ObjectId) scenario_ids.
  */
-function createNegotiation(req, res, next) {
+async function createNegotiation(req, res, next) {
   try {
     const { scenario_id, agents, maximum_rounds, mode, practice_mode } = req.body;
 
@@ -33,7 +35,13 @@ function createNegotiation(req, res, next) {
       return next(err);
     }
 
-    const scenario = negotiationService.getScenarioById(scenario_id);
+    const userId = req.body.userId || req.query.userId || (req.user && req.user.id) || 'anonymous';
+
+    // Try built-in first, then async custom lookup
+    let scenario = negotiationService.getScenarioById(scenario_id);
+    if (!scenario) {
+      scenario = await getScenarioByIdAsync(scenario_id, userId);
+    }
     if (!scenario) {
       const err = new Error(`Scenario not found: ${scenario_id}`);
       err.statusCode = 404;
@@ -55,14 +63,22 @@ function createNegotiation(req, res, next) {
       }
     }
 
-    const session = negotiationService.createSession({ scenario_id, agents, maximum_rounds, mode, practice_mode });
-    // Tag userId for session auto-save (session.service.js)
-    const liveSession = negotiationService.getSession(session.id);
+    // For custom scenarios, temporarily inject into the service's in-memory lookup
+    // by patching the session creation path
+    const sessionResult = negotiationService.createSessionFromScenarioDef({
+      scenarioDef: scenario,
+      agentPersonalities: agents,
+      maximum_rounds,
+      mode,
+      practice_mode,
+    });
+
+    const liveSession = negotiationService.getSession(sessionResult.id);
     if (liveSession) {
-      liveSession._userId = req.body.userId || req.query.userId || (req.user && req.user.id) || 'anonymous';
+      liveSession._userId = userId;
     }
-    logger.negotiation(`Created: ${session.id}`);
-    res.status(201).json(session);
+    logger.negotiation(`Created: ${sessionResult.id}`);
+    res.status(201).json(sessionResult);
   } catch (err) {
     next(err);
   }

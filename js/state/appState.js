@@ -6,13 +6,16 @@
 
 const AppState = (function () {
   const STEPS = {
-    SCENARIO:  'scenario',
-    CONFIGURE: 'configure',
-    SUMMARY:   'summary',
-    READY:     'ready',
-    NEGOTIATE: 'negotiate',
-    DASHBOARD: 'dashboard',
-    HISTORY:   'history',
+    SCENARIO:         'scenario',
+    CONFIGURE:        'configure',
+    SUMMARY:          'summary',
+    READY:            'ready',
+    NEGOTIATE:        'negotiate',
+    DASHBOARD:        'dashboard',
+    HISTORY:          'history',
+    ANALYTICS:        'analytics',
+    COACH:            'coach',
+    SCENARIO_BUILDER: 'scenario-builder',
   };
 
   let state = {
@@ -63,7 +66,19 @@ const AppState = (function () {
     state.error     = null;
     notify();
     try {
-      state.scenarios = await window.ApiService.getScenarios();
+      const builtIn = await window.ApiService.getScenarios();
+      // Merge with custom scenarios if ScenarioService is available
+      let custom = [];
+      if (window.ScenarioService) {
+        try {
+          const res = await window.ScenarioService.listScenarios();
+          custom = res.scenarios || [];
+        } catch (e) { /* non-critical */ }
+      }
+      // Merge: put custom first, then built-in. Avoid duplicates by id.
+      const builtInIds = new Set(builtIn.map(s => s.id));
+      const uniqueCustom = custom.filter(c => !builtInIds.has(c.id));
+      state.scenarios = [...uniqueCustom, ...builtIn];
     } catch (err) {
       state.error = 'Unable to load scenarios. Please try again.';
     } finally {
@@ -82,10 +97,29 @@ const AppState = (function () {
     state.error              = null;
     notify();
     try {
-      const scenario = await window.ApiService.getScenarioById(scenarioId);
-      const index    = state.scenarios.findIndex(s => s.id === scenarioId);
-      if (index !== -1) state.scenarios[index] = scenario;
-      else              state.scenarios.push(scenario);
+      // Check if it's already in the local list (custom or built-in)
+      const localScenario = state.scenarios.find(s => s.id === scenarioId);
+      if (localScenario) {
+        state.isLoading = false;
+        notify();
+        return;
+      }
+      // Try to fetch from API (built-in)
+      try {
+        const scenario = await window.ApiService.getScenarioById(scenarioId);
+        const index = state.scenarios.findIndex(s => s.id === scenarioId);
+        if (index !== -1) state.scenarios[index] = scenario;
+        else              state.scenarios.push(scenario);
+      } catch {
+        // May be a custom scenario — try ScenarioService
+        if (window.ScenarioService) {
+          const res = await window.ScenarioService.getScenario(scenarioId);
+          const scenario = res.scenario;
+          const index = state.scenarios.findIndex(s => s.id === scenarioId);
+          if (index !== -1) state.scenarios[index] = scenario;
+          else              state.scenarios.push(scenario);
+        }
+      }
     } catch (err) {
       state.error = 'Unable to load agent configuration. Please try again.';
     } finally {

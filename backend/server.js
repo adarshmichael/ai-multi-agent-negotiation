@@ -23,6 +23,8 @@ const healthRoutes = require('./routes/health.routes');
 const negotiationRoutes = require('./routes/negotiation.routes');
 const authRoutes = require('./routes/auth.routes');
 const sessionRoutes = require('./routes/session.routes');
+const coachingRoutes = require('./routes/coaching.routes');
+const customScenarioRoutes = require('./routes/customScenario.routes');
 const errorHandler = require('./middleware/errorHandler');
 const engine = require('./engine/NegotiationEngine');
 const negotiationService = require('./services/negotiation.service');
@@ -46,6 +48,8 @@ app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', negotiationRoutes);
 app.use('/api', sessionRoutes);
+app.use('/api', coachingRoutes);
+app.use('/api', customScenarioRoutes);
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '..')));

@@ -182,7 +182,11 @@ async function getSessions(userId, filters = {}) {
   if (filters.outcome) query.outcome = filters.outcome;
   if (filters.mode) query.mode = filters.mode;
   if (filters.search) {
-    query.scenarioName = { $regex: filters.search, $options: 'i' };
+    // search can match scenarioName or sessionId prefix
+    query.$or = [
+      { scenarioName: { $regex: filters.search, $options: 'i' } },
+      { sessionId: { $regex: filters.search, $options: 'i' } },
+    ];
   }
   if (filters.minScore != null) {
     query.performanceScore = { ...query.performanceScore, $gte: Number(filters.minScore) };
@@ -223,10 +227,18 @@ async function getSessions(userId, filters = {}) {
 }
 
 /**
- * Get a single session by sessionId, with ownership check.
+ * Get a single session by sessionId OR MongoDB _id, with ownership check.
+ * Accepts both formats so that export endpoints using _id also work.
  */
 async function getSessionById(sessionId, userId) {
-  return Session.findOne({ sessionId, userId }).lean();
+  // Try by sessionId first (the live negotiation ID)
+  let doc = await Session.findOne({ sessionId, userId }).lean();
+  if (doc) return doc;
+  // Fall back to MongoDB _id (used by export endpoints)
+  if (sessionId && sessionId.match && sessionId.match(/^[a-f\d]{24}$/i)) {
+    doc = await Session.findOne({ _id: sessionId, userId }).lean();
+  }
+  return doc || null;
 }
 
 /**

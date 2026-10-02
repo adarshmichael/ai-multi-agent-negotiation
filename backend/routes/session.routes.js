@@ -12,11 +12,16 @@ const router     = express.Router();
 const controller = require('../controllers/session.controller');
 
 // Session CRUD
-router.get('/sessions',            controller.listSessions);
-router.get('/sessions/:id',        controller.getSession);
-router.delete('/sessions/:id',     controller.deleteSession);
+router.get('/sessions',                 controller.listSessions);
+router.get('/sessions/:id',             controller.getSession);
+router.delete('/sessions/:id',          controller.deleteSession);
 
-// Dashboard
-router.get('/dashboard',           controller.getDashboard);
+// Export
+router.get('/sessions/:id/export/csv',  controller.exportSessionCsv);
+router.get('/sessions/:id/export/pdf',  controller.exportSessionPdf);
+
+// Dashboard / Analytics
+router.get('/dashboard',                controller.getDashboard);
+router.get('/analytics',                controller.getAnalytics);
 
 module.exports = router;
