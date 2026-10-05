@@ -310,7 +310,11 @@ function renderAgentCard(agent) {
 
   // Goals panel content
   const selectedGoals = AppState.getGoals(agent.id);
-  const goalChips = (agent.goalOptions || []).map(goal => {
+  // For custom scenarios, auto-pre-select the goal if only one option and nothing selected yet
+  const effectiveGoalOptions = (agent.goalOptions && agent.goalOptions.length > 0)
+    ? agent.goalOptions
+    : (agent.goal ? [agent.goal] : []);
+  const goalChips = effectiveGoalOptions.map(goal => {
     const selected = selectedGoals.includes(goal) ? 'selected' : '';
     return `<div class="goal-chip ${selected}" data-goal="${escapeHtml(goal)}" data-agent-id="${agent.id}">${escapeHtml(goal)}</div>`;
   }).join('');
@@ -320,7 +324,32 @@ function renderAgentCard(agent) {
   ).join('');
 
   // Constraints panel content
-  const constraintOpts = (agent.constraintOptions || []).map(opt => {
+  // For custom scenarios with no constraintOptions, generate sensible defaults
+  let effectiveConstraintOpts = agent.constraintOptions || [];
+  const isCustomScenario = !!(AppState.getSelectedScenario()?.isCustom);
+  if (effectiveConstraintOpts.length === 0 && isCustomScenario) {
+    // Build default constraint options from numeric constraint or agent goal
+    const defaults = [];
+    if (agent.numericConstraint) {
+      defaults.push({
+        id: `nc-0-${agent.id}`,
+        label: agent.numericConstraint.type === 'max' ? 'Maximum Budget' : 'Minimum Acceptable Value',
+        hasNumeric: true,
+        numericLabel: agent.numericConstraint.type === 'max' ? 'Budget Limit (₹)' : 'Minimum Value (₹)',
+        numericType: agent.numericConstraint.type,
+        defaultValue: agent.numericConstraint.value,
+        placeholder: `e.g. ${agent.numericConstraint.value}`,
+      });
+    }
+    defaults.push(
+      { id: `goal-align-${agent.id}`, label: 'Goal-aligned constraints apply' },
+      { id: `fair-deal-${agent.id}`, label: 'Fair and mutually acceptable terms required' },
+      { id: `no-extra-${agent.id}`, label: 'No additional hidden costs or conditions' }
+    );
+    effectiveConstraintOpts = defaults;
+  }
+
+  const constraintOpts = effectiveConstraintOpts.map(opt => {
     const isSelected = (constraintState.selected || []).includes(opt.label);
     const numericVal = opt.numericType === 'max'
       ? (constraintState.numericMax || opt.defaultValue || '')

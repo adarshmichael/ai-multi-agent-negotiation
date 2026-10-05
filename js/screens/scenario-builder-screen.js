@@ -385,8 +385,12 @@ const ScenarioBuilderScreen = (function () {
               await mount(containerId);
             } catch (err) { alert(err.message); }
           } else if (action === 'run') {
-            // Navigate to scenario screen and pre-select this custom scenario
+            // Navigate to configure screen with this custom scenario pre-selected
             if (window.AppState) {
+              // Set default mode (ai-vs-ai) if no mode selected yet
+              if (!window.AppState.getMode()) {
+                window.AppState.setMode('ai-vs-ai');
+              }
               await window.AppState.selectScenario(id);
               window.AppState.goToStep(window.AppState.STEPS.CONFIGURE);
             }

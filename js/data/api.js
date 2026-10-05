@@ -116,14 +116,23 @@ const ApiService = (function () {
       constraints: window.AppState.getConstraints(id),
     }));
 
+    // Include userId so the backend can resolve custom scenario IDs (stored per-user)
+    let userId = null;
+    try {
+      const userJson = localStorage.getItem('negosim_user');
+      if (userJson) userId = JSON.parse(userJson)?.id || null;
+    } catch (_) {}
+
     return _post('/negotiations', {
       scenario_id: scenarioId,
       agents,
       maximum_rounds: options.maxRounds || 10,
       mode: options.mode || 'simulation',
       practice_mode: options.practiceMode || false,
+      ...(userId ? { userId } : {}),
     });
   }
+
 
   async function startNegotiation(negotiationId) {
     return _post(`/negotiations/${negotiationId}/start`);
