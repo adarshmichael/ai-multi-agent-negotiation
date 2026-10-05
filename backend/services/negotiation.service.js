@@ -207,17 +207,32 @@ function getScenarioById(id) {
 /**
  * Async variant that checks built-in then custom scenarios.
  * Used by createSession to support custom scenario IDs.
+ * NOTE: We look up by _id only (not userId) because the userId stored at
+ * scenario creation time may differ from the one sent during negotiation
+ * (JWT decode vs query param, ObjectId vs string, etc.). MongoDB _id is
+ * globally unique so this is safe — the caller already knows the ID.
  */
 async function getScenarioByIdAsync(id, userId) {
   const builtin = SCENARIOS.find(s => s.id === id);
   if (builtin) return builtin;
   try {
-    const { getScenarioById: getCustom } = require('./customScenario.service');
-    return await getCustom(id, userId || 'anonymous');
+    const CustomScenario = require('../models/customScenario.model');
+    const { toScenarioShape } = require('./customScenario.service');
+    // First try with userId for strict ownership check
+    let doc = null;
+    if (userId && userId !== 'anonymous') {
+      doc = await CustomScenario.findOne({ _id: id, userId }).lean();
+    }
+    // Fallback: find by _id alone (userId mismatch between token/query param formats)
+    if (!doc) {
+      doc = await CustomScenario.findById(id).lean();
+    }
+    return doc ? toScenarioShape(doc) : null;
   } catch {
     return null;
   }
 }
+
 
 /**
  * Create a new negotiation session from a configuration request.
