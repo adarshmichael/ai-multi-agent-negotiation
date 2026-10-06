@@ -55,22 +55,7 @@ body:has(#app-sidebar.collapsed) .app-shell {
   to { transform: rotate(360deg); }
 }
 
-/* ── Light theme override ── */
-[data-theme="light"] {
-  --color-bg:              #F0F4FF;
-  --color-bg-alt:          #E8EEFF;
-  --color-surface:         #FFFFFF;
-  --color-surface-raised:  #F7F9FF;
-  --color-border:          rgba(80, 90, 140, 0.12);
-  --color-border-strong:   rgba(80, 90, 140, 0.25);
-  --color-text:            #1A1D2E;
-  --color-text-muted:      #5B6380;
-  --color-text-faint:      #9BA3C0;
-  --shadow-sm:   0 1px 3px rgba(80, 90, 140, 0.1);
-  --shadow-md:   0 4px 16px rgba(80, 90, 140, 0.12);
-  --shadow-lg:   0 8px 32px rgba(80, 90, 140, 0.15);
-  --shadow-glow: 0 0 0 1px rgba(110, 123, 250, 0.25), 0 4px 20px rgba(110, 123, 250, 0.12);
-}
+/* ── Light theme base removed (handled in base.css) ── */
 
 /* ── Extended token: game-specific ── */
 :root {
@@ -260,7 +245,11 @@ body:has(#app-sidebar.collapsed) .app-shell {
   transition: opacity var(--transition-fast);
 }
 
-.sidebar.collapsed .sidebar-nav-label { opacity: 0; pointer-events: none; }
+.sidebar.collapsed .sidebar-nav-label,
+.sidebar.collapsed .sidebar-nav-group-label { 
+  opacity: 0; 
+  pointer-events: none; 
+}
 
 .sidebar-nav-divider {
   height: 1px;

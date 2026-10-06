@@ -1,6 +1,5 @@
 /* ==========================================================================
-   NegoSim — Split-Screen Premium Authentication Styles
-   Aesthetics: Modern split layout, solid dark form panel, stunning imagery
+   NegoSim — Split-Screen Premium Authentication Styles (Light Theme)
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
@@ -10,9 +9,9 @@ body, html {
   padding: 0;
   width: 100%;
   height: 100%;
-  font-family: 'Outfit', sans-serif;
-  background: #050505;
-  color: #fff;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
   overflow: hidden;
 }
 
@@ -30,10 +29,10 @@ body, html {
   flex-direction: column;
   justify-content: center;
   padding: 40px;
-  background: #09090b; /* Deep rich black */
+  background: var(--color-surface);
   position: relative;
   z-index: 10;
-  box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+  box-shadow: var(--shadow-lg);
   overflow-y: auto;
 }
 
@@ -48,13 +47,13 @@ body, html {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #111;
+  background: var(--color-bg-alt);
 }
 
 .auth-bg-image {
   position: absolute;
   inset: -5%;
-  background-image: url("https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2500&auto=format&fit=crop"); /* Stunning abstract AI network */
+  background-image: url("https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2500&auto=format&fit=crop"); /* Abstract network */
   background-size: cover;
   background-position: center;
   animation: slowPan 30s ease-in-out infinite alternate;
@@ -64,7 +63,9 @@ body, html {
 .auth-bg-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.3) 0%, rgba(9, 9, 11, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(247, 250, 248, 0.8) 0%, rgba(22, 92, 71, 0.4) 100%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 1;
 }
 
@@ -76,26 +77,26 @@ body, html {
   flex-direction: column;
   justify-content: center;
   padding: 10%;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .auth-image-content h2 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-sans);
   font-size: 56px;
   font-weight: 700;
   margin-bottom: 24px;
   line-height: 1.1;
-  background: linear-gradient(to right, #ffffff, #a5b4fc);
+  background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .auth-image-content p {
   font-size: 20px;
-  color: #e0e7ff;
+  color: var(--color-text-muted);
   max-width: 500px;
   line-height: 1.6;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 @keyframes slowPan {
@@ -120,38 +121,38 @@ body, html {
 .auth-brand-mark {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  border-radius: var(--radius-md);
+  background: var(--gradient-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-sans);
   font-size: 24px;
   font-weight: 700;
   color: #fff;
-  box-shadow: 0 8px 20px -4px rgba(99, 102, 241, 0.5);
+  box-shadow: var(--shadow-sm);
 }
 
 .auth-brand-text {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-sans);
   font-size: 24px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text);
   letter-spacing: -0.02em;
 }
 
 .auth-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-sans);
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 8px;
-  color: #fff;
+  color: var(--color-text);
   letter-spacing: -0.02em;
 }
 
 .auth-subtitle {
   font-size: 15px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-weight: 400;
   margin-bottom: 32px;
 }
@@ -159,11 +160,11 @@ body, html {
 /* ── Tabs ── */
 .auth-tabs {
   display: flex;
-  background: rgba(255,255,255,0.03);
-  border-radius: 10px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
   padding: 4px;
   position: relative;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid var(--color-border);
   margin-bottom: 32px;
 }
 
@@ -172,10 +173,10 @@ body, html {
   top: 4px;
   bottom: 4px;
   width: calc(50% - 4px);
-  background: rgba(255,255,255,0.1);
-  border-radius: 6px;
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
   transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .auth-tabs.is-register .auth-tab-bg {
@@ -188,17 +189,17 @@ body, html {
   padding: 12px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   cursor: pointer;
   z-index: 2;
   transition: color 0.3s;
   background: none;
   border: none;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .auth-tab.active {
-  color: #fff;
+  color: var(--color-text);
 }
 
 /* ── Inputs ── */
@@ -216,12 +217,12 @@ body, html {
 .auth-input {
   width: 100%;
   padding: 16px 16px 16px 48px;
-  background: #18181b; /* Slightly lighter than panel */
-  border: 1px solid #27272a;
-  border-radius: 10px;
-  color: #fff;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
   font-size: 15px;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-sans);
   transition: all 0.2s ease;
   outline: none;
 }
@@ -235,7 +236,7 @@ body, html {
   left: 16px;
   width: 20px;
   height: 20px;
-  color: #52525b;
+  color: var(--color-text-faint);
   pointer-events: none;
   transition: all 0.2s ease;
   z-index: 2;
@@ -247,7 +248,7 @@ body, html {
   left: 48px;
   top: 50%;
   transform: translateY(-50%);
-  color: #71717a;
+  color: var(--color-text-muted);
   font-size: 15px;
   pointer-events: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -257,9 +258,9 @@ body, html {
 
 .auth-input:focus,
 .auth-input:not(:placeholder-shown) {
-  border-color: #6366f1;
-  background: #18181b;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px var(--color-vendor-light);
 }
 
 .auth-input:focus ~ .auth-floating-label,
@@ -267,14 +268,14 @@ body, html {
   top: -1px;
   left: 12px;
   font-size: 12px;
-  color: #818cf8;
+  color: var(--color-primary);
   font-weight: 500;
-  background: #09090b; /* matches panel bg to cover input border */
+  background: var(--color-surface);
   border-radius: 4px;
 }
 
 .auth-input:focus ~ .auth-input-icon {
-  color: #818cf8;
+  color: var(--color-primary);
 }
 
 /* Password Eye */
@@ -283,7 +284,7 @@ body, html {
   right: 16px;
   background: none;
   border: none;
-  color: #52525b;
+  color: var(--color-text-faint);
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -291,7 +292,7 @@ body, html {
 }
 
 .auth-pw-toggle:hover {
-  color: #fff;
+  color: var(--color-text);
 }
 
 /* ── Buttons ── */
@@ -299,13 +300,13 @@ body, html {
   width: 100%;
   padding: 16px;
   margin-top: 12px;
-  background: #fff;
-  color: #09090b;
+  background: var(--color-primary);
+  color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 16px;
   font-weight: 600;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-sans);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -315,7 +316,7 @@ body, html {
 }
 
 .auth-submit:hover {
-  background: #e4e4e7;
+  background: var(--color-primary-light);
   transform: translateY(-1px);
 }
 
@@ -334,12 +335,12 @@ body, html {
 .auth-divider-line {
   flex: 1;
   height: 1px;
-  background: #27272a;
+  background: var(--color-border);
 }
 
 .auth-divider-text {
   font-size: 12px;
-  color: #71717a;
+  color: var(--color-text-faint);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -349,13 +350,13 @@ body, html {
 .auth-google-btn {
   width: 100%;
   padding: 14px;
-  background: #18181b;
-  border: 1px solid #27272a;
-  border-radius: 10px;
-  color: #fff;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
   font-size: 15px;
   font-weight: 500;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-sans);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -365,14 +366,14 @@ body, html {
 }
 
 .auth-google-btn:hover {
-  background: #27272a;
-  border-color: #3f3f46;
+  background: var(--color-bg-alt);
+  border-color: var(--color-border-strong);
 }
 
 /* ── Messages & Badges ── */
 .auth-message {
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 500;
   display: none;
@@ -383,14 +384,14 @@ body, html {
 
 .auth-message.show { display: flex; }
 .auth-message.error {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.05);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  color: var(--color-danger);
 }
 .auth-message.success {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  color: #86efac;
+  background: rgba(21, 128, 61, 0.05);
+  border: 1px solid rgba(21, 128, 61, 0.2);
+  color: var(--color-success);
 }
 
 /* Password Strength */
@@ -405,22 +406,22 @@ body, html {
   flex: 1;
   height: 4px;
   border-radius: 2px;
-  background: #27272a;
+  background: var(--color-border);
   transition: all 0.3s ease;
 }
 
-.auth-pw-strength-bar.active.weak { background: #ef4444; }
-.auth-pw-strength-bar.active.fair { background: #eab308; }
-.auth-pw-strength-bar.active.good { background: #3b82f6; }
-.auth-pw-strength-bar.active.strong { background: #22c55e; }
+.auth-pw-strength-bar.active.weak { background: var(--color-danger); }
+.auth-pw-strength-bar.active.fair { background: var(--color-warning); }
+.auth-pw-strength-bar.active.good { background: var(--color-stance-flexible); }
+.auth-pw-strength-bar.active.strong { background: var(--color-success); }
 
 /* Spinner */
 .auth-spinner {
   display: none;
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(0,0,0,0.2);
-  border-top-color: #000;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

@@ -25,12 +25,23 @@ const SessionService = (function () {
   async function _get(path) {
     const url = `${_getBaseUrl()}${path}`;
     const sep = url.includes('?') ? '&' : '?';
-    const response = await fetch(`${url}${sep}userId=${encodeURIComponent(_getUserId())}`);
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    try {
+      const response = await fetch(`${url}${sep}userId=${encodeURIComponent(_getUserId())}`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+        throw new Error(err.error?.message || `HTTP ${response.status}`);
+      }
+      return await response.json();
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        throw new Error('Request timed out. The server might be unreachable or database is offline.');
+      }
+      throw err;
     }
-    return response.json();
   }
 
   async function _delete(path) {

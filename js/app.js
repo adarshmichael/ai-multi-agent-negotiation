@@ -62,9 +62,10 @@ function renderStepper() {
 /* ============================== Screen switching ============================== */
 
 let lastRenderedStep = null;
+let transitionPromise = Promise.resolve();
 
 function showScreen(stepId) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const targetStep = stepId;
   const map = {
     [AppState.STEPS.SCENARIO]:         'screen-scenario',
     [AppState.STEPS.CONFIGURE]:        'screen-configure',
@@ -76,17 +77,35 @@ function showScreen(stepId) {
     [AppState.STEPS.COACH]:            'screen-coach',
     [AppState.STEPS.SCENARIO_BUILDER]: 'screen-scenario-builder',
   };
-  const screenId = map[stepId];
-  if (screenId) {
-    const el = document.getElementById(screenId);
-    if (el) el.classList.add('active');
-  }
-  renderStepper();
-  
-  if (lastRenderedStep !== stepId) {
+
+  transitionPromise = transitionPromise.then(async () => {
+    if (AppState.getState().currentStep !== targetStep) return;
+    if (lastRenderedStep === targetStep) {
+      renderStepper();
+      return;
+    }
+
+    const currentScreenId = lastRenderedStep ? map[lastRenderedStep] : null;
+    const currentEl = currentScreenId ? document.getElementById(currentScreenId) : null;
+    const nextScreenId = map[targetStep];
+    const nextEl = nextScreenId ? document.getElementById(nextScreenId) : null;
+
+    if (window.Motion && currentEl && currentEl.classList.contains('active')) {
+      await window.Motion.leaveScreen(currentEl);
+    }
+    
+    if (AppState.getState().currentStep !== targetStep) return;
+
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    if (nextEl) {
+      nextEl.classList.add('active');
+      if (window.Motion) window.Motion.enterScreen(nextEl);
+    }
+    
+    renderStepper();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    lastRenderedStep = stepId;
-  }
+    lastRenderedStep = targetStep;
+  });
 }
 
 window.startNewNegotiation = function() {
@@ -99,6 +118,8 @@ window.startNewNegotiation = function() {
   const url = new URL(window.location);
   url.searchParams.delete('negId');
   window.history.replaceState({}, '', url);
+  if (typeof clearEquilibriumPanels === 'function') clearEquilibriumPanels();
+  if (window.LiveNegotiationScreen) window.LiveNegotiationScreen.reset();
   AppState.goToStep(AppState.STEPS.SCENARIO);
 };
 
@@ -3035,6 +3056,12 @@ async function init() {
       btnPause.disabled = true;
       try {
         await window.ApiService.pauseNegotiation(negotiationId);
+        btnPause.style.display = 'none';
+        const resumeBtn = document.getElementById('btn-resume-negotiation');
+        if (resumeBtn) { resumeBtn.style.display = 'inline-flex'; resumeBtn.disabled = false; }
+        AppState.setNegotiationState({ negotiationStatus: 'paused' });
+        updateOrchStatusBar(AppState.getState().currentRound, AppState.getState().maxRounds, '—', 'paused');
+        addOrchLogEntry('pending', 'Negotiation paused.');
       } catch (err) {
         console.error('Pause failed:', err);
         btnPause.disabled = false;
@@ -3051,7 +3078,12 @@ async function init() {
       btnResume.disabled = true;
       try {
         await window.ApiService.resumeNegotiation(negotiationId);
-        btnResume.disabled = false;
+        btnResume.style.display = 'none';
+        const pb = document.getElementById('btn-pause-negotiation');
+        if (pb) { pb.style.display = 'inline-flex'; pb.disabled = false; }
+        AppState.setNegotiationState({ negotiationStatus: 'in_progress' });
+        updateOrchStatusBar(AppState.getState().currentRound, AppState.getState().maxRounds, '—', 'in_progress');
+        addOrchLogEntry('pending', 'Negotiation resumed.');
       } catch (err) {
         console.error('Resume failed:', err);
         btnResume.disabled = false;
@@ -3191,6 +3223,36 @@ async function init() {
   if (!isSpecialBoot) {
     AppState.loadScenarios();
     render();
+  }
+
+  // Topbar Search Event Listener
+  const searchInput = document.getElementById('topbar-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      const sState = AppState.getState();
+      if (sState.currentStep === AppState.STEPS.SCENARIO) {
+        const cards = document.querySelectorAll('.scenario-card');
+        cards.forEach(card => {
+          const text = card.textContent.toLowerCase();
+          card.style.display = text.includes(query) ? 'block' : 'none';
+        });
+      } else {
+        // If not on scenario screen, simple alert or console
+        if (query.trim().length > 2) {
+          console.log('Search functionality available on scenario screen.');
+        }
+      }
+    });
+  }
+
+  // Sidebar Toggle Event Listener
+  const sidebarToggle = document.getElementById('sidebar-toggle-btn');
+  const appSidebar = document.getElementById('app-sidebar');
+  if (sidebarToggle && appSidebar) {
+    sidebarToggle.addEventListener('click', () => {
+      appSidebar.classList.toggle('collapsed');
+    });
   }
 
   // Arena tab switcher (tablet responsive)

@@ -24,20 +24,16 @@ const ApiService = (function () {
   let backendHost;
   let protocol;
   let wsProtocol;
-
+  
   if (useLocal || isLocal) {
-    // Local backend on port 8001 (either served from it, or explicitly requested)
     backendHost = `${hostname === '127.0.0.1' ? '127.0.0.1' : 'localhost'}:8001`;
     protocol    = 'http:';
     wsProtocol  = 'ws:';
   } else if (isRenderHost) {
-    // Hosted directly on the Render backend
     backendHost = window.location.host;
     protocol    = 'https:';
     wsProtocol  = 'wss:';
   } else {
-    // Running on GitHub Pages (*.github.io) or other static hosts:
-    // Route to the live Render cloud backend
     backendHost = RENDER_HOST;
     protocol    = 'https:';
     wsProtocol  = 'wss:';

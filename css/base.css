@@ -7,64 +7,65 @@
    Design tokens
    ========================================================================== */
 :root {
+  color-scheme: light;
   /* ── Backgrounds ── */
-  --color-bg:              #0D1117;
-  --color-bg-alt:          #161B22;
-  --color-surface:         #1C2128;
-  --color-surface-raised:  #21262D;
-  --color-border:          rgba(240, 246, 252, 0.08);
-  --color-border-strong:   rgba(240, 246, 252, 0.16);
+  --color-bg:              #F7FAF8; /* Faint green tint */
+  --color-bg-alt:          #EBF2EF;
+  --color-surface:         #FFFFFF;
+  --color-surface-raised:  #F7FAF8;
+  --color-border:          rgba(16, 64, 51, 0.12);
+  --color-border-strong:   rgba(16, 64, 51, 0.22);
 
   /* ── Text hierarchy ── */
-  --color-text:            #E6EDF3;
-  --color-text-muted:      #8B949E;
-  --color-text-faint:      #484F58;
+  --color-text:            #101F1A;
+  --color-text-muted:      #4D665E;
+  --color-text-faint:      #8FA39C;
 
   /* ── Legacy primary (kept for existing code refs) ── */
-  --color-primary:         #6E7BFA;
-  --color-primary-light:   #8B96FC;
-  --color-primary-dark:    #5561D9;
-  --color-accent:          #58A6FF;
-  --color-success:         #3FB950;
-  --color-danger:          #F85149;
-  --color-warning:         #D29922;
+  --color-primary:         #165C47; /* Deep forest green */
+  --color-primary-light:   #238568;
+  --color-primary-dark:    #0B3629;
+  --color-accent:          #165C47;
+  --color-success:         #15803D;
+  --color-danger:          #DC2626;
+  --color-warning:         #D97706;
 
-  /* ── Equilibrium brand palette (intensified for dark ground) ── */
-  --color-buyer:           #E07A3D;
-  --color-buyer-light:     rgba(224, 122, 61, 0.15);
-  --color-buyer-glow:      rgba(224, 122, 61, 0.35);
-  --color-buyer-surface:   rgba(224, 122, 61, 0.06);
-  --color-vendor:          #3FB950;
-  --color-vendor-light:    rgba(63, 185, 80, 0.15);
-  --color-vendor-glow:     rgba(63, 185, 80, 0.35);
-  --color-vendor-surface:  rgba(63, 185, 80, 0.06);
-  --color-orchestrator:    #2D333B;
-  --color-orch-text:       #8B949E;
-  --color-orch-light:      rgba(110, 118, 129, 0.08);
-  --color-orch-glow:       rgba(110, 118, 129, 0.25);
-  --color-orch-border:     rgba(110, 118, 129, 0.3);
-  --color-state:           #484F58;
-  --color-state-border:    rgba(72, 79, 88, 0.3);
-  --color-success-sage:    #7CB889;
-  --color-warning-amber:   #D29922;
+  /* ── Equilibrium brand palette (intensified for dark ground -> adapted for light) ── */
+  --color-buyer:           #D97706;
+  --color-buyer-light:     rgba(217, 119, 6, 0.08);
+  --color-buyer-glow:      rgba(217, 119, 6, 0.15);
+  --color-buyer-surface:   rgba(217, 119, 6, 0.04);
+  --color-vendor:          #165C47;
+  --color-vendor-light:    rgba(22, 92, 71, 0.08);
+  --color-vendor-glow:     rgba(22, 92, 71, 0.15);
+  --color-vendor-surface:  rgba(22, 92, 71, 0.04);
+  --color-orchestrator:    #F7FAF8;
+  --color-orch-text:       #4D665E;
+  --color-orch-light:      rgba(77, 102, 94, 0.08);
+  --color-orch-glow:       rgba(77, 102, 94, 0.15);
+  --color-orch-border:     rgba(77, 102, 94, 0.2);
+  --color-state:           #8FA39C;
+  --color-state-border:    rgba(143, 163, 156, 0.3);
+  --color-success-sage:    #10B981;
+  --color-warning-amber:   #F59E0B;
 
   /* ── Stance semantic colors ── */
-  --color-stance-firm:        #F0883E;
-  --color-stance-aggressive:  #F85149;
-  --color-stance-cautious:    #D29922;
-  --color-stance-flexible:    #58A6FF;
-  --color-stance-cooperative: #3FB950;
+  --color-stance-firm:        #EA580C;
+  --color-stance-aggressive:  #DC2626;
+  --color-stance-cautious:    #D97706;
+  --color-stance-flexible:    #0284C7;
+  --color-stance-cooperative: #059669;
 
-  /* ── Gradients (toned down — no gradient-first surfaces) ── */
-  --gradient-primary:  linear-gradient(135deg, #6E7BFA 0%, #58A6FF 100%);
-  --gradient-surface:  linear-gradient(160deg, #1C2128 0%, #161B22 100%);
+  /* ── Gradients ── */
+  --gradient-primary:  linear-gradient(135deg, #165C47 0%, #238568 100%);
+  --gradient-surface:  linear-gradient(160deg, #FFFFFF 0%, #F7FAF8 100%);
 
-  /* ── Radius (tightened) ── */
-  --radius-xs:  3px;
-  --radius-sm:  4px;
-  --radius-md:  8px;
-  --radius-lg:  12px;
-  --radius-xl:  16px;
+  /* ── Radius (Fernly style, larger radii) ── */
+  --radius-xs:  6px;
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
   --radius-pill: 999px;
 
   /* ── Spacing ── */
@@ -77,16 +78,16 @@
   --space-7: 48px;
   --space-8: 64px;
 
-  /* ── Elevation (deliberate, not gradient-heavy) ── */
-  --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md:   0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-glow:  0 0 0 1px rgba(110, 123, 250, 0.2), 0 4px 16px rgba(110, 123, 250, 0.15);
-  --shadow-buyer-glow:  0 0 0 1px var(--color-buyer-glow), 0 4px 16px rgba(224, 122, 61, 0.12);
-  --shadow-vendor-glow: 0 0 0 1px var(--color-vendor-glow), 0 4px 16px rgba(63, 185, 80, 0.12);
+  /* ── Elevation (soft low-contrast shadows) ── */
+  --shadow-sm:   0 1px 3px rgba(16, 64, 51, 0.04);
+  --shadow-md:   0 4px 12px rgba(16, 64, 51, 0.06);
+  --shadow-lg:   0 8px 24px rgba(16, 64, 51, 0.08);
+  --shadow-glow:  0 0 0 1px rgba(22, 92, 71, 0.1), 0 4px 20px rgba(22, 92, 71, 0.08);
+  --shadow-buyer-glow:  0 0 0 1px rgba(217, 119, 6, 0.15), 0 4px 20px rgba(217, 119, 6, 0.08);
+  --shadow-vendor-glow: 0 0 0 1px rgba(22, 92, 71, 0.15), 0 4px 20px rgba(22, 92, 71, 0.08);
 
   /* ── Typography ── */
-  --font-sans:  "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans:  "Outfit", "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono:  "JetBrains Mono", "Fira Code", "Cascadia Code", "Courier New", monospace;
 
   /* ── Motion ── */

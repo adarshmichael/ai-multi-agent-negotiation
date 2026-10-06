@@ -13,30 +13,30 @@
   bottom: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.025;
+  opacity: 0.15; /* Increased opacity slightly for light theme */
   background-image:
-    /* Horizontal grid lines (perspective fade via gradient) */
+    /* Horizontal grid lines */
     repeating-linear-gradient(
       0deg,
       transparent,
       transparent 79px,
-      rgba(110, 123, 250, 0.5) 79px,
-      rgba(110, 123, 250, 0.5) 80px
+      rgba(22, 92, 71, 0.1) 79px,
+      rgba(22, 92, 71, 0.1) 80px
     ),
     /* Vertical grid lines */
     repeating-linear-gradient(
       90deg,
       transparent,
       transparent 79px,
-      rgba(110, 123, 250, 0.5) 79px,
-      rgba(110, 123, 250, 0.5) 80px
+      rgba(22, 92, 71, 0.1) 79px,
+      rgba(22, 92, 71, 0.1) 80px
     );
   background-size: 80px 80px;
   perspective: 600px;
   transform: rotateX(45deg) scale(2.5);
   transform-origin: center center;
-  mask-image: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 60%);
-  -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 60%);
+  mask-image: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 60%);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 60%);
 }
 
 /* Subtle radial glow behind center content */
@@ -50,8 +50,8 @@
   height: 400px;
   background: radial-gradient(
     ellipse at center,
-    rgba(110, 123, 250, 0.035) 0%,
-    rgba(88, 166, 255, 0.015) 30%,
+    rgba(22, 92, 71, 0.06) 0%,
+    rgba(22, 92, 71, 0.02) 30%,
     transparent 70%
   );
   pointer-events: none;

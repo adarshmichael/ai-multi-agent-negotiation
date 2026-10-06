@@ -143,7 +143,7 @@ wss.on('connection', (ws, request, negotiationId) => {
 });
 
 // ======== MongoDB Connection ========
-mongoose.connect(config.mongoUri)
+mongoose.connect(config.mongoUri, { serverSelectionTimeoutMS: 2000 })
   .then(() => {
     logger.info('MongoDB', `Connected to ${config.mongoUri.replace(/\/\/.*@/, '//***@')}`);
   })

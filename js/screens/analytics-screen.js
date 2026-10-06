@@ -50,22 +50,29 @@ const AnalyticsScreen = (function () {
     if (!data || data.length === 0) {
       return `<div class="dashboard-empty"><div class="dashboard-empty-icon">📈</div><div class="dashboard-empty-title">No data yet</div></div>`;
     }
-    const maxTotal = Math.max(...data.map(d => (d.agreement || 0) + (d.rejection || 0) + (d.max_rounds || 0) + (d.stopped || 0) + (d.other || 0)), 1);
+    const maxTotal = Math.max(...data.map(d => Number(d.agreement || 0) + Number(d.rejection || 0) + Number(d.max_rounds || 0) + Number(d.stopped || 0) + Number(d.other || 0)), 1);
     const bars = data.slice(-12).map(d => {
-      const total = (d.agreement || 0) + (d.rejection || 0) + (d.max_rounds || 0) + (d.stopped || 0) + (d.other || 0);
-      const agPct = Math.round((d.agreement || 0) / total * 100);
-      const rePct = Math.round((d.rejection || 0) / total * 100);
-      const mrPct = Math.round((d.max_rounds || 0) / total * 100);
+      const agreement = Number(d.agreement || 0);
+      const rejection = Number(d.rejection || 0);
+      const max_rounds = Number(d.max_rounds || 0);
+      const stopped = Number(d.stopped || 0);
+      const other = Number(d.other || 0);
+      const total = agreement + rejection + max_rounds + stopped + other;
+      
+      const agPct = total > 0 ? Math.round(agreement / total * 100) : 0;
+      const rePct = total > 0 ? Math.round(rejection / total * 100) : 0;
+      const mrPct = total > 0 ? Math.round(max_rounds / total * 100) : 0;
       const h = Math.round((total / maxTotal) * 80);
+      
       return `
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0;max-width:40px;">
+        <div style="display:flex;flex-direction:column;justify-content:flex-end;align-items:center;flex:1;min-width:20px;max-width:40px;height:100%;">
           <div style="font-size:10px;color:var(--color-text-muted);font-family:var(--font-mono);margin-bottom:4px;">${total}</div>
           <div style="width:100%;height:${h}px;min-height:4px;border-radius:4px 4px 0 0;overflow:hidden;display:flex;flex-direction:column-reverse;">
             <div style="width:100%;height:${agPct}%;background:var(--color-success);"></div>
             <div style="width:100%;height:${rePct}%;background:var(--color-danger);"></div>
             <div style="width:100%;height:${mrPct}%;background:var(--color-warning);"></div>
           </div>
-          <div style="font-size:9px;color:var(--color-text-faint);transform:rotate(-40deg);transform-origin:top left;margin-top:8px;width:40px;overflow:hidden;text-overflow:ellipsis;">${escHtml(d.week || '')}</div>
+          <div style="font-size:9px;color:var(--color-text-faint);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;">${escHtml(d.week || '')}</div>
         </div>
       `;
     }).join('');

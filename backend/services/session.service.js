@@ -16,6 +16,12 @@ const Session = require('../models/session.model');
 const { buildReport } = require('./report.service');
 const { calculateSessionScore } = require('./performance.service');
 const logger = require('../utils/logger');
+const mongoose = require('mongoose');
+
+// Helper to check DB connection
+function isDbConnected() {
+  return mongoose.connection.readyState === 1;
+}
 
 /**
  * Save a completed in-memory negotiation session to MongoDB.
@@ -176,6 +182,15 @@ async function saveSession(liveSession, userId) {
  * Supports filtering and pagination.
  */
 async function getSessions(userId, filters = {}) {
+  if (!isDbConnected()) {
+    return {
+      sessions: [],
+      total: 0,
+      page: Math.max(1, parseInt(filters.page) || 1),
+      totalPages: 0,
+      hasMore: false
+    };
+  }
   const query = { userId };
 
   if (filters.scenarioId) query.scenarioId = filters.scenarioId;
@@ -255,6 +270,10 @@ async function deleteSession(sessionId, userId) {
  */
 async function getDashboardData(userId) {
   const { calculatePerformance } = require('./performance.service');
+
+  if (!isDbConnected()) {
+    return calculatePerformance([]);
+  }
 
   const sessions = await Session.find({ userId }).lean();
   return calculatePerformance(sessions);
