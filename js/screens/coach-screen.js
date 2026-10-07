@@ -59,10 +59,10 @@ const CoachScreen = (function () {
 
   function renderEmpty() {
     return `
-      <div class="dashboard-empty">
-        <div class="dashboard-empty-icon">🎯</div>
-        <div class="dashboard-empty-title">No coaching reports yet</div>
-        <div class="dashboard-empty-sub">Complete a Practice Mode negotiation and generate coaching feedback to see your reports here.</div>
+      <div class="screen-empty">
+        <div class="screen-empty-icon">🎯</div>
+        <div class="screen-empty-title">No coaching reports yet</div>
+        <div class="screen-empty-sub">Complete a Practice Mode negotiation and generate coaching feedback to see your reports here.</div>
       </div>
     `;
   }
@@ -96,7 +96,7 @@ const CoachScreen = (function () {
     container.innerHTML = `
       <div class="page-content">
         <button class="btn btn-ghost btn-sm" id="coach-back-btn" style="margin-bottom:20px;">← Back</button>
-        <div class="dashboard-loading"><div class="dashboard-loading-spinner"></div><div>Loading coaching report…</div></div>
+        <div class="screen-loading"><div class="screen-loading-spinner"></div><div>Loading coaching report…</div></div>
       </div>
     `;
 
@@ -174,10 +174,10 @@ const CoachScreen = (function () {
       container.innerHTML = `
         <div class="page-content">
           <button class="btn btn-ghost btn-sm" id="coach-back-btn3" style="margin-bottom:20px;">← Back</button>
-          <div class="dashboard-empty">
-            <div class="dashboard-empty-icon">❌</div>
-            <div class="dashboard-empty-title">Could not load report</div>
-            <div class="dashboard-empty-sub">${err.message}</div>
+          <div class="screen-empty">
+            <div class="screen-empty-icon">❌</div>
+            <div class="screen-empty-title">Could not load report</div>
+            <div class="screen-empty-sub">${err.message}</div>
           </div>
         </div>
       `;
@@ -192,7 +192,7 @@ const CoachScreen = (function () {
 
     container.innerHTML = `
       <div class="page-content">
-        <div class="dashboard-loading"><div class="dashboard-loading-spinner"></div><div>Loading coaching reports…</div></div>
+        <div class="screen-loading"><div class="screen-loading-spinner"></div><div>Loading coaching reports…</div></div>
       </div>
     `;
 
@@ -218,10 +218,10 @@ const CoachScreen = (function () {
       if (!_mounted) return;
       container.innerHTML = `
         <div class="page-content">
-          <div class="dashboard-empty">
-            <div class="dashboard-empty-icon">🎯</div>
-            <div class="dashboard-empty-title">Could not load coaching reports</div>
-            <div class="dashboard-empty-sub">${err.message}</div>
+          <div class="screen-empty">
+            <div class="screen-empty-icon">🎯</div>
+            <div class="screen-empty-title">Could not load coaching reports</div>
+            <div class="screen-empty-sub">${err.message}</div>
           </div>
         </div>
       `;

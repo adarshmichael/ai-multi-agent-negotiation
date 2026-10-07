@@ -83,20 +83,10 @@ const SessionService = (function () {
     return _delete(`/sessions/${sessionId}`);
   }
 
-  // ==================== Dashboard ====================
-
-  /**
-   * Get aggregated dashboard data.
-   */
-  async function getDashboard() {
-    return _get('/dashboard');
-  }
-
   return {
     getSessions,
     getSession,
     deleteSession,
-    getDashboard,
   };
 })();
 

@@ -71,7 +71,6 @@ function showScreen(stepId) {
     [AppState.STEPS.CONFIGURE]:        'screen-configure',
     [AppState.STEPS.SUMMARY]:          'screen-summary',
     [AppState.STEPS.NEGOTIATE]:        'screen-negotiate',
-    [AppState.STEPS.DASHBOARD]:        'screen-dashboard',
     [AppState.STEPS.HISTORY]:          'screen-history',
     [AppState.STEPS.ANALYTICS]:        'screen-analytics',
     [AppState.STEPS.COACH]:            'screen-coach',
@@ -3016,7 +3015,6 @@ function render() {
   
   // ── Dynamic screen mounts ──
   const dynamicScreens = [
-    { step: AppState.STEPS.DASHBOARD,        screen: window.DashboardScreen,       id: 'screen-dashboard' },
     { step: AppState.STEPS.HISTORY,          screen: window.HistoryScreen,         id: 'screen-history' },
     { step: AppState.STEPS.ANALYTICS,        screen: window.AnalyticsScreen,       id: 'screen-analytics' },
     { step: AppState.STEPS.COACH,            screen: window.CoachScreen,           id: 'screen-coach' },
@@ -3059,6 +3057,9 @@ function render() {
 /* ============================== Init / Wire Up ============================== */
 
 async function init() {
+  if (window.FlowerLogo) {
+    new window.FlowerLogo('flower-logo-mount', { size: 32, duration: 1600, hoverPause: true });
+  }
   AppState.onChange(render);
 
   const params = new URLSearchParams(window.location.search);
@@ -3382,34 +3383,58 @@ async function init() {
   function _setSidebarCollapsed(collapsed) {
     if (!appSidebar) return;
     appSidebar.classList.toggle('collapsed', collapsed);
+    if (sidebarToggle) {
+      sidebarToggle.setAttribute('aria-expanded', !collapsed);
+      sidebarToggle.setAttribute('aria-controls', 'app-sidebar');
+    }
     try { localStorage.setItem('negosim_sidebar', collapsed ? '1' : '0'); } catch {}
+  }
+
+  function _closeMobileSidebar() {
+    if (appSidebar) appSidebar.classList.remove('mobile-open');
+    if (backdrop) backdrop.classList.remove('active');
+    if (sidebarToggle) sidebarToggle.setAttribute('aria-expanded', 'false');
   }
 
   // Restore saved state (default: expanded)
   try {
     const saved = localStorage.getItem('negosim_sidebar');
-    if (saved === '1') appSidebar.classList.add('collapsed');
+    if (saved === '1') _setSidebarCollapsed(true);
+    else _setSidebarCollapsed(false);
   } catch {}
 
   if (sidebarToggle && appSidebar) {
     sidebarToggle.addEventListener('click', () => {
       if (window.innerWidth <= 768) {
-        appSidebar.classList.toggle('mobile-open');
+        const isNowOpen = appSidebar.classList.toggle('mobile-open');
         if (backdrop) backdrop.classList.toggle('active');
+        sidebarToggle.setAttribute('aria-expanded', isNowOpen);
       } else {
         const isNowCollapsed = !appSidebar.classList.contains('collapsed');
         _setSidebarCollapsed(isNowCollapsed);
       }
     });
+
+    // Close on mobile nav click
+    const navItems = appSidebar.querySelectorAll('.sidebar-nav-item');
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        if (window.innerWidth <= 768) _closeMobileSidebar();
+      });
+    });
   }
 
   // Mobile: close sidebar when backdrop is clicked
   if (backdrop) {
-    backdrop.addEventListener('click', () => {
-      appSidebar.classList.remove('mobile-open');
-      backdrop.classList.remove('active');
-    });
+    backdrop.addEventListener('click', _closeMobileSidebar);
   }
+
+  // Keyboard accessibility
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && window.innerWidth <= 768 && appSidebar && appSidebar.classList.contains('mobile-open')) {
+      _closeMobileSidebar();
+    }
+  });
 
   // Arena tab switcher (tablet responsive)
   const tabSwitcher = document.getElementById('arena-tab-switcher');

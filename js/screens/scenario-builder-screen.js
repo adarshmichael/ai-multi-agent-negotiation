@@ -19,10 +19,10 @@ const ScenarioBuilderScreen = (function () {
 
   function renderEmpty() {
     return `
-      <div class="dashboard-empty">
-        <div class="dashboard-empty-icon">🔧</div>
-        <div class="dashboard-empty-title">No custom scenarios yet</div>
-        <div class="dashboard-empty-sub">Build your own negotiation scenario with custom agents, goals, and constraints.</div>
+      <div class="screen-empty">
+        <div class="screen-empty-icon">🔧</div>
+        <div class="screen-empty-title">No custom scenarios yet</div>
+        <div class="screen-empty-sub">Build your own negotiation scenario with custom agents, goals, and constraints.</div>
         <button class="btn btn-primary" id="create-first-scenario" style="margin-top:16px;">+ Create Scenario</button>
       </div>
     `;
@@ -305,7 +305,7 @@ const ScenarioBuilderScreen = (function () {
     _editId = id;
     _view = 'form';
 
-    container.innerHTML = `<div class="page-content"><div class="dashboard-loading"><div class="dashboard-loading-spinner"></div><div>Loading…</div></div></div>`;
+    container.innerHTML = `<div class="page-content"><div class="screen-loading"><div class="screen-loading-spinner"></div><div>Loading…</div></div></div>`;
     try {
       const res = await window.ScenarioService.getScenario(id);
       const s = res.scenario;
@@ -319,7 +319,7 @@ const ScenarioBuilderScreen = (function () {
       container.innerHTML = renderForm({ ...s, agents });
       _wireFormEvents(true);
     } catch (err) {
-      container.innerHTML = `<div class="page-content"><div class="dashboard-empty"><div class="dashboard-empty-icon">❌</div><div>${err.message}</div></div></div>`;
+      container.innerHTML = `<div class="page-content"><div class="screen-empty"><div class="screen-empty-icon">❌</div><div>${err.message}</div></div></div>`;
     }
   }
 
@@ -330,7 +330,7 @@ const ScenarioBuilderScreen = (function () {
     _view = 'list';
     _editId = null;
 
-    container.innerHTML = `<div class="page-content"><div class="dashboard-loading"><div class="dashboard-loading-spinner"></div><div>Loading scenarios…</div></div></div>`;
+    container.innerHTML = `<div class="page-content"><div class="screen-loading"><div class="screen-loading-spinner"></div><div>Loading scenarios…</div></div></div>`;
 
     try {
       const res = await window.ScenarioService.listScenarios();
@@ -402,10 +402,10 @@ const ScenarioBuilderScreen = (function () {
       if (!_mounted) return;
       container.innerHTML = `
         <div class="page-content">
-          <div class="dashboard-empty">
-            <div class="dashboard-empty-icon">🔧</div>
-            <div class="dashboard-empty-title">Could not load scenarios</div>
-            <div class="dashboard-empty-sub">${err.message}</div>
+          <div class="screen-empty">
+            <div class="screen-empty-icon">🔧</div>
+            <div class="screen-empty-title">Could not load scenarios</div>
+            <div class="screen-empty-sub">${err.message}</div>
           </div>
         </div>
       `;

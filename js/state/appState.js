@@ -11,7 +11,6 @@ const AppState = (function () {
     SUMMARY:          'summary',
     READY:            'ready',
     NEGOTIATE:        'negotiate',
-    DASHBOARD:        'dashboard',
     HISTORY:          'history',
     ANALYTICS:        'analytics',
     COACH:            'coach',

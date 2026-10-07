@@ -48,7 +48,7 @@ const AnalyticsScreen = (function () {
 
   function renderOutcomesChart(data) {
     if (!data || data.length === 0) {
-      return `<div class="dashboard-empty"><div class="dashboard-empty-icon">📈</div><div class="dashboard-empty-title">No data yet</div></div>`;
+      return `<div class="screen-empty"><div class="screen-empty-icon">📈</div><div class="screen-empty-title">No data yet</div></div>`;
     }
     const maxTotal = Math.max(...data.map(d => Number(d.agreement || 0) + Number(d.rejection || 0) + Number(d.max_rounds || 0) + Number(d.stopped || 0) + Number(d.other || 0)), 1);
     const bars = data.slice(-12).map(d => {
@@ -91,7 +91,7 @@ const AnalyticsScreen = (function () {
 
   function renderSatisfactionPerScenario(data) {
     if (!data || data.length === 0) {
-      return `<div class="dashboard-empty"><div class="dashboard-empty-icon">🎯</div><div class="dashboard-empty-title">No data yet</div></div>`;
+      return `<div class="screen-empty"><div class="screen-empty-icon">🎯</div><div class="screen-empty-title">No data yet</div></div>`;
     }
     const max = Math.max(...data.map(d => d.avgScore), 1);
     return `<div class="inline-bar-chart">
@@ -109,7 +109,7 @@ const AnalyticsScreen = (function () {
 
   function renderConcessionsPerRound(data) {
     if (!data || data.length === 0) {
-      return `<div class="dashboard-empty"><div class="dashboard-empty-icon">📉</div><div class="dashboard-empty-title">No data yet</div></div>`;
+      return `<div class="screen-empty"><div class="screen-empty-icon">📉</div><div class="screen-empty-title">No data yet</div></div>`;
     }
     const max = Math.max(...data.map(d => d.avgConcession), 1);
     return `<div class="inline-bar-chart">
@@ -127,7 +127,7 @@ const AnalyticsScreen = (function () {
 
   function renderPersonalityResults(data) {
     if (!data || data.length === 0) {
-      return `<div class="dashboard-empty"><div class="dashboard-empty-icon">🎭</div><div class="dashboard-empty-title">No data yet</div></div>`;
+      return `<div class="screen-empty"><div class="screen-empty-icon">🎭</div><div class="screen-empty-title">No data yet</div></div>`;
     }
     const max = Math.max(...data.map(d => d.agreementRate), 1);
     return `<div class="inline-bar-chart">
@@ -150,8 +150,8 @@ const AnalyticsScreen = (function () {
 
     container.innerHTML = `
       <div class="page-content">
-        <div class="dashboard-loading" id="analytics-loading">
-          <div class="dashboard-loading-spinner"></div>
+        <div class="screen-loading" id="analytics-loading">
+          <div class="screen-loading-spinner"></div>
           <div>Loading analytics…</div>
         </div>
       </div>
@@ -195,10 +195,10 @@ const AnalyticsScreen = (function () {
       if (!_mounted) return;
       container.innerHTML = `
         <div class="page-content">
-          <div class="dashboard-empty">
-            <div class="dashboard-empty-icon">📊</div>
-            <div class="dashboard-empty-title">Analytics unavailable</div>
-            <div class="dashboard-empty-sub">${err.message}</div>
+          <div class="screen-empty">
+            <div class="screen-empty-icon">📊</div>
+            <div class="screen-empty-title">Analytics unavailable</div>
+            <div class="screen-empty-sub">${err.message}</div>
           </div>
         </div>
       `;

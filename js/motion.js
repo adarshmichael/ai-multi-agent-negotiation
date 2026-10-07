@@ -75,7 +75,6 @@ window.Motion = (function () {
     else if (el.id === 'screen-configure') targets = el.querySelectorAll('.agent-config-card, .agent-builder-card, .agent-grid > *');
     else if (el.id === 'screen-summary') targets = el.querySelectorAll('.summary-card, .config-section');
     else if (el.id === 'screen-negotiate') targets = el.querySelectorAll('.ready-panel, .arena-col');
-    else if (el.id === 'screen-dashboard') targets = el.querySelectorAll('.quick-start-card, .kpi-tile, .chart-card');
     
     if (!targets || targets.length === 0) {
       // Just animate the whole wrapper

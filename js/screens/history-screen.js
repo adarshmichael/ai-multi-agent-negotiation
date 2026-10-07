@@ -70,8 +70,8 @@ const HistoryScreen = (function () {
 
   async function loadSessions(container) {
     container.innerHTML = `
-      <div class="dashboard-loading">
-        <div class="dashboard-loading-spinner"></div>
+      <div class="screen-loading">
+        <div class="screen-loading-spinner"></div>
         <div>Loading session history…</div>
       </div>
     `;
@@ -107,10 +107,10 @@ const HistoryScreen = (function () {
     } catch (err) {
       console.error('[History] Failed to load:', err);
       container.innerHTML = `
-        <div class="dashboard-empty">
-          <div class="dashboard-empty-icon">📋</div>
-          <div class="dashboard-empty-title">Unable to load history</div>
-          <div class="dashboard-empty-sub">${err.message || 'Please check your connection.'}</div>
+        <div class="screen-empty">
+          <div class="screen-empty-icon">📋</div>
+          <div class="screen-empty-title">Unable to load history</div>
+          <div class="screen-empty-sub">${err.message || 'Please check your connection.'}</div>
         </div>
       `;
     }
@@ -123,10 +123,10 @@ const HistoryScreen = (function () {
   function renderList(container) {
     if (_sessions.length === 0) {
       container.innerHTML = `
-        <div class="dashboard-empty">
-          <div class="dashboard-empty-icon">📋</div>
-          <div class="dashboard-empty-title">No sessions yet</div>
-          <div class="dashboard-empty-sub">Complete a negotiation to see it here.</div>
+        <div class="screen-empty">
+          <div class="screen-empty-icon">📋</div>
+          <div class="screen-empty-title">No sessions yet</div>
+          <div class="screen-empty-sub">Complete a negotiation to see it here.</div>
           <button class="btn btn-primary" onclick="AppState.goToStep(AppState.STEPS.SCENARIO)" style="margin-top:16px;">Start Negotiating</button>
         </div>
       `;
