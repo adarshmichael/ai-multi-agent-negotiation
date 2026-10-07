@@ -37,6 +37,12 @@ async function saveSession(liveSession, userId) {
     return null;
   }
 
+  // Skip if DB is not connected
+  if (!isDbConnected()) {
+    logger.warn('SessionService', `DB not connected — session ${liveSession.id} will not be persisted.`);
+    return null;
+  }
+
   // Prevent duplicate saves
   const existing = await Session.findOne({ sessionId: liveSession.id });
   if (existing) {
@@ -246,6 +252,7 @@ async function getSessions(userId, filters = {}) {
  * Accepts both formats so that export endpoints using _id also work.
  */
 async function getSessionById(sessionId, userId) {
+  if (!isDbConnected()) return null;
   // Try by sessionId first (the live negotiation ID)
   let doc = await Session.findOne({ sessionId, userId }).lean();
   if (doc) return doc;

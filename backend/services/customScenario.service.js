@@ -9,6 +9,11 @@
 
 const CustomScenario = require('../models/customScenario.model');
 const logger = require('../utils/logger');
+const mongoose = require('mongoose');
+
+function isDbConnected() {
+  return mongoose.connection.readyState === 1;
+}
 
 const VALID_PERSONALITIES = ['aggressive', 'collaborative', 'risk-averse', 'competitive', 'flexible', 'analytical', 'professional'];
 
@@ -126,11 +131,13 @@ async function createScenario(userId, data) {
 }
 
 async function getUserScenarios(userId) {
+  if (!isDbConnected()) return [];
   const docs = await CustomScenario.find({ userId }).sort({ createdAt: -1 }).lean();
   return docs.map(toScenarioShape);
 }
 
 async function getScenarioById(scenarioId, userId) {
+  if (!isDbConnected()) return null;
   const doc = await CustomScenario.findOne({ _id: scenarioId, userId }).lean();
   if (!doc) return null;
   return toScenarioShape(doc);

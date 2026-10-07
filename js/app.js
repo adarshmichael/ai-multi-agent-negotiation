@@ -2598,56 +2598,6 @@ async function showResultCard(data) {
       }
     });
 
-    if (btnJson) btnJson.addEventListener('click', () => {
-      const url = window.ApiService.getTranscriptUrl(negotiationId, 'json');
-      const a = document.createElement('a'); a.href = url; a.download = ''; a.click();
-    });
-
-    // CSV Export — hits /api/sessions/:id/export/csv via sessionService lookup
-    const btnCsv = document.getElementById('btn-download-csv');
-    if (btnCsv) btnCsv.addEventListener('click', async () => {
-      btnCsv.disabled = true;
-      btnCsv.textContent = '⏳...';
-      try {
-        const BASE = window.ApiService.getBackendInfo().baseUrl;
-        const userId = (() => { try { return JSON.parse(localStorage.getItem('negosim_user') || '{}').id || 'anonymous'; } catch { return 'anonymous'; } })();
-        // Try to find saved session — the negotiationId may be the session _id
-        const sessions = await window.SessionService.getSessions({ search: negotiationId, limit: 5 });
-        const session = (sessions.sessions || []).find(s => s._id === negotiationId || s.negotiationId === negotiationId);
-        if (session) {
-          window.open(`${BASE}/sessions/${session._id}/export/csv?userId=${encodeURIComponent(userId)}`, '_blank');
-        } else {
-          alert('Session not yet saved. Please wait a moment and try again.');
-        }
-      } catch (err) {
-        console.warn('CSV export fallback:', err.message);
-        alert('CSV export failed. The session may not be saved yet.');
-      } finally {
-        btnCsv.disabled = false;
-        btnCsv.textContent = '⬇ Download CSV';
-      }
-    });
-
-    // Full Report (server-rendered HTML PDF)
-    const btnReport = document.getElementById('btn-export-report');
-    if (btnReport) btnReport.addEventListener('click', async () => {
-      btnReport.disabled = true;
-      try {
-        const BASE = window.ApiService.getBackendInfo().baseUrl;
-        const userId = (() => { try { return JSON.parse(localStorage.getItem('negosim_user') || '{}').id || 'anonymous'; } catch { return 'anonymous'; } })();
-        const sessions = await window.SessionService.getSessions({ search: negotiationId, limit: 5 });
-        const session = (sessions.sessions || []).find(s => s._id === negotiationId || s.negotiationId === negotiationId);
-        if (session) {
-          window.open(`${BASE}/sessions/${session._id}/export/pdf?userId=${encodeURIComponent(userId)}`, '_blank');
-        } else {
-          alert('Session not yet saved. Please wait a moment and try again.');
-        }
-      } catch (err) {
-        alert('Report export failed.');
-      } finally {
-        btnReport.disabled = false;
-      }
-    });
 
     // Coaching button (Practice Mode only)
     const btnCoaching = document.getElementById('btn-get-coaching');
@@ -2693,14 +2643,129 @@ async function showResultCard(data) {
   }
 
   // Fetch full report and render rich outcome
+  let _fetchedReport = null; // stored for client-side downloads
   if (negotiationId && window.ApiService.getReport) {
     try {
-      const report = await window.ApiService.getReport(negotiationId);
-      _renderOutcomeReport(report, data.result);
+      _fetchedReport = await window.ApiService.getReport(negotiationId);
+      _renderOutcomeReport(_fetchedReport, data.result);
     } catch (err) {
       const bodyEl = document.getElementById('neg-result-body');
-      if (bodyEl) bodyEl.innerHTML = `<div class="neg-result-loading" style="color:#ef4444;">Could not load outcome report. Session data may have expired.</div>`;
+      if (bodyEl) bodyEl.innerHTML = `<div class="neg-result-loading" style="color:var(--color-text-muted);">Outcome report unavailable (session may have expired on server restart).</div>`;
     }
+  }
+
+  // ── Wire download buttons using in-memory data ──
+  // These work entirely client-side so they never depend on MongoDB
+  function _getDownloadData() {
+    const state = AppState.getState();
+    return {
+      negotiationId,
+      result: data.result,
+      reason: data.reason,
+      rounds: data.rounds || state.currentRound,
+      finalOffer: data.finalOffer,
+      report: _fetchedReport,
+      scenario: state.selectedScenario,
+      messages: state.messages || [],
+    };
+  }
+
+  // JSON download — fully client-side
+  const btnJson2 = document.getElementById('btn-download-json');
+  if (btnJson2) {
+    btnJson2.addEventListener('click', () => {
+      const d = _getDownloadData();
+      const payload = {
+        negotiationId: d.negotiationId,
+        scenario: d.scenario?.name || 'Unknown',
+        result: d.result,
+        reason: d.reason,
+        totalRounds: d.rounds,
+        finalOffer: d.finalOffer,
+        generatedAt: new Date().toISOString(),
+        report: d.report || null,
+        messages: d.messages.map(m => ({
+          round: m.round,
+          agent: m.agentName,
+          role: m.role,
+          message: m.message,
+          offer: m.offer || null,
+          decision: m.decision || null,
+        })),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `negosim-${d.negotiationId || 'session'}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // CSV download — fully client-side
+  const btnCsv2 = document.getElementById('btn-download-csv');
+  if (btnCsv2) {
+    btnCsv2.addEventListener('click', () => {
+      const d = _getDownloadData();
+      const rows = [
+        ['Round', 'Agent', 'Role', 'Message', 'Offer', 'Decision'],
+        ...d.messages.map(m => [
+          m.round || '',
+          m.agentName || '',
+          m.role || '',
+          (m.message || '').replace(/"/g, '""'),
+          m.offer != null ? m.offer : '',
+          m.decision || '',
+        ]),
+      ];
+      const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `negosim-${d.negotiationId || 'session'}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // Full Report — open client-side print page
+  const btnReport2 = document.getElementById('btn-export-report');
+  if (btnReport2) {
+    btnReport2.addEventListener('click', () => {
+      const d = _getDownloadData();
+      const r = d.report || {};
+      const insights = (r.insights || []).map(i => `<li>${i}</li>`).join('');
+      const timeline = (r.concessionTimeline || []).map(t =>
+        `<tr><td>${t.round}</td>${(t.entries || []).map(e =>
+          `<td>${escapeHtml(e.agentName || '')}</td><td>${e.offer != null ? formatINR(e.offer) : '—'}</td><td>${e.decision || '—'}</td>`
+        ).join('')}</tr>`
+      ).join('');
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>NegoSim Report – ${d.negotiationId}</title>
+        <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;color:#111;line-height:1.6}
+        h1{font-size:22px;border-bottom:2px solid #165C47;padding-bottom:8px;color:#165C47}
+        h2{font-size:16px;margin-top:24px;color:#165C47}table{border-collapse:collapse;width:100%;font-size:13px}
+        th,td{border:1px solid #ddd;padding:6px 10px;text-align:left}th{background:#f5f5f5}
+        .badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700}
+        .agreement{background:#dcfce7;color:#166534}.rejection{background:#fee2e2;color:#991b1b}
+        .max_rounds{background:#fef3c7;color:#92400e}@media print{button{display:none}}</style>
+        </head><body>
+        <h1>NegoSim Negotiation Report</h1>
+        <p><strong>ID:</strong> ${d.negotiationId} &nbsp;|&nbsp; <strong>Scenario:</strong> ${escapeHtml(d.scenario?.name || '—')} &nbsp;|&nbsp; <strong>Date:</strong> ${new Date().toLocaleString()}</p>
+        <p><strong>Outcome:</strong> <span class="badge ${d.result}">${(d.result || '—').toUpperCase().replace('_',' ')}</span> &nbsp; <strong>Rounds:</strong> ${d.rounds} &nbsp; <strong>Final Offer:</strong> ${d.finalOffer ? formatINR(d.finalOffer) : '—'}</p>
+        ${insights ? `<h2>Key Insights</h2><ul>${insights}</ul>` : ''}
+        ${timeline ? `<h2>Concession Timeline</h2><table><tr><th>Round</th><th>Agent</th><th>Offer</th><th>Decision</th></tr>${timeline}</table>` : ''}
+        <h2>Message Transcript</h2><table><tr><th>Round</th><th>Agent</th><th>Role</th><th>Message</th><th>Offer</th></tr>
+        ${d.messages.map(m=>`<tr><td>${m.round||''}</td><td>${escapeHtml(m.agentName||'')}</td><td>${escapeHtml(m.role||'')}</td><td>${escapeHtml(m.message||'')}</td><td>${m.offer!=null?formatINR(m.offer):'—'}</td></tr>`).join('')}
+        </table>
+        <p style="margin-top:32px;font-size:11px;color:#888;">Generated by NegoSim &mdash; AI Multi-Agent Negotiation Platform</p>
+        <button onclick="window.print()" style="margin-top:16px;padding:10px 20px;background:#165C47;color:#fff;border:none;border-radius:8px;cursor:pointer;">🖨 Print / Save as PDF</button>
+        </body></html>`;
+      const win = window.open('', '_blank');
+      if (win) { win.document.write(html); win.document.close(); }
+      else { alert('Pop-up blocked. Please allow pop-ups for this site.'); }
+    });
   }
 }
 
