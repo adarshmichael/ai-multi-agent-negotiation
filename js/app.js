@@ -3246,12 +3246,35 @@ async function init() {
     });
   }
 
-  // Sidebar Toggle Event Listener
+  // Sidebar Toggle — restore saved state, then wire button
   const sidebarToggle = document.getElementById('sidebar-toggle-btn');
-  const appSidebar = document.getElementById('app-sidebar');
+  const appSidebar    = document.getElementById('app-sidebar');
+  const backdrop      = document.getElementById('sidebar-backdrop');
+
+  function _setSidebarCollapsed(collapsed) {
+    if (!appSidebar) return;
+    appSidebar.classList.toggle('collapsed', collapsed);
+    try { localStorage.setItem('negosim_sidebar', collapsed ? '1' : '0'); } catch {}
+  }
+
+  // Restore saved state (default: expanded)
+  try {
+    const saved = localStorage.getItem('negosim_sidebar');
+    if (saved === '1') appSidebar.classList.add('collapsed');
+  } catch {}
+
   if (sidebarToggle && appSidebar) {
     sidebarToggle.addEventListener('click', () => {
-      appSidebar.classList.toggle('collapsed');
+      const isNowCollapsed = !appSidebar.classList.contains('collapsed');
+      _setSidebarCollapsed(isNowCollapsed);
+    });
+  }
+
+  // Mobile: close sidebar when backdrop is clicked
+  if (backdrop) {
+    backdrop.addEventListener('click', () => {
+      appSidebar.classList.remove('mobile-open');
+      backdrop.classList.remove('active');
     });
   }
 

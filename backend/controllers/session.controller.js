@@ -154,7 +154,12 @@ async function getDashboard(req, res, next) {
 async function getAnalytics(req, res, next) {
   try {
     const userId = getUserId(req);
-    const sessions = await Session.find({ userId }).sort({ completedAt: 1 }).lean();
+    const mongoose = require('mongoose');
+    const isConnected = mongoose.connection.readyState === 1;
+
+    const sessions = isConnected
+      ? await Session.find({ userId }).sort({ completedAt: 1 }).lean()
+      : [];
 
     if (sessions.length === 0) {
       return res.json({

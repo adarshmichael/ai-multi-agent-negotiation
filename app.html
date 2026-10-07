@@ -93,17 +93,16 @@
         <div class="clock-digits" id="clock-time">--:--:--</div>
         <div class="clock-date" id="clock-date">---</div>
       </div>
-
-      <button class="sidebar-collapse-btn" id="sidebar-toggle-btn" title="Collapse sidebar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 18l-6-6 6-6"/></svg>
-        <span class="sidebar-nav-label" style="font-size:12px;">Collapse</span>
-      </button>
     </div>
   </aside>
 
   <div class="app-shell">
 
     <header class="app-header" style="justify-content: space-between;">
+      <!-- Hamburger toggle always visible -->
+      <button id="sidebar-toggle-btn" title="Toggle sidebar" style="flex-shrink:0; width:36px; height:36px; border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all var(--transition-fast);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
       <nav class="stepper" id="stepper" style="margin-left: 0;"></nav>
 
       <div class="topbar-search" style="flex: 1; max-width: 320px; position: relative; margin: 0 24px;">
