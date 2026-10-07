@@ -77,13 +77,27 @@ const HistoryScreen = (function () {
     `;
 
     try {
-      const result = await window.SessionService.getSessions({
-        ...(_filters),
-        page: _currentPage,
-        limit: 20,
-      });
-      _sessions = result.sessions || [];
-      _total = result.total || 0;
+      // Always load from localStorage first
+      const localSessions = _getLocalSessionsForHistory();
+
+      // Try API (silent fail with 4s timeout)
+      let apiSessions = [];
+      try {
+        const result = await Promise.race([
+          window.SessionService.getSessions({ ...(_filters), page: _currentPage, limit: 20 }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 4000)),
+        ]);
+        apiSessions = result.sessions || [];
+        _total = result.total || apiSessions.length;
+      } catch (_) {
+        _total = localSessions.length;
+      }
+
+      // Merge: API first (richer data), then local-only
+      const apiIds = new Set(apiSessions.map(s => s.sessionId || s._id));
+      const localOnly = localSessions.filter(s => !apiIds.has(s.id));
+      _sessions = [...apiSessions, ...localOnly];
+      _total = _sessions.length;
       renderList(container);
     } catch (err) {
       console.error('[History] Failed to load:', err);
@@ -95,6 +109,10 @@ const HistoryScreen = (function () {
         </div>
       `;
     }
+  }
+
+  function _getLocalSessionsForHistory() {
+    try { return JSON.parse(localStorage.getItem('negosim_local_sessions') || '[]'); } catch { return []; }
   }
 
   function renderList(container) {

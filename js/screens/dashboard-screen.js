@@ -21,6 +21,7 @@ const DashboardScreen = (function () {
 
   /**
    * Mount and render the dashboard.
+   * Reads from localStorage (always available) and merges with API if reachable.
    */
   async function mount(containerId) {
     const container = document.getElementById(containerId);
@@ -33,21 +34,73 @@ const DashboardScreen = (function () {
       </div>
     `;
 
-    try {
-      _data = await window.SessionService.getDashboard();
-      render(container);
-    } catch (err) {
-      console.error('[Dashboard] Failed to load:', err);
-      container.innerHTML = `
-        <div class="dashboard-empty">
-          <div class="dashboard-empty-icon">📊</div>
-          <div class="dashboard-empty-title">Unable to load dashboard</div>
-          <div class="dashboard-empty-sub">${err.message || 'Please check your connection and try again.'}</div>
-        </div>
-      `;
-    }
+    // Always read localStorage sessions first
+    const localSessions = _getLocalSessions();
 
+    // Try to merge with API sessions (optional, silent fail)
+    let apiSessions = [];
+    try {
+      const result = await Promise.race([
+        window.SessionService.getSessions({ limit: 50 }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 4000)),
+      ]);
+      apiSessions = result.sessions || [];
+    } catch (_) { /* offline or no DB — use only localStorage */ }
+
+    // Merge: prefer API sessions (they have more data), add any local-only ones
+    const apiIds = new Set(apiSessions.map(s => s.sessionId || s.id));
+    const localOnly = localSessions.filter(s => !apiIds.has(s.id));
+    const allSessions = [...apiSessions, ...localOnly];
+
+    // Compute dashboard metrics locally
+    _data = _computeDashboard(allSessions);
+    render(container);
     _mounted = true;
+  }
+
+  function _getLocalSessions() {
+    try { return JSON.parse(localStorage.getItem('negosim_local_sessions') || '[]'); } catch { return []; }
+  }
+
+  function _computeDashboard(sessions) {
+    const total = sessions.length;
+    if (total === 0) return { totalSessions: 0, successfulSessions: 0, failedSessions: 0, successRate: 0, averageScore: 0, scoreTrend: 0, averageRounds: 0, scenarioBreakdown: [], recentSessions: [] };
+
+    const successful = sessions.filter(s => (s.outcome || s.successStatus) === 'agreement' || s.successStatus === true).length;
+    const failed = total - successful;
+    const scores = sessions.map(s => s.score || s.performanceScore || 0).filter(Boolean);
+    const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+
+    // Trend: compare last 5 vs previous 5
+    const sorted = [...sessions].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+    const recent5 = sorted.slice(0, 5).map(s => s.score || s.performanceScore || 0).filter(Boolean);
+    const prev5   = sorted.slice(5, 10).map(s => s.score || s.performanceScore || 0).filter(Boolean);
+    const recentAvg = recent5.length ? recent5.reduce((a, b) => a + b, 0) / recent5.length : avgScore;
+    const prevAvg   = prev5.length   ? prev5.reduce((a, b) => a + b, 0)   / prev5.length   : avgScore;
+    const trend = prev5.length ? Math.round(recentAvg - prevAvg) : 0;
+
+    // Scenario breakdown
+    const scenarioMap = {};
+    sessions.forEach(s => {
+      const k = s.scenarioName || s.scenarioId || 'Unknown';
+      if (!scenarioMap[k]) scenarioMap[k] = { name: k, count: 0, wins: 0 };
+      scenarioMap[k].count++;
+      if ((s.outcome || '') === 'agreement' || s.successStatus === true) scenarioMap[k].wins++;
+    });
+
+    const avgRounds = Math.round(sessions.reduce((a, s) => a + (s.totalRounds || 0), 0) / total);
+
+    return {
+      totalSessions: total,
+      successfulSessions: successful,
+      failedSessions: failed,
+      successRate: Math.round((successful / total) * 100),
+      averageScore: avgScore,
+      scoreTrend: trend,
+      averageRounds: avgRounds,
+      scenarioBreakdown: Object.values(scenarioMap),
+      recentSessions: sorted.slice(0, 5),
+    };
   }
 
   function unmount() {
