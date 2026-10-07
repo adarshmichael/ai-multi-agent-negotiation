@@ -2313,6 +2313,8 @@ function handleNegotiationEvent(eventName, data, agents) {
       if (pauseBtn) pauseBtn.disabled = true;
       // Show result card
       showResultCard(data);
+      // ── Save compact session to localStorage (Dashboard/History offline support) ──
+      _saveSessionToLocalStorage(data, state);
       window.ApiService.disconnectWebSocket();
       break;
     }
@@ -2406,6 +2408,55 @@ function handleNegotiationEvent(eventName, data, agents) {
       break;
     }
   }
+}
+
+/**
+ * Save a compact session summary to localStorage so Dashboard and History
+ * work even without MongoDB (Render free tier / no DB configured).
+ */
+function _saveSessionToLocalStorage(data, state) {
+  try {
+    const KEY = 'negosim_local_sessions';
+    const existing = JSON.parse(localStorage.getItem(KEY) || '[]');
+    const scenario = state.selectedScenario || {};
+    const negotiationId = data.negotiationId || state.negotiationId || ('local-' + Date.now());
+    // Avoid duplicates
+    if (existing.find(s => s.id === negotiationId)) return;
+    const session = {
+      id:           negotiationId,
+      scenarioName: scenario.name  || 'Unknown Scenario',
+      scenarioId:   scenario.id    || 'unknown',
+      mode:         state.selectedMode || 'watch',
+      outcome:      data.result    || 'unknown',
+      reason:       data.reason    || '',
+      totalRounds:  data.rounds    || state.currentRound || 0,
+      maxRounds:    state.maxRounds || 10,
+      finalOffer:   data.finalOffer || null,
+      completedAt:  new Date().toISOString(),
+      score:        null, // calculated below
+      messages:     (state.messages || []).map(m => ({
+        round: m.round, agentName: m.agentName, role: m.role,
+        message: m.message, offer: m.offer, decision: m.decision,
+      })),
+    };
+    // Simple performance score: 100 for agreement, 50 for max_rounds, 20 others
+    session.score = data.result === 'agreement' ? 75 + Math.min(25, Math.round((1 - (session.totalRounds / session.maxRounds)) * 25))
+                  : data.result === 'max_rounds' ? 40
+                  : data.result === 'rejection'  ? 30
+                  : 20;
+    existing.unshift(session); // newest first
+    // Keep max 50 sessions in localStorage
+    localStorage.setItem(KEY, JSON.stringify(existing.slice(0, 50)));
+  } catch (e) { /* silent fail */ }
+}
+
+/**
+ * Read all locally stored sessions from localStorage.
+ */
+function _getLocalSessions() {
+  try {
+    return JSON.parse(localStorage.getItem('negosim_local_sessions') || '[]');
+  } catch { return []; }
 }
 
 /**
@@ -3330,8 +3381,13 @@ async function init() {
 
   if (sidebarToggle && appSidebar) {
     sidebarToggle.addEventListener('click', () => {
-      const isNowCollapsed = !appSidebar.classList.contains('collapsed');
-      _setSidebarCollapsed(isNowCollapsed);
+      if (window.innerWidth <= 768) {
+        appSidebar.classList.toggle('mobile-open');
+        if (backdrop) backdrop.classList.toggle('active');
+      } else {
+        const isNowCollapsed = !appSidebar.classList.contains('collapsed');
+        _setSidebarCollapsed(isNowCollapsed);
+      }
     });
   }
 

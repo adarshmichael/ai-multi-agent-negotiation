@@ -156,18 +156,34 @@ body:has(#app-sidebar.collapsed) .app-shell {
 }
 
 .sidebar-brand-mark {
+  position: relative;
   width: 32px;
   height: 32px;
   min-width: 32px;
-  background: var(--gradient-primary);
-  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 14px;
   color: #fff;
-  box-shadow: 0 0 12px rgba(110, 123, 250, 0.4);
+  z-index: 1;
+}
+
+.sidebar-brand-mark::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 12px rgba(22, 92, 71, 0.4);
+  z-index: -1;
+  animation: bloomPulse 6s ease-in-out infinite;
+}
+
+@keyframes bloomPulse {
+  0% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; transform: rotate(0deg) scale(1); }
+  50% { border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%; transform: rotate(180deg) scale(1.15); box-shadow: 0 0 16px rgba(22, 92, 71, 0.7); }
+  100% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; transform: rotate(360deg) scale(1); }
 }
 
 .sidebar-brand-name {
