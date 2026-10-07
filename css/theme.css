@@ -172,18 +172,19 @@ body:has(#app-sidebar.collapsed) .app-shell {
 .sidebar-brand-mark::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--gradient-primary);
-  border-radius: var(--radius-md);
-  box-shadow: 0 0 12px rgba(22, 92, 71, 0.4);
+  top: -8px; left: -8px; right: -8px; bottom: -8px;
+  background-image: url('../assets/flowers.png');
+  background-size: 400% 400%;
+  background-position: 0% 0%; /* First flower */
+  background-repeat: no-repeat;
   z-index: -1;
-  animation: bloomPulse 6s ease-in-out infinite;
+  animation: flowerSpinPulse 8s linear infinite;
 }
 
-@keyframes bloomPulse {
-  0% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; transform: rotate(0deg) scale(1); }
-  50% { border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%; transform: rotate(180deg) scale(1.15); box-shadow: 0 0 16px rgba(22, 92, 71, 0.7); }
-  100% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; transform: rotate(360deg) scale(1); }
+@keyframes flowerSpinPulse {
+  0%   { transform: rotate(0deg) scale(0.95); filter: drop-shadow(0 0 4px rgba(22, 92, 71, 0.3)); }
+  50%  { transform: rotate(180deg) scale(1.1); filter: drop-shadow(0 0 10px rgba(22, 92, 71, 0.6)); }
+  100% { transform: rotate(360deg) scale(0.95); filter: drop-shadow(0 0 4px rgba(22, 92, 71, 0.3)); }
 }
 
 .sidebar-brand-name {
@@ -202,6 +203,37 @@ body:has(#app-sidebar.collapsed) .app-shell {
   padding: 12px 0;
   overflow-y: auto;
   overflow-x: hidden;
+  position: relative;
+}
+
+/* Sidebar Active Ball Indicator */
+.sidebar-active-ball {
+  position: absolute;
+  left: 28px; /* Centered in the collapsed sidebar 64px width (32px half - 4px radius) */
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--color-primary);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+}
+
+/* Only show the ball indicator when sidebar is collapsed */
+.sidebar.collapsed .sidebar-active-ball {
+  opacity: 1;
+}
+
+/* Hide normal nav active backgrounds when collapsed */
+.sidebar.collapsed .sidebar-nav-item.active {
+  background: transparent !important;
+  color: var(--color-text) !important;
+}
+.sidebar.collapsed .sidebar-nav-item.active .sidebar-nav-icon {
+  color: var(--color-primary);
+  transform: scale(1.1);
 }
 
 .sidebar-nav-item {

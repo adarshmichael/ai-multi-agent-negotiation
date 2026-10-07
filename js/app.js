@@ -2418,7 +2418,7 @@ function _saveSessionToLocalStorage(data, state) {
   try {
     const KEY = 'negosim_local_sessions';
     const existing = JSON.parse(localStorage.getItem(KEY) || '[]');
-    const scenario = state.selectedScenario || {};
+    const scenario = (state.scenarios || []).find(s => s.id === state.selectedScenarioId) || {};
     const negotiationId = data.negotiationId || state.negotiationId || ('local-' + Date.now());
     // Avoid duplicates
     if (existing.find(s => s.id === negotiationId)) return;
@@ -3038,7 +3038,19 @@ function render() {
 
   // Update sidebar active state
   document.querySelectorAll('.sidebar-nav-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.step === currentStep);
+    const isActive = el.dataset.step === currentStep;
+    el.classList.toggle('active', isActive);
+    if (isActive) {
+      const ball = document.getElementById('sidebar-active-ball');
+      const nav = el.closest('.sidebar-nav');
+      if (ball && nav) {
+        // Calculate offset relative to the scrolling nav container
+        const navRect = nav.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        const relativeTop = (elRect.top - navRect.top) + nav.scrollTop + (elRect.height / 2) - 4;
+        ball.style.transform = `translateY(${relativeTop}px)`;
+      }
+    }
   });
 
   showScreen(currentStep);

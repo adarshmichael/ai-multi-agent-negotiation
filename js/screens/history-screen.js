@@ -95,7 +95,12 @@ const HistoryScreen = (function () {
 
       // Merge: API first (richer data), then local-only
       const apiIds = new Set(apiSessions.map(s => s.sessionId || s._id));
-      const localOnly = localSessions.filter(s => !apiIds.has(s.id));
+      const localOnly = localSessions.filter(s => !apiIds.has(s.id)).map(s => ({
+        ...s,
+        sessionId: s.id,
+        performanceScore: s.score,
+        scenarioName: s.scenarioName !== 'Unknown Scenario' ? s.scenarioName : 'Offline Scenario'
+      }));
       _sessions = [...apiSessions, ...localOnly];
       _total = _sessions.length;
       renderList(container);

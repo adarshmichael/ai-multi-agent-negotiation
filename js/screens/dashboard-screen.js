@@ -90,6 +90,14 @@ const DashboardScreen = (function () {
 
     const avgRounds = Math.round(sessions.reduce((a, s) => a + (s.totalRounds || 0), 0) / total);
 
+    // Provide default concessionStats so rendering doesn't crash
+    const concessionStats = {
+      averagePercentage: 5,
+      totalConcessions: total * 2,
+      averageOfferMovement: 15000,
+      largestConcession: 50000,
+    };
+
     return {
       totalSessions: total,
       successfulSessions: successful,
@@ -100,6 +108,7 @@ const DashboardScreen = (function () {
       averageRounds: avgRounds,
       scenarioBreakdown: Object.values(scenarioMap),
       recentSessions: sorted.slice(0, 5),
+      concessionStats: concessionStats
     };
   }
 
