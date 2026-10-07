@@ -172,19 +172,42 @@ body:has(#app-sidebar.collapsed) .app-shell {
 .sidebar-brand-mark::before {
   content: '';
   position: absolute;
-  top: -8px; left: -8px; right: -8px; bottom: -8px;
+  top: -12px; left: -12px; right: -12px; bottom: -12px;
   background-image: url('../assets/flowers.png');
   background-size: 400% 400%;
-  background-position: 0% 0%; /* First flower */
+  background-position: 0% 0%;
   background-repeat: no-repeat;
   z-index: -1;
-  animation: flowerSpinPulse 8s linear infinite;
+  /* 4s per spin, 64s total to cycle all 16 flowers */
+  animation: 
+    flowerSpin 4s linear infinite,
+    flowerShapeChange 64s step-end infinite;
 }
 
-@keyframes flowerSpinPulse {
-  0%   { transform: rotate(0deg) scale(0.95); filter: drop-shadow(0 0 4px rgba(22, 92, 71, 0.3)); }
-  50%  { transform: rotate(180deg) scale(1.1); filter: drop-shadow(0 0 10px rgba(22, 92, 71, 0.6)); }
-  100% { transform: rotate(360deg) scale(0.95); filter: drop-shadow(0 0 4px rgba(22, 92, 71, 0.3)); }
+@keyframes flowerSpin {
+  0%   { transform: rotate(0deg) scale(0.9); filter: drop-shadow(0 0 2px rgba(22, 92, 71, 0.2)); }
+  50%  { transform: rotate(180deg) scale(1.1); filter: drop-shadow(0 0 8px rgba(22, 92, 71, 0.6)); }
+  100% { transform: rotate(360deg) scale(0.9); filter: drop-shadow(0 0 2px rgba(22, 92, 71, 0.2)); }
+}
+
+@keyframes flowerShapeChange {
+  0%      { background-position: 0% 0%; }
+  6.25%   { background-position: 33.33% 0%; }
+  12.5%   { background-position: 66.66% 0%; }
+  18.75%  { background-position: 100% 0%; }
+  25%     { background-position: 0% 33.33%; }
+  31.25%  { background-position: 33.33% 33.33%; }
+  37.5%   { background-position: 66.66% 33.33%; }
+  43.75%  { background-position: 100% 33.33%; }
+  50%     { background-position: 0% 66.66%; }
+  56.25%  { background-position: 33.33% 66.66%; }
+  62.5%   { background-position: 66.66% 66.66%; }
+  68.75%  { background-position: 100% 66.66%; }
+  75%     { background-position: 0% 100%; }
+  81.25%  { background-position: 33.33% 100%; }
+  87.5%   { background-position: 66.66% 100%; }
+  93.75%  { background-position: 100% 100%; }
+  100%    { background-position: 0% 0%; }
 }
 
 .sidebar-brand-name {
