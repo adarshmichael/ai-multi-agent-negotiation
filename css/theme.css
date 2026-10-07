@@ -167,6 +167,7 @@ body:has(#app-sidebar.collapsed) .app-shell {
   font-size: 14px;
   color: #fff;
   z-index: 1;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
 }
 
 .sidebar-brand-mark::before {
@@ -177,6 +178,8 @@ body:has(#app-sidebar.collapsed) .app-shell {
   background-size: 400% 400%;
   background-position: 0% 0%;
   background-repeat: no-repeat;
+  mix-blend-mode: multiply;
+  border-radius: 50%;
   z-index: -1;
   /* 4s per spin, 64s total to cycle all 16 flowers */
   animation: 
