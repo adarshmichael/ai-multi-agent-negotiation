@@ -34,6 +34,7 @@ const logger = require('./utils/logger');
 
 // ======== Express Setup ========
 const app = express();
+app.set('trust proxy', 1); // Required for express-rate-limit behind Render's reverse proxy
 
 // ── Security headers ──
 app.use(helmet({
