@@ -212,7 +212,12 @@ const ApiService = (function () {
   }
 
   function getBackendInfo() {
-    return { baseUrl: BASE_URL, wsUrl: WS_URL, isLocal, useLocal };
+    return { 
+      baseUrl: BASE_URL, 
+      wsUrl: WS_URL, 
+      isLocal: window.NegoSimConfig.isLocal,
+      useLocal: window.NegoSimConfig.isLocal 
+    };
   }
 
   return {
