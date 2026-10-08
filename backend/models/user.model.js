@@ -22,13 +22,19 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
+    index: true,
     match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address'],
   },
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
+    minlength: [8, 'Password must be at least 8 characters'],
     select: false,  // don't include password in queries by default
+  },
+  provider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local',
   },
   googleId: {
     type: String,
@@ -43,8 +49,12 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user',
   },
+  lastLoginAt: {
+    type: Date,
+    default: null,
+  },
 }, {
-  timestamps: true,
+  timestamps: true,  // adds createdAt and updatedAt
 });
 
 // Hash password before saving

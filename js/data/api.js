@@ -5,47 +5,10 @@
  */
 
 const ApiService = (function () {
-  const RENDER_HOST = 'negosim-backend.onrender.com';
+  const BASE_URL = window.NegoSimConfig.API_BASE;
+  const WS_URL   = window.NegoSimConfig.WS_BASE;
 
-  const hostname = window.location.hostname || 'localhost';
-  const port     = window.location.port;
-  const isLocal  = hostname === 'localhost' || hostname === '127.0.0.1';
-  const isRenderHost = hostname.includes('onrender.com');
-
-  // Allow switching via ?backend=local or ?backend=render, or localStorage
-  const urlParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
-  const forced = urlParams ? urlParams.get('backend') : null;
-  const saved  = typeof localStorage !== 'undefined' ? localStorage.getItem('negosim_backend') : null;
-
-  // When served directly from localhost:8001, the backend is this same host
-  const isServedFromBackend = isLocal && port === '8001';
-  const useLocal = isServedFromBackend || (forced === 'local' || saved === 'local');
-
-  let backendHost;
-  let protocol;
-  let wsProtocol;
-  
-  if (useLocal || isLocal) {
-    backendHost = `${hostname === '127.0.0.1' ? '127.0.0.1' : 'localhost'}:8001`;
-    protocol    = 'http:';
-    wsProtocol  = 'ws:';
-  } else if (isRenderHost) {
-    backendHost = window.location.host;
-    protocol    = 'https:';
-    wsProtocol  = 'wss:';
-  } else {
-    backendHost = RENDER_HOST;
-    protocol    = 'https:';
-    wsProtocol  = 'wss:';
-  }
-
-  const BASE_URL = `${protocol}//${backendHost}/api`;
-  const WS_URL   = `${wsProtocol}//${backendHost}`;
-
-  const _backendMode = isServedFromBackend ? '🟢 LOCAL (port 8001)'
-    : useLocal ? '🟡 LOCAL (forced)'
-    : isRenderHost ? '🔵 RENDER (same host)'
-    : '🌐 RENDER (cloud)';
+  const _backendMode = window.NegoSimConfig.isLocal ? '🟢 LOCAL' : '🌐 RENDER';
   console.log(`[ApiService] Backend: ${_backendMode}  →  ${BASE_URL}`);
 
   let activeWs = null;

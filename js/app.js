@@ -2312,8 +2312,6 @@ function handleNegotiationEvent(eventName, data, agents) {
       if (pauseBtn) pauseBtn.disabled = true;
       // Show result card
       showResultCard(data);
-      // ── Save compact session to localStorage (Dashboard/History offline support) ──
-      _saveSessionToLocalStorage(data, state);
       window.ApiService.disconnectWebSocket();
       break;
     }
@@ -3284,8 +3282,8 @@ async function init() {
   const btnLogout = document.getElementById('btn-logout');
   if (btnLogout) {
     btnLogout.addEventListener('click', () => {
-      localStorage.removeItem('negosim_token');
-      localStorage.removeItem('negosim_user');
+      try { localStorage.removeItem('negosim_token'); localStorage.removeItem('negosim_user'); } catch (e) {}
+      try { sessionStorage.removeItem('negosim_token'); sessionStorage.removeItem('negosim_user'); } catch (e) {}
       window.location.href = 'index.html';
     });
   }

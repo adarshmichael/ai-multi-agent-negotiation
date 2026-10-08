@@ -8,6 +8,7 @@
   
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/auth.css" />
+  <script src="js/config.js"></script>
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -62,7 +63,7 @@
               </svg>
               <input class="auth-input" type="password" id="login-password" name="password" placeholder=" " required autocomplete="current-password" />
               <label class="auth-floating-label" for="login-password">Password</label>
-              <button type="button" class="auth-pw-toggle" id="login-pw-toggle">
+              <button type="button" class="auth-pw-toggle" id="login-pw-toggle" aria-label="Toggle password visibility">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                 </svg>
@@ -105,9 +106,9 @@
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
-              <input class="auth-input" type="password" id="register-password" name="password" placeholder=" " required autocomplete="new-password" minlength="6" />
-              <label class="auth-floating-label" for="register-password">Create Password</label>
-              <button type="button" class="auth-pw-toggle" id="register-pw-toggle">
+              <input class="auth-input" type="password" id="register-password" name="password" placeholder=" " required autocomplete="new-password" minlength="8" />
+              <label class="auth-floating-label" for="register-password">Password (min 8 characters)</label>
+              <button type="button" class="auth-pw-toggle" id="register-pw-toggle" aria-label="Toggle password visibility">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                 </svg>
@@ -149,12 +150,19 @@
       </div>
     </div>
 
-    <!-- RIGHT SIDE: FULL IMAGE PANEL -->
-    <div class="auth-image-side">
-      <div class="auth-bg-image"></div>
-      <div class="auth-bg-overlay"></div>
-      
-      <!-- Content floating over the image -->
+    <!-- RIGHT SIDE: ANIMATED PANEL -->
+    <div class="auth-image-side" id="auth-image-side">
+      <!-- Canvas for AI negotiation network animation -->
+      <canvas id="nego-canvas" aria-hidden="true"></canvas>
+
+      <!-- Glass chips (Layer 3) -->
+      <div class="nego-chips" aria-hidden="true">
+        <div class="nego-chip" id="chip-1">Offer $4,200</div>
+        <div class="nego-chip" id="chip-2">Counter $3,900</div>
+        <div class="nego-chip" id="chip-3">Deal ✓</div>
+      </div>
+
+      <!-- Content floating over the animation -->
       <div class="auth-image-content">
         <h2>Master the Art of<br>Negotiation.</h2>
         <p>Train your skills against advanced AI agents in hyper-realistic simulations.</p>
@@ -167,23 +175,73 @@
     (() => {
       'use strict';
 
-      // ── API Setup ──
-      const RENDER_HOST = 'negosim-backend.onrender.com';
-      const hostname = window.location.hostname || 'localhost';
-      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-      const API_BASE = isLocal ? 'http://localhost:8001/api' : `https://${RENDER_HOST}/api`;
+      // ── API Base (from config.js) ──
+      const API_BASE = window.NegoSimConfig.API_BASE;
 
-      // ── Redirect Check ──
-      if (localStorage.getItem('negosim_token')) {
-        const token = localStorage.getItem('negosim_token');
-        if (token === 'mock-token-fallback') {
-          window.location.href = 'app.html';
-        } else {
-          fetch(`${API_BASE}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` }})
-          .then(r => r.ok ? window.location.href = 'app.html' : localStorage.removeItem('negosim_token'))
-          .catch(() => localStorage.removeItem('negosim_token'));
+      // ── Token storage (localStorage, with graceful fallback) ──
+      function storeToken(token) {
+        try { localStorage.setItem('negosim_token', token); } catch (e) {
+          try { sessionStorage.setItem('negosim_token', token); } catch (_) {}
         }
       }
+      function getToken() {
+        try { return localStorage.getItem('negosim_token') || sessionStorage.getItem('negosim_token'); } catch (_) { return null; }
+      }
+      function clearToken() {
+        try { localStorage.removeItem('negosim_token'); localStorage.removeItem('negosim_user'); } catch (_) {}
+        try { sessionStorage.removeItem('negosim_token'); sessionStorage.removeItem('negosim_user'); } catch (_) {}
+      }
+      function storeUser(user) {
+        try { localStorage.setItem('negosim_user', JSON.stringify(user)); } catch (_) {
+          try { sessionStorage.setItem('negosim_user', JSON.stringify(user)); } catch (_) {}
+        }
+      }
+
+      // ── Server wake-up ping ──
+      let _serverWakeMsgShown = false;
+      let _wakeTimer = null;
+
+      function pingServer() {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+
+        _wakeTimer = setTimeout(() => {
+          if (!_serverWakeMsgShown) {
+            _serverWakeMsgShown = true;
+            showMessage('info', 'Server is waking up, please wait… This can take up to 30 seconds on the first visit.');
+          }
+        }, 4000);
+
+        fetch(`${API_BASE}/health`, { signal: controller.signal })
+          .then(() => {
+            clearTimeout(timeout);
+            clearTimeout(_wakeTimer);
+            if (_serverWakeMsgShown) {
+              _serverWakeMsgShown = false;
+              showMessage('success', 'Server is ready!');
+              setTimeout(() => { authMessage.className = 'auth-message'; }, 2500);
+            }
+          })
+          .catch(() => {
+            clearTimeout(timeout);
+            clearTimeout(_wakeTimer);
+          });
+      }
+
+      // ── Redirect Check ──
+      const existingToken = getToken();
+      if (existingToken) {
+        if (existingToken === 'mock-token-fallback') {
+          window.location.href = 'app.html';
+        } else {
+          fetch(`${API_BASE}/auth/me`, { headers: { 'Authorization': `Bearer ${existingToken}` }})
+          .then(r => r.ok ? window.location.href = 'app.html' : clearToken())
+          .catch(() => clearToken());
+        }
+      }
+
+      // Ping server to wake it up on page load
+      pingServer();
 
       // ── Tabs Logic ──
       const tabContainer = document.getElementById('auth-tabs');
@@ -238,16 +296,16 @@
       regPw.addEventListener('input', () => {
         const val = regPw.value;
         let score = 0;
-        if(val.length >= 6) score++;
-        if(/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
-        if(/\d/.test(val)) score++;
-        if(/[^A-Za-z0-9]/.test(val)) score++;
+        if (val.length >= 8) score++;
+        if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+        if (/\d/.test(val)) score++;
+        if (/[^A-Za-z0-9]/.test(val)) score++;
         
         const classes = ['', 'weak', 'fair', 'good', 'strong'];
-        for(let i=1; i<=4; i++) {
+        for (let i = 1; i <= 4; i++) {
           const bar = document.getElementById(`pw-bar-${i}`);
           bar.className = 'auth-pw-strength-bar';
-          if(val.length > 0 && i <= score) {
+          if (val.length > 0 && i <= score) {
             bar.classList.add('active', classes[score]);
           }
         }
@@ -256,8 +314,44 @@
       // ── Message Helper ──
       function showMessage(type, text) {
         authMessage.className = `auth-message show ${type}`;
-        document.getElementById('auth-message-icon').textContent = type==='error' ? '✕' : '✓';
+        document.getElementById('auth-message-icon').textContent = 
+          type === 'error' ? '✕' : type === 'success' ? '✓' : 'ℹ';
         document.getElementById('auth-message-text').textContent = text;
+      }
+
+      // ── Friendly error messages ──
+      function friendlyError(err, status) {
+        if (!navigator.onLine) return 'No internet connection. Please check your network.';
+        if (err.name === 'AbortError' || err.message?.includes('abort')) return 'Request timed out. The server may be slow — please try again.';
+        if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+          return 'Cannot reach the server. It may be starting up — please wait 30 seconds and try again.';
+        }
+        if (status === 409) return 'An account with this email already exists. Try signing in instead.';
+        if (status === 401) return 'Incorrect email or password. Please try again.';
+        if (status === 429) return 'Too many attempts. Please wait a few minutes before trying again.';
+        if (status === 400) return err.message || 'Please check your inputs and try again.';
+        if (status >= 500) return 'Server error. Please try again in a moment.';
+        return err.message || 'Something went wrong. Please try again.';
+      }
+
+      // ── Generic auth fetch with timeout + one retry ──
+      async function authFetch(url, options, retried = false) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+        try {
+          const res = await fetch(url, { ...options, signal: controller.signal });
+          clearTimeout(timeout);
+          return res;
+        } catch (err) {
+          clearTimeout(timeout);
+          // Retry once on network failure (not on abort)
+          if (!retried && err.name !== 'AbortError') {
+            await new Promise(r => setTimeout(r, 2000)); // wait 2s before retry
+            return authFetch(url, options, true);
+          }
+          throw err;
+        }
       }
 
       // ── Form Submissions ──
@@ -266,37 +360,43 @@
         const btn = document.getElementById('btn-login');
         btn.classList.add('loading');
         btn.disabled = true;
-        const email = document.getElementById('login-email').value;
+        authMessage.className = 'auth-message';
 
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        if (!email || !password) {
+          showMessage('error', 'Please fill in all fields.');
+          btn.classList.remove('loading'); btn.disabled = false;
+          return;
+        }
+
+        // Show wakeup notice if request takes a while
+        const wakeNotice = setTimeout(() => {
+          showMessage('info', 'Server is waking up, please wait…');
+        }, 4000);
+
+        let status = 0;
         try {
-          const res = await fetch(`${API_BASE}/auth/login`, {
+          const res = await authFetch(`${API_BASE}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email,
-              password: document.getElementById('login-password').value
-            })
+            body: JSON.stringify({ email, password })
           });
+          clearTimeout(wakeNotice);
+          status = res.status;
           const data = await res.json();
-          if(!res.ok) throw new Error(data.error?.message || 'Login failed');
+          if (!res.ok) throw new Error(data.error?.message || 'Login failed');
           
-          localStorage.setItem('negosim_token', data.token);
-          localStorage.setItem('negosim_user', JSON.stringify(data.user));
-          showMessage('success', 'Success! Redirecting...');
-          setTimeout(() => window.location.href = 'app.html', 800);
-        } catch(err) {
-          // If Render backend is outdated/broken, fallback to Mock Auth
-          if (err.message.includes('Route not found') || err.message.includes('Failed to fetch') || err.message.includes('server error')) {
-            console.warn('Backend Auth not found or DB disconnected. Using Fallback Local Auth.');
-            localStorage.setItem('negosim_token', 'mock-token-fallback');
-            localStorage.setItem('negosim_user', JSON.stringify({ name: email.split('@')[0], email: email }));
-            showMessage('success', 'Logged in (Local Mode)! Redirecting...');
-            setTimeout(() => window.location.href = 'app.html', 800);
-          } else {
-            showMessage('error', err.message);
-            btn.classList.remove('loading');
-            btn.disabled = false;
-          }
+          storeToken(data.token);
+          storeUser(data.user);
+          showMessage('success', 'Success! Redirecting…');
+          setTimeout(() => window.location.href = 'app.html', 700);
+        } catch (err) {
+          clearTimeout(wakeNotice);
+          showMessage('error', friendlyError(err, status));
+          btn.classList.remove('loading');
+          btn.disabled = false;
         }
       });
 
@@ -305,63 +405,75 @@
         const btn = document.getElementById('btn-register');
         btn.classList.add('loading');
         btn.disabled = true;
-        const name = document.getElementById('register-name').value;
-        const email = document.getElementById('register-email').value;
+        authMessage.className = 'auth-message';
 
+        const name     = document.getElementById('register-name').value.trim();
+        const email    = document.getElementById('register-email').value.trim();
+        const password = document.getElementById('register-password').value;
+
+        // Front-end validation
+        if (!name || !email || !password) {
+          showMessage('error', 'Please fill in all fields.');
+          btn.classList.remove('loading'); btn.disabled = false;
+          return;
+        }
+        if (password.length < 8) {
+          showMessage('error', 'Password must be at least 8 characters.');
+          btn.classList.remove('loading'); btn.disabled = false;
+          return;
+        }
+
+        const wakeNotice = setTimeout(() => {
+          showMessage('info', 'Server is waking up, please wait…');
+        }, 4000);
+
+        let status = 0;
         try {
-          const res = await fetch(`${API_BASE}/auth/register`, {
+          const res = await authFetch(`${API_BASE}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: name,
-              email: email,
-              password: document.getElementById('register-password').value
-            })
+            body: JSON.stringify({ name, email, password })
           });
+          clearTimeout(wakeNotice);
+          status = res.status;
           const data = await res.json();
-          if(!res.ok) throw new Error(data.error?.message || 'Registration failed');
+          if (!res.ok) throw new Error(data.error?.message || 'Registration failed');
           
-          localStorage.setItem('negosim_token', data.token);
-          localStorage.setItem('negosim_user', JSON.stringify(data.user));
-          showMessage('success', 'Account created! Redirecting...');
-          setTimeout(() => window.location.href = 'app.html', 800);
-        } catch(err) {
-          // If Render backend is outdated/broken, fallback to Mock Auth
-          if (err.message.includes('Route not found') || err.message.includes('Failed to fetch') || err.message.includes('server error')) {
-            console.warn('Backend Auth not found or DB disconnected. Using Fallback Local Auth.');
-            localStorage.setItem('negosim_token', 'mock-token-fallback');
-            localStorage.setItem('negosim_user', JSON.stringify({ name: name, email: email }));
-            showMessage('success', 'Account created (Local Mode)! Redirecting...');
-            setTimeout(() => window.location.href = 'app.html', 800);
-          } else {
-            showMessage('error', err.message);
-            btn.classList.remove('loading');
-            btn.disabled = false;
-          }
+          storeToken(data.token);
+          storeUser(data.user);
+          showMessage('success', 'Account created! Redirecting…');
+          setTimeout(() => window.location.href = 'app.html', 700);
+        } catch (err) {
+          clearTimeout(wakeNotice);
+          showMessage('error', friendlyError(err, status));
+          btn.classList.remove('loading');
+          btn.disabled = false;
         }
       });
 
       // ── Google OAuth ──
       setTimeout(() => {
-        if(window.google?.accounts) {
+        if (window.google?.accounts) {
           google.accounts.id.initialize({
-            client_id: '', // Add via .env later
-            callback: async (res) => {
+            client_id: '', // Add your Google Client ID here when you have one
+            callback: async (googleRes) => {
+              let status = 0;
               try {
-                const response = await fetch(`${API_BASE}/auth/google`, {
+                const res = await authFetch(`${API_BASE}/auth/google`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ credential: res.credential })
+                  body: JSON.stringify({ credential: googleRes.credential })
                 });
-                const data = await response.json();
-                if(!response.ok) throw new Error(data.error?.message || 'Google login failed');
+                status = res.status;
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || 'Google login failed');
                 
-                localStorage.setItem('negosim_token', data.token);
-                localStorage.setItem('negosim_user', JSON.stringify(data.user));
-                showMessage('success', 'Logged in via Google! Redirecting...');
-                setTimeout(() => window.location.href = 'app.html', 800);
-              } catch(err) {
-                showMessage('error', err.message);
+                storeToken(data.token);
+                storeUser(data.user);
+                showMessage('success', 'Logged in via Google! Redirecting…');
+                setTimeout(() => window.location.href = 'app.html', 700);
+              } catch (err) {
+                showMessage('error', friendlyError(err, status));
               }
             }
           });
@@ -369,15 +481,374 @@
       }, 500);
 
       document.getElementById('btn-google-login').addEventListener('click', () => {
-        if(window.google?.accounts) {
+        if (window.google?.accounts) {
           google.accounts.id.prompt((n) => {
-            if(n.isNotDisplayed() || n.isSkippedMoment()) showMessage('error', 'Google Auth is not configured.');
+            if (n.isNotDisplayed() || n.isSkippedMoment()) {
+              showMessage('error', 'Google Sign-In is not configured yet. Please use email/password.');
+            }
           });
         } else {
-          showMessage('error', 'Google script failed to load.');
+          showMessage('error', 'Google Sign-In is not available. Please use email and password.');
         }
       });
+
     })();
   </script>
+
+  <!-- Right-panel animated canvas -->
+  <script>
+    (() => {
+      'use strict';
+
+      const panel  = document.getElementById('auth-image-side');
+      const canvas = document.getElementById('nego-canvas');
+      if (!panel || !canvas) return;
+
+      // ── Respect prefers-reduced-motion ──
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const ctx = canvas.getContext('2d');
+      let W = 0, H = 0, dpr = 1;
+      let rafId = null;
+      let paused = false;
+      let mouse = { x: 0, y: 0 };
+
+      // ── Theme colors (from CSS vars) ──
+      const PRIMARY   = '#165C47';
+      const PRIMARY_L = '#238568';
+      const BG_DARK   = '#0B2D1E';   // very dark green for canvas bg
+      const BG_MID    = '#0F3D28';
+      const MINT      = 'rgba(120,210,170,';
+      const WHITE     = 'rgba(247,250,248,';
+
+      // ── Node count based on device capability ──
+      const cores = navigator.hardwareConcurrency || 2;
+      const NODE_COUNT = cores <= 2 ? 20 : cores <= 4 ? 28 : 36;
+      const CONNECTION_DIST = 0.28; // fraction of panel width
+
+      // ── Node class ──
+      class Node {
+        constructor(w, h, side) {
+          // side: 'left' | 'right' | 'center' | 'any'
+          if (side === 'left')        { this.x = Math.random() * w * 0.42;                    }
+          else if (side === 'right')  { this.x = w * 0.58 + Math.random() * w * 0.42;         }
+          else                        { this.x = Math.random() * w;                            }
+          this.y   = Math.random() * h;
+          this.vx  = (Math.random() - 0.5) * 0.18;
+          this.vy  = (Math.random() - 0.5) * 0.18;
+          this.r   = 2.5 + Math.random() * 2;
+          this.agent = side === 'left' ? 'buyer' : side === 'right' ? 'seller' : 'neutral';
+        }
+
+        update(w, h) {
+          this.x += this.vx;
+          this.y += this.vy;
+          // Soft bounce
+          if (this.x < 5)     { this.x = 5;     this.vx *= -1; }
+          if (this.x > w - 5) { this.x = w - 5; this.vx *= -1; }
+          if (this.y < 5)     { this.y = 5;     this.vy *= -1; }
+          if (this.y > h - 5) { this.y = h - 5; this.vy *= -1; }
+        }
+
+        draw(ctx) {
+          const color = this.agent === 'buyer'  ? '#D97706'
+                      : this.agent === 'seller' ? '#165C47'
+                      : 'rgba(247,250,248,0.6)';
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          // Soft glow
+          const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r * 4);
+          grd.addColorStop(0, this.agent === 'buyer'  ? 'rgba(217,119,6,0.18)'
+                             : this.agent === 'seller' ? 'rgba(22,92,71,0.18)'
+                             : 'rgba(247,250,248,0.06)');
+          grd.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r * 4, 0, Math.PI * 2);
+          ctx.fillStyle = grd;
+          ctx.fill();
+        }
+      }
+
+      // ── Pulse class (offer/counter offers traveling along lines) ──
+      class Pulse {
+        constructor(from, to, color) {
+          this.from  = from;
+          this.to    = to;
+          this.t     = 0;      // 0 → 1 progress
+          this.speed = 0.004 + Math.random() * 0.003;
+          this.color = color;
+          this.done  = false;
+        }
+
+        update() {
+          this.t += this.speed;
+          if (this.t >= 1) { this.t = 1; this.done = true; }
+        }
+
+        draw(ctx) {
+          const x = this.from.x + (this.to.x - this.from.x) * this.t;
+          const y = this.from.y + (this.to.y - this.from.y) * this.t;
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = this.color;
+          ctx.fill();
+          // Trail
+          ctx.beginPath();
+          ctx.arc(x, y, 7, 0, Math.PI * 2);
+          ctx.fillStyle = this.color.replace('1)', '0.18)');
+          ctx.fill();
+        }
+      }
+
+      // ── Deal ring (center burst when offer meets counter) ──
+      class DealRing {
+        constructor(x, y) {
+          this.x = x; this.y = y;
+          this.r = 0; this.alpha = 1; this.done = false;
+        }
+        update() {
+          this.r     += 1.8;
+          this.alpha -= 0.018;
+          if (this.alpha <= 0) { this.alpha = 0; this.done = true; }
+        }
+        draw(ctx) {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(120,210,170,${this.alpha})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      let nodes = [];
+      let buyerNodes  = [];
+      let sellerNodes = [];
+      let pulses = [];
+      let rings  = [];
+
+      // State machine for offer/counter cycle
+      let cyclePhase  = 'offer';   // 'offer' | 'counter' | 'deal' | 'pause'
+      let cycleTimer  = 0;
+      let cyclePause  = 180;       // frames to pause after deal
+
+      function initNodes() {
+        nodes = [];
+        const leftCount   = Math.floor(NODE_COUNT * 0.35);
+        const rightCount  = Math.floor(NODE_COUNT * 0.35);
+        const centerCount = NODE_COUNT - leftCount - rightCount;
+
+        for (let i = 0; i < leftCount;   i++) nodes.push(new Node(W, H, 'left'));
+        for (let i = 0; i < rightCount;  i++) nodes.push(new Node(W, H, 'right'));
+        for (let i = 0; i < centerCount; i++) nodes.push(new Node(W, H, 'center'));
+
+        buyerNodes  = nodes.filter(n => n.agent === 'buyer');
+        sellerNodes = nodes.filter(n => n.agent === 'seller');
+      }
+
+      function resize() {
+        dpr   = Math.min(window.devicePixelRatio || 1, 2);
+        const rect = panel.getBoundingClientRect();
+        W = rect.width;
+        H = rect.height;
+        canvas.width  = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width  = W + 'px';
+        canvas.style.height = H + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        initNodes();
+      }
+
+      // ── Parallax mouse ──
+      panel.addEventListener('mousemove', (e) => {
+        const rect = panel.getBoundingClientRect();
+        mouse.x = (e.clientX - rect.left - W / 2) / W;  // -0.5 to +0.5
+        mouse.y = (e.clientY - rect.top  - H / 2) / H;
+      });
+      panel.addEventListener('mouseleave', () => { mouse.x = 0; mouse.y = 0; });
+
+      // ── Visibility pause ──
+      document.addEventListener('visibilitychange', () => {
+        paused = document.hidden;
+        if (!paused && !reducedMotion) loop();
+      });
+
+      const io = new IntersectionObserver(entries => {
+        paused = !entries[0].isIntersecting;
+        if (!paused && !reducedMotion) loop();
+      }, { threshold: 0.1 });
+      io.observe(panel);
+
+      // ── Render background gradient ──
+      function drawBackground() {
+        const grd = ctx.createLinearGradient(0, 0, W * 0.6, H);
+        grd.addColorStop(0, BG_DARK);
+        grd.addColorStop(0.6, BG_MID);
+        grd.addColorStop(1, '#0D4A30');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // ── Draw network lines ──
+      function drawLines() {
+        const distSq = (CONNECTION_DIST * W) ** 2;
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const dx = nodes[i].x - nodes[j].x;
+            const dy = nodes[i].y - nodes[j].y;
+            if (dx * dx + dy * dy > distSq) continue;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const alpha = (1 - dist / (CONNECTION_DIST * W)) * 0.22;
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x, nodes[i].y);
+            ctx.lineTo(nodes[j].x, nodes[j].y);
+            ctx.strokeStyle = `rgba(120,210,170,${alpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // ── Offer/counter/deal cycle ──
+      function tickCycle() {
+        cycleTimer++;
+
+        if (cyclePhase === 'offer' && pulses.length === 0) {
+          // Send a few offer pulses from buyer cluster to seller cluster
+          const count = 2 + Math.floor(Math.random() * 2);
+          for (let i = 0; i < count; i++) {
+            const from = buyerNodes[Math.floor(Math.random() * buyerNodes.length)];
+            const to   = sellerNodes[Math.floor(Math.random() * sellerNodes.length)];
+            if (from && to) {
+              pulses.push(new Pulse(from, to, 'rgba(217,119,6,1)'));
+            }
+          }
+          cyclePhase = 'waiting-counter';
+        }
+
+        if (cyclePhase === 'waiting-counter') {
+          const allDone = pulses.every(p => p.done);
+          if (allDone && pulses.length > 0) {
+            // Slight pause, then counter
+            setTimeout(() => {
+              const count = 1 + Math.floor(Math.random() * 2);
+              for (let i = 0; i < count; i++) {
+                const from = sellerNodes[Math.floor(Math.random() * sellerNodes.length)];
+                const to   = buyerNodes[Math.floor(Math.random() * buyerNodes.length)];
+                if (from && to) {
+                  pulses.push(new Pulse(from, to, 'rgba(35,133,104,1)'));
+                }
+              }
+              pulses = pulses.filter(p => !p.done);
+              cyclePhase = 'waiting-deal';
+            }, 600);
+            cyclePhase = 'transitioning';
+          }
+        }
+
+        if (cyclePhase === 'waiting-deal') {
+          const allDone = pulses.every(p => p.done);
+          if (allDone && pulses.length > 0) {
+            // Deal burst in the center
+            rings.push(new DealRing(W / 2, H / 2));
+            rings.push(new DealRing(W / 2, H / 2));
+            pulses = [];
+            cyclePhase = 'pause';
+            cycleTimer = 0;
+          }
+        }
+
+        if (cyclePhase === 'pause' && cycleTimer > cyclePause) {
+          cycleTimer = 0;
+          cyclePhase = 'offer';
+        }
+      }
+
+      // ── Main draw ──
+      function draw(timestamp) {
+        // Apply parallax offset to ctx transform
+        const px = mouse.x * 12;
+        const py = mouse.y * 12;
+
+        drawBackground();
+
+        // Save and apply parallax shift to network layer
+        ctx.save();
+        ctx.translate(px, py);
+        drawLines();
+        nodes.forEach(n => n.update(W, H));
+        nodes.forEach(n => n.draw(ctx));
+        ctx.restore();
+
+        // Pulses and rings on top (no parallax)
+        pulses.forEach(p => { p.update(); p.draw(ctx); });
+        pulses = pulses.filter(p => !p.done);
+
+        rings.forEach(r => { r.update(); r.draw(ctx); });
+        rings = rings.filter(r => !r.done);
+
+        tickCycle();
+      }
+
+      function loop(timestamp) {
+        if (paused) return;
+        draw(timestamp);
+        rafId = requestAnimationFrame(loop);
+      }
+
+      // ── ResizeObserver for proper resizing ──
+      const ro = new ResizeObserver(() => {
+        resize();
+        if (reducedMotion) {
+          // Draw one static frame
+          drawBackground();
+          drawLines();
+          nodes.forEach(n => n.draw(ctx));
+        }
+      });
+      ro.observe(panel);
+
+      resize();
+
+      if (reducedMotion) {
+        // One static frame only
+        drawBackground();
+        drawLines();
+        nodes.forEach(n => n.draw(ctx));
+      } else {
+        // Only run if panel is visible (not on mobile where it's hidden)
+        const panelVisible = window.getComputedStyle(panel).display !== 'none';
+        if (panelVisible) loop();
+      }
+
+      // ── Glass chips animation ──
+      const chips = [
+        document.getElementById('chip-1'),
+        document.getElementById('chip-2'),
+        document.getElementById('chip-3'),
+      ];
+      // Stagger chip animations via class cycling
+      function cycleChips() {
+        chips.forEach((chip, i) => {
+          if (!chip) return;
+          const delay = i * 3500;
+          setTimeout(() => {
+            function show() {
+              chip.classList.add('visible');
+              setTimeout(() => {
+                chip.classList.remove('visible');
+                setTimeout(show, 6000 + i * 1200);
+              }, 3200);
+            }
+            show();
+          }, delay);
+        });
+      }
+      if (!reducedMotion) cycleChips();
+
+    })();
+  </script>
+
 </body>
 </html>

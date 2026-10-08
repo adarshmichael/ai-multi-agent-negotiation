@@ -17,34 +17,50 @@ async function register(req, res, next) {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
+    // Reject non-string inputs to prevent NoSQL injection
+    if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({
+        error: { message: 'Invalid input format.', code: 'VALIDATION_ERROR' }
+      });
+    }
+
+    if (!name.trim() || !email.trim() || !password) {
       return res.status(400).json({
         error: { message: 'Name, email, and password are required.', code: 'VALIDATION_ERROR' }
       });
     }
 
-    if (password.length < 6) {
+    // Email format validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return res.status(400).json({
-        error: { message: 'Password must be at least 6 characters.', code: 'VALIDATION_ERROR' }
+        error: { message: 'Please enter a valid email address.', code: 'VALIDATION_ERROR' }
       });
     }
 
+    if (password.length < 8) {
+      return res.status(400).json({
+        error: { message: 'Password must be at least 8 characters.', code: 'VALIDATION_ERROR' }
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
     // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
       return res.status(409).json({
         error: { message: 'An account with this email already exists.', code: 'EMAIL_EXISTS' }
       });
     }
 
-    const user = await User.create({ name, email: email.toLowerCase(), password });
+    const user = await User.create({ name: name.trim(), email: cleanEmail, password });
     const token = generateToken(user);
 
     logger.info('Auth', `New user registered: ${user.email}`);
 
     res.status(201).json({
       message: 'Account created successfully.',
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email },
       token,
     });
   } catch (err) {
@@ -65,15 +81,25 @@ async function login(req, res, next) {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    // Reject non-string inputs to prevent NoSQL injection
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({
+        error: { message: 'Invalid input format.', code: 'VALIDATION_ERROR' }
+      });
+    }
+
+    if (!email.trim() || !password) {
       return res.status(400).json({
         error: { message: 'Email and password are required.', code: 'VALIDATION_ERROR' }
       });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     // Find user with password field included
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const user = await User.findOne({ email: cleanEmail }).select('+password');
     if (!user) {
+      // Generic error — don't reveal if email exists
       return res.status(401).json({
         error: { message: 'Invalid email or password.', code: 'INVALID_CREDENTIALS' }
       });
@@ -86,13 +112,17 @@ async function login(req, res, next) {
       });
     }
 
+    // Update lastLoginAt
+    user.lastLoginAt = new Date();
+    await user.save({ validateBeforeSave: false });
+
     const token = generateToken(user);
 
     logger.info('Auth', `User logged in: ${user.email}`);
 
     res.json({
       message: 'Login successful.',
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email },
       token,
     });
   } catch (err) {

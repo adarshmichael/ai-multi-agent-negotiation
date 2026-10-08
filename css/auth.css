@@ -4,7 +4,8 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
 
-body, html {
+body,
+html {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -53,7 +54,8 @@ body, html {
 .auth-bg-image {
   position: absolute;
   inset: -5%;
-  background-image: url("https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2500&auto=format&fit=crop"); /* Abstract network */
+  background-image: url("https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2500&auto=format&fit=crop");
+  /* Abstract network */
   background-size: cover;
   background-position: center;
   animation: slowPan 30s ease-in-out infinite alternate;
@@ -86,28 +88,37 @@ body, html {
   font-weight: 700;
   margin-bottom: 24px;
   line-height: 1.1;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff;
 }
 
 .auth-image-content p {
   font-size: 20px;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.9);
   max-width: 500px;
   line-height: 1.6;
   font-weight: 400;
 }
 
 @keyframes slowPan {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.06); }
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(1.06);
+  }
 }
 
 /* ── Responsive ── */
 @media (max-width: 960px) {
-  .auth-form-side { flex: 1; padding: 20px; }
-  .auth-image-side { display: none; }
+  .auth-form-side {
+    flex: 1;
+    padding: 20px;
+  }
+
+  .auth-image-side {
+    display: none;
+  }
 }
 
 /* ── Header inside Form ── */
@@ -263,8 +274,8 @@ body, html {
   box-shadow: 0 0 0 3px var(--color-vendor-light);
 }
 
-.auth-input:focus ~ .auth-floating-label,
-.auth-input:not(:placeholder-shown) ~ .auth-floating-label {
+.auth-input:focus~.auth-floating-label,
+.auth-input:not(:placeholder-shown)~.auth-floating-label {
   top: -1px;
   left: 12px;
   font-size: 12px;
@@ -274,7 +285,7 @@ body, html {
   border-radius: 4px;
 }
 
-.auth-input:focus ~ .auth-input-icon {
+.auth-input:focus~.auth-input-icon {
   color: var(--color-primary);
 }
 
@@ -382,12 +393,16 @@ body, html {
   margin-bottom: 24px;
 }
 
-.auth-message.show { display: flex; }
+.auth-message.show {
+  display: flex;
+}
+
 .auth-message.error {
   background: rgba(220, 38, 38, 0.05);
   border: 1px solid rgba(220, 38, 38, 0.2);
   color: var(--color-danger);
 }
+
 .auth-message.success {
   background: rgba(21, 128, 61, 0.05);
   border: 1px solid rgba(21, 128, 61, 0.2);
@@ -410,23 +425,91 @@ body, html {
   transition: all 0.3s ease;
 }
 
-.auth-pw-strength-bar.active.weak { background: var(--color-danger); }
-.auth-pw-strength-bar.active.fair { background: var(--color-warning); }
-.auth-pw-strength-bar.active.good { background: var(--color-stance-flexible); }
-.auth-pw-strength-bar.active.strong { background: var(--color-success); }
+.auth-pw-strength-bar.active.weak {
+  background: var(--color-danger);
+}
+
+.auth-pw-strength-bar.active.fair {
+  background: var(--color-warning);
+}
+
+.auth-pw-strength-bar.active.good {
+  background: var(--color-stance-flexible);
+}
+
+.auth-pw-strength-bar.active.strong {
+  background: var(--color-success);
+}
 
 /* Spinner */
 .auth-spinner {
   display: none;
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255,255,255,0.2);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-.auth-submit.loading .auth-spinner { display: block; }
-.auth-submit.loading .auth-btn-text { opacity: 0; position: absolute; }
+.auth-submit.loading .auth-spinner {
+  display: block;
+}
 
-@keyframes spin { 100% { transform: rotate(360deg); } }
+.auth-submit.loading .auth-btn-text {
+  opacity: 0;
+  position: absolute;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* -- Animation Layer 3: Glass Chips -- */
+.nego-chips {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.nego-chip {
+  position: absolute;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nego-chip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#chip-1 {
+  top: 25%;
+  left: 15%;
+}
+
+#chip-2 {
+  top: 55%;
+  right: 12%;
+}
+
+#chip-3 {
+  top: 75%;
+  left: 30%;
+}

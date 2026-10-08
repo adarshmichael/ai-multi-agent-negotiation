@@ -12,12 +12,14 @@ const { validateConfig, config } = require('./config/env');
 // Validate env before doing anything else
 validateConfig();
 
-const express = require('express');
-const http = require('http');
-const cors = require('cors');
-const mongoose = require('mongoose');
+const express     = require('express');
+const http        = require('http');
+const cors        = require('cors');
+const helmet      = require('helmet');
+const rateLimit   = require('express-rate-limit');
+const mongoose    = require('mongoose');
 const { WebSocketServer } = require('ws');
-const url = require('url');
+const url         = require('url');
 
 const healthRoutes = require('./routes/health.routes');
 const negotiationRoutes = require('./routes/negotiation.routes');
@@ -33,11 +35,48 @@ const logger = require('./utils/logger');
 // ======== Express Setup ========
 const app = express();
 
+// ── Security headers ──
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false,
+}));
+
+// ── Allowed CORS origins ──
+const ALLOWED_ORIGINS = [
+  'https://adarshmichael.github.io',
+  'http://127.0.0.1:5501',
+  'http://localhost:5501',
+  'http://localhost:3000',
+  'http://localhost:8001',
+  'http://127.0.0.1:8001',
+];
+if (config.clientOrigins) {
+  config.clientOrigins.split(',').forEach(o => {
+    const trimmed = o.trim().replace(/\/$/, ''); // strip trailing slash
+    if (trimmed && !ALLOWED_ORIGINS.includes(trimmed)) ALLOWED_ORIGINS.push(trimmed);
+  });
+}
+
 app.use(cors({
-  origin: '*', // Allow all origins for local development (Live Server, etc.)
+  origin: (origin, cb) => {
+    // Allow requests with no origin (e.g., curl, Postman, mobile apps)
+    if (!origin) return cb(null, true);
+    if (ALLOWED_ORIGINS.includes(origin.replace(/\/$/, ''))) return cb(null, true);
+    cb(new Error(`CORS: Origin not allowed — ${origin}`));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
 }));
+
+// ── Rate limiting on auth routes (prevent brute-force) ──
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,                   // max 20 requests per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { message: 'Too many requests. Please wait a few minutes and try again.', code: 'RATE_LIMITED' } },
+});
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -45,7 +84,7 @@ app.use(express.urlencoded({ extended: true }));
 // ======== Routes ========
 const path = require('path');
 app.use('/api/health', healthRoutes);
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api', negotiationRoutes);
 app.use('/api', sessionRoutes);
 app.use('/api', coachingRoutes);
