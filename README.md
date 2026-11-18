@@ -75,7 +75,7 @@
 | **Animations** | GSAP 3.12 | Smooth screen transitions and micro-interactions |
 | **Backend** | Node.js (>=18), Express 4.19 | REST API endpoints, routing, error handling |
 | **Real-Time** | WebSocket (`ws` 8.18) | Low-latency duplex streaming of turns and reasoning |
-| **AI / LLM** | Google Gemini API (`@google/generative-ai`) | Dynamic contextual agent reasoning |
+| **AI / LLM** | Google Gemini API (`@google/generative-ai`) | Dynamic contextual agent reasoning |..
 | **Database** | MongoDB Atlas + Mongoose 9 (Optional) | User account security & persistent session history |
 | **Security** | bcryptjs, jsonwebtoken, helmet, express-rate-limit | Password hashing, JWT auth, rate limiting |
 
